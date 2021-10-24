@@ -31,6 +31,7 @@ program.on('--help', () => {
   console.log('Example call: node index.js https://www.google.com');
   console.log('  $ custom-help --help');
 });
+
 program.command('example').
   description('Run an example Lighthouse test with test of "google.com"').
   action(() => {
@@ -41,4 +42,13 @@ program.command('example').
       console.error(err);
     });
   });
+
+// Provide help in case
+if (program.helpme) {
+  program.help();
+} else if (process.argv.length < 3) {
+  console.error('error: missing required argument \'urls\'');
+  program.help();
+}
+
 program.parse(process.argv);
