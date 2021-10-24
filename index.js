@@ -2,20 +2,28 @@
 
 const program = require('commander');
 const checkLighthouse = require('./src/services/lighthouse');
+program.version('1.0.0').
+  description('Run Lighthouse on an array of URLs').
+  option('-e, --example', 'run an example Lighthouse test of "google.com"').
+  arguments('<urls...>').
+  action((urls = []) => {
+    if (!urls || !urls.length) {
+      console.error('error: missing required argument \'urls\'');
+      program.help();
+      return;
+    }
+    console.log('Lighouse urls: ', urls);
+    console.log('Please wait...');
 
-program
-.version('1.0.0')
-.description('Run Lighthouse on an array of URLs')
-.arguments('<urls...>')
-.action((urls) => {
-  checkLighthouse(urls)
-  .then((results) => {
-    console.log(results);
-  })
-  .catch((err) => {
-    console.error(err);
+    checkLighthouse(urls).then((results) => {
+      console.log('Lighthouse tests complete.');
+      console.log(results);
+    }).catch((err) => {
+      console.log('Lighthouse tests failed.');
+      console.error(err);
+    });
   });
-});
+
 
 // Helper options.
 program.on('--help', () => {
