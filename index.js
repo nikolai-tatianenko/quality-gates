@@ -31,4 +31,14 @@ program.on('--help', () => {
   console.log('Example call: node index.js https://www.google.com');
   console.log('  $ custom-help --help');
 });
+program.command('example').
+  description('Run an example Lighthouse test with test of "google.com"').
+  action(() => {
+    const urls = ['https://www.google.com'];
+    checkLighthouse(urls).then((results) => {
+      console.log(results);
+    }).catch((err) => {
+      console.error(err);
+    });
+  });
 program.parse(process.argv);
