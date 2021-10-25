@@ -48,18 +48,21 @@ async function* checkUrl(urls) {
  * @returns {Promise<*[]>}
  */
 async function checkLighthouse(urls) {
-  const results = [],
-    nStartTime = Date.now();
+  const results = [];
+  const nStartTime = Date.now();
 
-  for await (let item of checkUrl(urls)) {
-    results.push(item);
+  try {
+    for await (let item of checkUrl(urls)) {
+      results.push(item);
+    }
+  } catch (error) {
+    console.error(`Error running Lighthouse tests: ${error}`);
   }
 
   const nEndTime = Date.now();
-  console.log(results,
-    'Total Time: ' + String((nEndTime - nStartTime) / 1000) + ' sec');
+  console.log(`Results: ${results}`);
+  console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
   return results;
 }
 
 module.exports = checkLighthouse;
-//export default checkLighthouse;
