@@ -34,41 +34,39 @@ async function retryAsync(fn, retries = 3, retryDelay = 1000) {
  * @param urls
  * @returns {AsyncGenerator<{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}, void, *>}
  */
-async function* checkUrl(urls) {
+async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
   for (const url of urls) {
     try {
-      const nStartTime = Date.now();
-      const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
-      // logLevel: 'info',
-      const options = {output: 'json', port: chrome.port};
-      const runnerResult = await lighthouse(url, options);
+      console.log(`Testing URL '${url}'...`);
+      const result = await retryAsync(async () => {
+        const nStartTime = Date.now();
+        const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
+        const options = {output: 'json', port: chrome.port};
+        const runnerResult = await lighthouse(url, options);
+        const nEndTime = Date.now();
 
-      // `.report` is the HTML report as a string
-      //const reportHtml = runnerResult.report;
-      //fs.writeFileSync('lhreport.html', reportHtml);
+        await chrome.kill();
 
-      // `.lhr` is the Lighthouse Result as a JS object
+        return {
+          url: runnerResult.lhr.finalUrl,
+          'time': (nEndTime - nStartTime) / 1000,
+          'score': {
+            'accessibility': runnerResult.lhr.categories.accessibility.score * 100,
+            'best-practices': runnerResult.lhr.categories['best-practices'].score * 100,
+            'performance': runnerResult.lhr.categories.performance.score * 100,
+            'pwa': runnerResult.lhr.categories.pwa.score * 100,
+            'seo': runnerResult.lhr.categories.seo.score * 100,
+          },
+        };
+      }, retries, retryDelay);
 
-      // Get timeout
-      const nEndTime = Date.now();
-      yield {
-        url: runnerResult.lhr.finalUrl,
-        'time': (nEndTime - nStartTime) / 1000,
-        'score': {
-          'accessibility': runnerResult.lhr.categories.accessibility.score * 100,
-          'best-practices': runnerResult.lhr.categories['best-practices'].score *
-            100,
-          'performance': runnerResult.lhr.categories.performance.score * 100,
-          'pwa': runnerResult.lhr.categories.pwa.score * 100,
-          'seo': runnerResult.lhr.categories.seo.score * 100,
-        },
-      };
-      await chrome.kill();
+      yield result;
     } catch (error) {
       console.error(`Error testing URL '${url}': ${error}`);
     }
   }
 }
+
 
 /**
  *
