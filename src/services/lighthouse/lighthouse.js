@@ -58,9 +58,20 @@ async function checkLighthouse(urls) {
   }
 
   const nEndTime = Date.now();
-  console.log(`Results: ${results}`);
+
+  console.log(`Results:`);
+  console.dir(results);
   console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
+  writeResultsToFile(results, 'results.json');
   return results;
+}
+
+
+function writeResultsToFile(results, fileName) {
+  const fs = require('fs');
+  const data = JSON.stringify(results, null, 2);
+  fs.writeFileSync(fileName, data);
+  console.log(`Results written to file: ${fileName}`);
 }
 
 module.exports = checkLighthouse;
