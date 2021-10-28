@@ -28,9 +28,21 @@ async function retryAsync (fn, retries = 3, retryDelay = 1000) {
   throw new Error(`Failed after ${retries} retries`);
 }
 
-module.exports = retryAsync;function writeResultsToFile (results, fileName) {
+function writeResultsToFile (results, fileName) {
   const fs = require('fs');
   const data = JSON.stringify(results, null, 2);
   fs.writeFileSync(fileName, data);
   console.log(`Results written to file: ${fileName}`);
 }
+
+async function sendResultsToUrl (url, results) {
+  const axios = require('axios');
+  try {
+    const response = await axios.post(url, results);
+    console.log(`Results sent successfully: ${response.data}`);
+  } catch (error) {
+    console.error(`Error sending results: ${error}`);
+  }
+}
+
+module.exports = { retryAsync, writeResultsToFile, sendResultsToUrl };
