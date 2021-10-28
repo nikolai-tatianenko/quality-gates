@@ -1,3 +1,5 @@
+const fs = require('fs');
+
 /**
  * Wraps an async function in a retry loop that retries it until it succeeds or the maximum number of retries is reached.
  *
@@ -26,4 +28,9 @@ async function retryAsync (fn, retries = 3, retryDelay = 1000) {
   throw new Error(`Failed after ${retries} retries`);
 }
 
-module.exports = retryAsync;
+module.exports = retryAsync;function writeResultsToFile (results, fileName) {
+  const fs = require('fs');
+  const data = JSON.stringify(results, null, 2);
+  fs.writeFileSync(fileName, data);
+  console.log(`Results written to file: ${fileName}`);
+}
