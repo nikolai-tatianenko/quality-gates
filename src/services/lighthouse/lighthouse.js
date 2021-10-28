@@ -1,6 +1,6 @@
 const lighthouse = require('lighthouse');
 const chromeLauncher = require('chrome-launcher');
-const retryAsync = require('./lib/helper');
+const { retryAsync, writeResultsToFile } = require('./lib/helper');
 
 /**
  *
@@ -64,14 +64,6 @@ async function checkLighthouse(urls) {
   console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
   writeResultsToFile(results, 'results.json');
   return results;
-}
-
-
-function writeResultsToFile(results, fileName) {
-  const fs = require('fs');
-  const data = JSON.stringify(results, null, 2);
-  fs.writeFileSync(fileName, data);
-  console.log(`Results written to file: ${fileName}`);
 }
 
 module.exports = checkLighthouse;
