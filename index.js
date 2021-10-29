@@ -2,6 +2,7 @@
 
 const program = require('commander');
 const checkLighthouse = require('./src/services/lighthouse');
+
 program.version('1.0.0').
   description('Run Lighthouse on an array of URLs').
   option('-e, --example', 'run an example Lighthouse test of "google.com"').
@@ -12,18 +13,16 @@ program.version('1.0.0').
       program.help();
       return;
     }
-    console.log('Lighouse urls: ', urls);
+    console.log('Lighthouse urls:', urls.join(', '));
     console.log('Please wait...');
 
     checkLighthouse(urls).then((results) => {
       console.log('Lighthouse tests complete.');
       console.log(results);
     }).catch((err) => {
-      console.log('Lighthouse tests failed.');
-      console.error(err);
+      console.error('Lighthouse tests failed.', err);
     });
   });
-
 
 // Helper options.
 program.on('--help', () => {
@@ -43,10 +42,8 @@ program.command('example').
     });
   });
 
-// Provide help in case
-if (program.helpme) {
-  program.help();
-} else if (process.argv.length < 3) {
+// Print help message if no arguments are passed.
+if (process.argv.length < 3) {
   console.error('error: missing required argument \'urls\'');
   program.help();
 }
