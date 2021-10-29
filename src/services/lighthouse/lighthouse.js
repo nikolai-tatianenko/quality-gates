@@ -3,9 +3,13 @@ const chromeLauncher = require('chrome-launcher');
 const { retryAsync, writeResultsToFile } = require('./lib/helper');
 
 /**
+ * Returns an async generator that yields Lighthouse scores for a list of URLs.
  *
- * @param urls
- * @returns {AsyncGenerator<{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}, void, *>}
+ * @param urls - An array of URLs to test.
+ * @param retries - The number of times to retry a failed test.
+ * @param retryDelay - The delay (in milliseconds) between retries.
+ * @yields {{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}} - An object containing the scores, time and URL for each test.
+ * @throws If the test fails more than `retries` times.
  */
 async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
   for (const url of urls) {
@@ -49,9 +53,13 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
 }
 
 /**
+ * Checks Lighthouse scores for a list of URLs.
  *
- * @param urls
- * @returns {Promise<*[]>}
+ * @param urls - An array of URLs to test.
+ * @param options.retries - The number of times to retry a failed test.
+ * @param options.retryDelay - The delay (in milliseconds) between retries.
+ * @param options.outputFileName - The name of the file to write the results to.
+ * @returns {Promise<*[]>} - A Promise that resolves to an array of objects containing the scores, time, and URL for each test.
  */
 async function checkLighthouse(urls, options = {}) {
   const { retries = 3, retryDelay = 1000, outputFileName = 'results.json' } = options;
