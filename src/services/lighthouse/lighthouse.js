@@ -20,22 +20,30 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
 
         await chrome.kill();
 
+        const {
+          accessibility: accessibilityScore,
+          'best-practices': bestPracticesScore,
+          performance: performanceScore,
+          pwa: pwaScore,
+          seo: seoScore
+        } = runnerResult.lhr.categories;
+
         return {
           url: runnerResult.lhr.finalUrl,
-          'time': (nEndTime - nStartTime) / 1000,
-          'score': {
-            'accessibility': runnerResult.lhr.categories.accessibility.score * 100,
-            'best-practices': runnerResult.lhr.categories['best-practices'].score * 100,
-            'performance': runnerResult.lhr.categories.performance.score * 100,
-            'pwa': runnerResult.lhr.categories.pwa.score * 100,
-            'seo': runnerResult.lhr.categories.seo.score * 100,
+          time: (nEndTime - nStartTime) / 1000,
+          score: {
+            accessibility: accessibilityScore.score * 100,
+            'best-practices': bestPracticesScore.score * 100,
+            performance: performanceScore.score * 100,
+            pwa: pwaScore.score * 100,
+            seo: seoScore.score * 100,
           },
         };
       }, retries, retryDelay);
 
       yield result;
     } catch (error) {
-      console.error(`Error testing URL '${url}': ${error}`);
+      console.error(`Error testing URL '${url}': ${error.message}`);
     }
   }
 }
@@ -45,16 +53,17 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
  * @param urls
  * @returns {Promise<*[]>}
  */
-async function checkLighthouse(urls) {
+async function checkLighthouse(urls, options = {}) {
+  const { retries = 3, retryDelay = 1000, outputFileName = 'results.json' } = options;
   const results = [];
   const nStartTime = Date.now();
 
   try {
-    for await (let item of checkUrl(urls)) {
+    for await (let item of checkUrl(urls, retries, retryDelay)) {
       results.push(item);
     }
   } catch (error) {
-    console.error(`Error running Lighthouse tests: ${error}`);
+    console.error(`Error running Lighthouse tests: ${error.message}`);
   }
 
   const nEndTime = Date.now();
@@ -62,7 +71,7 @@ async function checkLighthouse(urls) {
   console.log(`Results:`);
   console.dir(results);
   console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
-  writeResultsToFile(results, 'results.json');
+  writeResultsToFile(results, outputFileName);
   return results;
 }
 
