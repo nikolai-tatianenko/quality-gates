@@ -5,9 +5,9 @@ const { retryAsync, writeResultsToFile } = require('./lib/helper');
 /**
  * Returns an async generator that yields Lighthouse scores for a list of URLs.
  *
- * @param urls - An array of URLs to test.
- * @param retries - The number of times to retry a failed test.
- * @param retryDelay - The delay (in milliseconds) between retries.
+ * @param {string[]} urls - An array of URLs to test.
+ * @param {number} retries - The number of times to retry a failed test.
+ * @param {number} retryDelay - The delay (in milliseconds) between retries.
  * @yields {{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}} - An object containing the scores, time and URL for each test.
  * @throws If the test fails more than `retries` times.
  */
@@ -55,14 +55,19 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
 /**
  * Checks Lighthouse scores for a list of URLs.
  *
- * @param urls - An array of URLs to test.
- * @param options.retries - The number of times to retry a failed test.
- * @param options.retryDelay - The delay (in milliseconds) between retries.
- * @param options.outputFileName - The name of the file to write the results to.
- * @returns {Promise<*[]>} - A Promise that resolves to an array of objects containing the scores, time, and URL for each test.
+ * @param {string[]} urls - An array of URLs to test.
+ * @param {Object} options - Options for the Lighthouse tests.
+ * @param {number} options.retries - The number of times to retry a failed test.
+ * @param {number} options.retryDelay - The delay (in milliseconds) between retries.
+ * @param {string} options.outputFileName - The name of the file to write the results to.
+ * @returns {Promise<{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}[]>} - A Promise that resolves to an array of objects containing the scores, time, and URL for each test
  */
-async function checkLighthouse(urls, options = {}) {
-  const { retries = 3, retryDelay = 1000, outputFileName = 'results.json' } = options;
+async function checkLighthouse (urls, options = {}) {
+  const {
+    retries = 3,
+    retryDelay = 1000,
+    outputFileName = 'results.json',
+  } = options;
   const results = [];
   const nStartTime = Date.now();
 
@@ -79,7 +84,16 @@ async function checkLighthouse(urls, options = {}) {
   console.log(`Results:`);
   console.dir(results);
   console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
-  writeResultsToFile(results, outputFileName);
+
+  // Write the results to a file
+  try {
+    await writeResultsToFile(results, outputFileName);
+    console.log(`Results written to file '${outputFileName}'`);
+  } catch (error) {
+    console.error(
+      `Error writing results to file '${outputFileName}': ${error.message}`);
+  }
+
   return results;
 }
 
