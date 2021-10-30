@@ -66,7 +66,7 @@ async function checkLighthouse (urls, options = {}) {
   const {
     retries = 3,
     retryDelay = 1000,
-    outputFileName = 'results.json',
+    outputFileName = './output/results.json',
   } = options;
   const results = [];
   const nStartTime = Date.now();
@@ -96,6 +96,5 @@ async function checkLighthouse (urls, options = {}) {
 
   return results;
 }
-
 
 module.exports = checkLighthouse;

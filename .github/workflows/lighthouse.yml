@@ -1,0 +1,33 @@
+name: Lighthouse Tests
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 14.x
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run Lighthouse tests
+        run: node lighthouse.js
+
+      - name: Create comment with results
+        uses: actions/github-script@v3
+        with:
+          script: |
+            github.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '```' + require("fs").readFileSync(./output/"results.json", "utf8") + '```'
+            })
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
