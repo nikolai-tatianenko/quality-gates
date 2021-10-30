@@ -25,22 +25,22 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
         await chrome.kill();
 
         const {
-          accessibility: accessibilityScore,
-          'best-practices': bestPracticesScore,
-          performance: performanceScore,
-          pwa: pwaScore,
-          seo: seoScore
+          accessibility: { score: accessibilityScore },
+          'best-practices': { score: bestPracticesScore },
+          performance: { score: performanceScore },
+          pwa: { score: pwaScore },
+          seo: { score: seoScore },
         } = runnerResult.lhr.categories;
 
         return {
           url: runnerResult.lhr.finalUrl,
           time: (nEndTime - nStartTime) / 1000,
           score: {
-            accessibility: accessibilityScore.score * 100,
-            'best-practices': bestPracticesScore.score * 100,
-            performance: performanceScore.score * 100,
-            pwa: pwaScore.score * 100,
-            seo: seoScore.score * 100,
+            accessibility: accessibilityScore * 100,
+            'best-practices': bestPracticesScore * 100,
+            performance: performanceScore * 100,
+            pwa: pwaScore * 100,
+            seo: seoScore * 100,
           },
         };
       }, retries, retryDelay);
@@ -60,7 +60,7 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
  * @param {number} options.retries - The number of times to retry a failed test.
  * @param {number} options.retryDelay - The delay (in milliseconds) between retries.
  * @param {string} options.outputFileName - The name of the file to write the results to.
- * @returns {Promise<{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}[]>} - A Promise that resolves to an array of objects containing the scores, time, and URL for each test
+ * @returns {Promise<{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}[]>} - A Promise that resolves to an array of objects containing the scores, time, and URL for each test.
  */
 async function checkLighthouse (urls, options = {}) {
   const {
@@ -82,7 +82,7 @@ async function checkLighthouse (urls, options = {}) {
   const nEndTime = Date.now();
 
   console.log(`Results:`);
-  console.dir(results);
+  console.table(results);
   console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
 
   // Write the results to a file
@@ -96,5 +96,6 @@ async function checkLighthouse (urls, options = {}) {
 
   return results;
 }
+
 
 module.exports = checkLighthouse;
