@@ -8,7 +8,7 @@ const { retryAsync, writeResultsToFile } = require('./lib/helper');
  * @param {string[]} urls - An array of URLs to test.
  * @param {number} retries - The number of times to retry a failed test.
  * @param {number} retryDelay - The delay (in milliseconds) between retries.
- * @yields {{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}} - An object containing the scores, time and URL for each test.
+ * @yields {{score: {performance: number, accessibility: number, 'best-practices': number, pwa: number, seo: number}, time: number, url}} - An object containing the scores, time, and URL for each test.
  * @throws If the test fails more than `retries` times.
  */
 async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
@@ -17,8 +17,9 @@ async function* checkUrl(urls, retries = 3, retryDelay = 1000) {
       console.log(`Testing URL '${url}'...`);
       const result = await retryAsync(async () => {
         const nStartTime = Date.now();
-        const chrome = await chromeLauncher.launch({chromeFlags: ['--headless']});
-        const options = {output: 'json', port: chrome.port};
+        const chrome = await chromeLauncher.launch(
+          { chromeFlags: ['--headless'] });
+        const options = { output: 'json', port: chrome.port };
         const runnerResult = await lighthouse(url, options);
         const nEndTime = Date.now();
 
@@ -81,9 +82,9 @@ async function checkLighthouse (urls, options = {}) {
 
   const nEndTime = Date.now();
 
-  console.log(`Results:`);
+  console.log('Results:');
   console.table(results);
-  console.log(`Total Time: ${String((nEndTime - nStartTime) / 1000)} sec`);
+  console.log(`Total Time: ${((nEndTime - nStartTime) / 1000).toFixed(2)} sec`);
 
   // Write the results to a file
   try {
