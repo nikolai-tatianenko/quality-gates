@@ -3,26 +3,31 @@
 const program = require('commander');
 const checkLighthouse = require('./src/services/lighthouse');
 
-program.version('1.0.0').
-  description('Run Lighthouse on an array of URLs').
-  option('-e, --example', 'run an example Lighthouse test of "google.com"').
-  arguments('<urls...>').
-  action((urls = []) => {
-    if (!urls || !urls.length) {
-      console.error('error: missing required argument \'urls\'');
-      program.help();
-      return;
-    }
-    console.log('Lighthouse urls:', urls.join(', '));
-    console.log('Please wait...');
+program
+.version('1.0.0')
+.description('Run Lighthouse on an array of URLs. For example: "npm run start https://www.example.com". Optionally write the results to a file or send them to a URL.')
+.option('-e, --example', 'run an example Lighthouse test of "https://google.com"')
+.option('-o, --output <file>', 'write results to a file')
+.helpOption('-h, --help', 'output usage information')
+.arguments('<urls...>')
+.action((urls = [], options) => {
+  if (!urls || !urls.length) {
+    console.error('error: missing required argument \'urls\'');
+    program.help();
+    return;
+  }
+  console.log('Lighthouse urls:', urls.join(', '));
+  console.log('Please wait...');
 
-    checkLighthouse(urls).then((results) => {
-      console.log('Lighthouse tests complete.');
-      console.log(results);
-    }).catch((err) => {
-      console.error('Lighthouse tests failed.', err);
-    });
+  checkLighthouse(urls, { outputFileName: options.output })
+  .then((results) => {
+    console.log('Lighthouse tests complete.');
+    console.log(results);
+  })
+  .catch((err) => {
+    console.error('Lighthouse tests failed.', err);
   });
+});
 
 // Helper options.
 program.on('--help', () => {
