@@ -67,13 +67,13 @@ async function checkLighthouse (urls, options = {}) {
   const {
     retries = 3,
     retryDelay = 1000,
-    outputFileName = './output/results.json',
+    outputFileName = options.outputFileName || './output/results.json',
   } = options;
   const results = [];
   const nStartTime = Date.now();
 
   try {
-    for await (let item of checkUrl(urls, retries, retryDelay)) {
+    for await (const item of checkUrl(urls, retries, retryDelay)) {
       results.push(item);
     }
   } catch (error) {
