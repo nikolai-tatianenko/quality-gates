@@ -46,3 +46,12 @@ errors retain their raw evidence. Evidence failures and cleanup errors are visib
 separately from the threshold decision. Storage uses a unique run directory and
 same-directory temporary files followed by atomic rename. If storage is unavailable,
 results remain in memory for CLI output, with an execution error and no report path.
+
+## CLI contract
+
+`qualitygate init [URL...] --config <path>` writes explicit defaults with exclusive
+creation. Without URLs it uses https://example.com. `qualitygate run --config <path>`
+resolves outputDir relative to that configuration file. Unknown options and invalid
+configuration exit 2. `--json` writes one JSON value to stdout (run result, init
+result, help or error envelope); terminal text is excluded. SIGINT and SIGTERM mark
+the run interrupted and preserve completed and skipped results before returning 130.
