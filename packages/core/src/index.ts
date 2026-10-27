@@ -45,6 +45,7 @@ export async function run(configInput: Config, plugins: {
         if (directory && data.raw !== undefined) {
           item.evidencePath = await storage.write(directory, `${index + 1}-lighthouse.json`, JSON.stringify(data.raw, null, 2));
         }
+        if (data.error) throw new Error(data.error);
       } catch (error) {
         item.execution = signal.aborted ? 'interrupted' : 'error';
         item.errors.push(message(error));
