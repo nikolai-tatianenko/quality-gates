@@ -13,7 +13,7 @@ export const configSchema = z.object({
   timeoutMs: z.number().int().min(1).max(600000).default(120000),
 }).strict();
 export const scoresSchema = thresholdsSchema.partial();
-export const auditDataSchema = z.object({ scores: scoresSchema, raw: z.unknown().optional() }).strict();
+export const auditDataSchema = z.object({ scores: scoresSchema, raw: z.unknown().optional(), error: z.string().optional() }).strict();
 export const auditResultSchema = z.object({
   url: z.string().url(), execution: z.enum(['completed', 'error', 'interrupted', 'skipped']),
   decision: z.enum(['PASS', 'BLOCK']), scores: scoresSchema,
