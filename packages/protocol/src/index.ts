@@ -36,3 +36,9 @@ export function exitCode(run: RunResult): number {
 export function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+export const cliErrorSchema = z.object({
+  schemaVersion: z.literal(1), execution: z.enum(['error', 'interrupted']), errors: z.array(z.string()).min(1),
+}).strict();
+export const cliInitSchema = z.object({ schemaVersion: z.literal(1), configPath: z.string() }).strict();
+export const cliHelpSchema = z.object({ schemaVersion: z.literal(1), help: z.string() }).strict();
+export const cliOutputSchema = z.union([runResultSchema, cliErrorSchema, cliInitSchema, cliHelpSchema]);
