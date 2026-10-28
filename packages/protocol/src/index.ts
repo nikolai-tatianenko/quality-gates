@@ -5,13 +5,24 @@ export const thresholdsSchema = z.object({
   performance: scoreSchema, accessibility: scoreSchema, seo: scoreSchema,
   'best-practices': scoreSchema,
 }).strict();
+export const gateSchema = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, 'Gate id: letters, digits, - and _'),
+  run: z.string().min(1),
+  timeoutMs: z.number().int().min(1).max(3600000).optional(),
+}).strict();
 export const configSchema = z.object({
   schemaVersion: z.literal(1),
-  urls: z.array(z.string().url().refine(u => ['http:', 'https:'].includes(new URL(u).protocol), 'Expected HTTP(S) URL')).min(1),
-  thresholds: thresholdsSchema,
+  urls: z.array(z.string().url().refine(u => ['http:', 'https:'].includes(new URL(u).protocol), 'Expected HTTP(S) URL')).default([]),
+  thresholds: thresholdsSchema.optional(),
+  gates: z.array(gateSchema).default([]),
   outputDir: z.string().min(1).default('.qualitygate'),
   timeoutMs: z.number().int().min(1).max(600000).default(120000),
-}).strict();
+}).strict().superRefine((config, ctx) => {
+  if (!config.urls.length && !config.gates.length) ctx.addIssue({ code: 'custom', message: 'Configure at least one URL or gate' });
+  if (config.urls.length && !config.thresholds) ctx.addIssue({ code: 'custom', path: ['thresholds'], message: 'thresholds are required when urls are set' });
+  const ids = config.gates.map(g => g.id.toLowerCase());
+  if (new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', path: ['gates'], message: 'Duplicate gate id' });
+});
 export const scoresSchema = thresholdsSchema.partial();
 export const auditDataSchema = z.object({ scores: scoresSchema, raw: z.unknown().optional(), error: z.string().optional() }).strict();
 export const auditResultSchema = z.object({
@@ -19,15 +30,24 @@ export const auditResultSchema = z.object({
   decision: z.enum(['PASS', 'BLOCK']), scores: scoresSchema,
   violations: z.array(z.string()), errors: z.array(z.string()), evidencePath: z.string().optional(),
 }).strict();
+export const gateDataSchema = z.object({ exitCode: z.number().int().nullable(), output: z.string() }).strict();
+export const gateResultSchema = z.object({
+  id: z.string(), command: z.string(), execution: z.enum(['completed', 'error', 'interrupted', 'skipped']),
+  decision: z.enum(['PASS', 'BLOCK']), exitCode: z.number().int().nullable(), durationMs: z.number().min(0),
+  outputTail: z.string(), errors: z.array(z.string()), evidencePath: z.string().optional(),
+}).strict();
 export const runResultSchema = z.object({
   schemaVersion: z.literal(1), runId: z.string().min(1), startedAt: z.string().datetime(),
   finishedAt: z.string().datetime(), execution: z.enum(['completed', 'error', 'interrupted']),
-  decision: z.enum(['PASS', 'BLOCK']), thresholds: thresholdsSchema,
-  results: z.array(auditResultSchema), errors: z.array(z.string()), reportPath: z.string().optional(),
+  decision: z.enum(['PASS', 'BLOCK']), thresholds: thresholdsSchema.optional(),
+  results: z.array(auditResultSchema), gates: z.array(gateResultSchema).default([]), errors: z.array(z.string()), reportPath: z.string().optional(),
 }).strict();
 export type Config = z.infer<typeof configSchema>;
 export type Scores = z.infer<typeof scoresSchema>;
 export type AuditData = z.infer<typeof auditDataSchema>;
+export type GateSpec = z.infer<typeof gateSchema>;
+export type GateData = z.infer<typeof gateDataSchema>;
+export type GateResult = z.infer<typeof gateResultSchema>;
 export type AuditResult = z.infer<typeof auditResultSchema>;
 export type RunResult = z.infer<typeof runResultSchema>;
 export function exitCode(run: RunResult): number {
