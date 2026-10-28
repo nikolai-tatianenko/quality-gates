@@ -1,33 +1,38 @@
-name: Lighthouse Tests
-
+name: QualityGate prototype
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
 jobs:
-  lighthouse:
+  qualitygate:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v2
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 14.x
-
-      - name: Install dependencies
-        run: npm install
-
-      - name: Run Lighthouse tests
-        run: node lighthouse.js
-
-      - name: Create comment with results
-        uses: actions/github-script@v3
+          node-version: '22.19.0'
+      - uses: pnpm/action-setup@v4
         with:
-          script: |
-            github.issues.createComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-              body: '```' + require("fs").readFileSync(./output/"results.json", "utf8") + '```'
-            })
+          version: '11.5.1'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - uses: browser-actions/setup-chrome@v2
+        id: chrome
+        with:
+          chrome-version: stable
+          install-dependencies: true
+      - run: pnpm smoke
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+      - run: pnpm verify:package
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualitygate-evidence
+          path: .qualitygate/
+          include-hidden-files: true

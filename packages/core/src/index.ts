@@ -42,10 +42,10 @@ export async function run(configInput: Config, plugins: {
       try {
         const data = auditDataSchema.parse(await audit.audit(url, { signal, defer: fn => cleanups.push(fn) }));
         item.scores = data.scores;
+        if (data.error) { item.execution = 'error'; item.errors.push(data.error); }
         if (directory && data.raw !== undefined) {
-          item.evidencePath = await storage.write(directory, `${index + 1}-lighthouse.json`, JSON.stringify(data.raw, null, 2));
+          item.evidencePath = await storage.write(directory, `${index + 1}-audit.json`, JSON.stringify(data.raw, null, 2));
         }
-        if (data.error) throw new Error(data.error);
       } catch (error) {
         item.execution = signal.aborted ? 'interrupted' : 'error';
         item.errors.push(message(error));
@@ -64,11 +64,18 @@ export async function run(configInput: Config, plugins: {
   result.finishedAt = new Date().toISOString();
   if (directory) {
     result.reportPath = join(directory, 'report.json');
-    try { await storage.write(directory, 'report.json', reporter.render(runResultSchema.parse(result))); }
+    try {
+      await storage.write(directory, 'report.json', reporter.render(runResultSchema.parse(result)));
+      // A signal can arrive while the filesystem write is in flight.
+      if (signal.aborted && result.execution !== 'interrupted') {
+        result.execution = 'interrupted';
+        await storage.write(directory, 'report.json', reporter.render(runResultSchema.parse(result)));
+      }
+    }
     catch (error) {
       delete result.reportPath;
       result.errors.push(`Report write: ${message(error)}`);
-      if (result.execution !== 'interrupted') result.execution = 'error';
+      result.execution = signal.aborted ? 'interrupted' : 'error';
     }
   }
   return runResultSchema.parse(result);

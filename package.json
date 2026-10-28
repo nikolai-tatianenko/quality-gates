@@ -10,7 +10,10 @@
     "lint": "eslint packages tests scripts --no-error-on-unmatched-pattern",
     "test": "node --import tsx --test tests/*.test.ts",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
-    "smoke": "node --import tsx scripts/smoke.ts"
+    "smoke": "node --import tsx scripts/smoke.ts",
+    "fixture": "node --import tsx scripts/fixture.ts",
+    "verify:package": "node scripts/verify-package.mjs",
+    "verify:clean": "node scripts/verify-clean.mjs"
   },
   "author": "QualityGate contributors",
   "license": "ISC",
@@ -27,9 +30,12 @@
     "qualitygate": "dist/qualitygate.mjs"
   },
   "files": [
-    "dist",
+    "dist/*.mjs",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/PROTOTYPE.md",
+    "VISION.md",
+    "docs/VERIFICATION.md"
   ],
   "engines": {
     "node": ">=22.19.0"

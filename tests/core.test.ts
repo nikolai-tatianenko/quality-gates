@@ -50,3 +50,24 @@ test('interruption skips pending URLs and takes exit precedence', async () => {
   const result = await run(config, { audit, storage, reporter }, c.signal);
   assert.equal(exitCode(result), 130); assert.equal(result.results[1]?.execution, 'skipped');
 });
+test('interruption during report write updates both saved report and exit status', async () => {
+  const controller = new AbortController();
+  const writes: string[] = [];
+  const audit: AuditPlugin = { id: 'test', apiVersion: 1, kind: 'audit', async audit() { return { scores }; } };
+  const result = await run(config, { audit, reporter, storage: { ...storage, async write(dir, name, data) {
+    writes.push(data); controller.abort(); return `${dir}/${name}`;
+  } } }, controller.signal);
+  assert.equal(exitCode(result), 130);
+  assert.equal(writes.length, 2); assert.deepEqual(JSON.parse(writes[1]!), result);
+});
+
+test('an evidence write failure does not mask the original audit error', async () => {
+  const audit: AuditPlugin = { id: 'test', apiVersion: 1, kind: 'audit', async audit() {
+    return { scores: {}, raw: {}, error: 'navigation failed' };
+  } };
+  const result = await run(config, { audit, reporter, storage: { ...storage, async write(_, name) {
+    if (name !== 'report.json') throw new Error('evidence disk full'); return name;
+  } } });
+  assert.equal(exitCode(result), 2);
+  assert.deepEqual(result.results[0]!.errors, ['navigation failed', 'evidence disk full']);
+});
