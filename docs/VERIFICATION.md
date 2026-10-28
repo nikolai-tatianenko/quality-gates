@@ -1,3 +1,26 @@
+# v0.1.0 release verification — 2026-10-28
+
+- Frozen-lockfile install, lint, strict typecheck, 24 tests and build passed after
+  removing the root legacy dependencies. A fresh temporary workspace passed the
+  same checks.
+- `pnpm verify:package` passed after a local tarball install: real Chrome PASS,
+  BLOCK, mixed URL failure, missing Chrome, timeout, SIGINT and storage-error
+  scenarios all returned the expected codes and cleaned up owned Chrome processes.
+- A real Claude Code session called QualityGate through MCP, received BLOCK,
+  read the failing assertion, edited only the implementation, and received PASS.
+  The recorder asserted that the tests/config were unchanged. The published GIF
+  and MP4 are 75-second paced replays, verified with ffprobe and inspected visually.
+  The sanitized tool transcript is in `docs/demo/session.json`.
+- QualityGate now uses MIT. The archived Lighthouse v1 source retains ISC in its
+  own directory and has a separate dependency installation outside the workspace.
+- Issues #1 (ESLint/Vitest plugins) and #2 (structured inspection) record follow-up
+  work. Repository description/topics and private vulnerability reporting are set.
+
+The notes below describe the original local prototype baseline, before command
+gates, MCP and the public v0.1.0 release preparation.
+
+---
+
 # Prototype verification — 2026-10-27
 
 Environment: macOS, Node 22.19.0, pnpm 11.5.1, Lighthouse 12.8.2,

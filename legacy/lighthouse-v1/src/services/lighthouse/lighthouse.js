@@ -1,5 +1,5 @@
-const lighthouse = require('lighthouse-legacy');
-const chromeLauncher = require('chrome-launcher-legacy');
+const lighthouse = require('lighthouse');
+const chromeLauncher = require('chrome-launcher');
 const { retryAsync, writeResultsToFile } = require('./lib/helper');
 
 /**

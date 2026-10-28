@@ -1,10 +1,10 @@
 {
   "name": "qualitygate-prototype",
   "version": "0.1.0",
-  "description": "Local Lighthouse quality gates with durable evidence",
+  "description": "Local quality gates for developers, CI and AI agents over MCP",
   "main": "dist/qualitygate.mjs",
   "scripts": {
-    "start": "node index.js",
+    "start": "node dist/qualitygate.mjs",
     "build": "node scripts/build.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint packages tests scripts --no-error-on-unmatched-pattern",
@@ -16,14 +16,11 @@
     "verify:clean": "node scripts/verify-clean.mjs"
   },
   "author": "QualityGate contributors",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
     "chrome-launcher": "1.0.0",
-    "chrome-launcher-legacy": "npm:chrome-launcher@0.15.2",
-    "commander": "6.2.1",
     "lighthouse": "12.8.2",
-    "lighthouse-legacy": "npm:lighthouse@8.6.0",
     "yaml": "2.8.1",
     "zod": "3.25.76"
   },
@@ -36,7 +33,11 @@
     "LICENSE",
     "docs/PROTOTYPE.md",
     "VISION.md",
-    "docs/VERIFICATION.md"
+    "docs/VERIFICATION.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "docs/demo",
+    "examples/agent-fix"
   ],
   "engines": {
     "node": ">=22.19.0"
@@ -49,5 +50,11 @@
     "tsx": "4.20.6",
     "typescript": "5.9.3",
     "typescript-eslint": "8.46.1"
-  }
+  },
+  "keywords": [
+    "quality-gates",
+    "mcp",
+    "lighthouse",
+    "ci"
+  ]
 }
