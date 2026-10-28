@@ -10,3 +10,5 @@
 - [x] T-004: Sequential Lighthouse execution and durable evidence
 - [x] T-005: init/run CLI and exit semantics
 - [x] T-006: Real Chrome smoke, CI, quickstart and tarball verification
+- [x] T-007: Command gates (exit-code checks) for any project, with process-group cleanup
+- [x] T-008: MCP stdio server (`list_gates`, `run_gates`, `get_run`) returning the CLI verdict

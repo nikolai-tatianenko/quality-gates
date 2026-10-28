@@ -18,13 +18,14 @@
   "author": "QualityGate contributors",
   "license": "ISC",
   "dependencies": {
-    "lighthouse": "12.8.2",
+    "@modelcontextprotocol/sdk": "1.32.2",
     "chrome-launcher": "1.0.0",
-    "yaml": "2.8.1",
-    "zod": "3.25.76",
+    "chrome-launcher-legacy": "npm:chrome-launcher@0.15.2",
     "commander": "6.2.1",
+    "lighthouse": "12.8.2",
     "lighthouse-legacy": "npm:lighthouse@8.6.0",
-    "chrome-launcher-legacy": "npm:chrome-launcher@0.15.2"
+    "yaml": "2.8.1",
+    "zod": "3.25.76"
   },
   "bin": {
     "qualitygate": "dist/qualitygate.mjs"
@@ -43,10 +44,10 @@
   "packageManager": "pnpm@11.5.1",
   "devDependencies": {
     "@types/node": "22.18.6",
-    "typescript": "5.9.3",
-    "tsx": "4.20.6",
     "esbuild": "0.25.10",
     "eslint": "9.37.0",
+    "tsx": "4.20.6",
+    "typescript": "5.9.3",
     "typescript-eslint": "8.46.1"
   }
 }

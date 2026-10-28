@@ -1,0 +1,11 @@
+# QualityGate checks this repository with itself.
+schemaVersion: 1
+gates:
+  - id: lint
+    run: pnpm lint
+  - id: typecheck
+    run: pnpm typecheck
+  - id: test
+    run: pnpm test
+    timeoutMs: 300000
+outputDir: .qualitygate
