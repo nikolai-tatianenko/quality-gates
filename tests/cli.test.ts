@@ -7,9 +7,9 @@ import { join, resolve } from 'node:path';
 import { parse } from 'yaml';
 import { cliOutputSchema, configSchema } from '../packages/protocol/src/index.js';
 const entry = resolve('packages/cli/src/index.ts');
-function cli(cwd: string, args: string[]) {
+function cli(cwd: string, args: string[], chromePath = '/qualitygate-no-such-chrome') {
   return new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve, reject) => {
-    const child = spawn(process.execPath, ['--import', 'tsx', entry, ...args], { cwd, env: { ...process.env, CHROME_PATH: '/qualitygate-no-such-chrome' } });
+    const child = spawn(process.execPath, ['--import', 'tsx', entry, ...args], { cwd, env: { ...process.env, CHROME_PATH: chromePath } });
     let stdout = ''; let stderr = '';
     child.stdout.on('data', chunk => { stdout += chunk; }); child.stderr.on('data', chunk => { stderr += chunk; });
     child.once('error', reject); child.once('close', code => resolve({ code, stdout, stderr }));
@@ -34,6 +34,12 @@ test('init, no overwrite, invalid config/arguments and missing Chrome obey JSON/
     const result = JSON.parse(missing.stdout); cliOutputSchema.parse(result);
     assert.match(result.results[0].errors.join(), /qualitygate-no-such-chrome/);
     assert.ok(result.reportPath);
+    const invalidBinary = join(dir, 'bad-chrome');
+    await writeFile(invalidBinary, '#!/qualitygate-missing-interpreter\n', { mode: 0o755 });
+    const spawnFailure = await cli(process.cwd(), ['run', '--config', path, '--json'], invalidBinary);
+    assert.equal(spawnFailure.code, 2); assert.equal(spawnFailure.stderr, '');
+    const spawnResult = JSON.parse(spawnFailure.stdout); cliOutputSchema.parse(spawnResult);
+    assert.match(spawnResult.results[0].errors.join(), /ENOENT/);
     await writeFile(path, 'schemaVersion: 100\n');
     const invalid = await cli(process.cwd(), ['run', '--config', path, '--json']);
     assert.equal(invalid.code, 2); cliOutputSchema.parse(JSON.parse(invalid.stdout));

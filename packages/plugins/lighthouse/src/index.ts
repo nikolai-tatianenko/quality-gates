@@ -1,5 +1,6 @@
 import { access } from 'node:fs/promises';
 import { constants } from 'node:fs';
+import { spawn } from 'node:child_process';
 import { Worker } from 'node:worker_threads';
 import { Launcher, getChromePath } from 'chrome-launcher';
 import type { AuditPlugin } from '../../../plugin-sdk/src/index.js';
@@ -12,7 +13,7 @@ export function normalize(raw: RawReport): Scores {
   const scores: Scores = {};
   for (const name of categories) {
     const value = raw.categories?.[name]?.score;
-    if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1) scores[name] = value * 100;
+    if (typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1) scores[name] = Math.round(value * 100);
   }
   return scores;
 }
@@ -44,10 +45,18 @@ export function lighthousePlugin(timeoutMs: number): AuditPlugin {
         const chromePath = process.env.CHROME_PATH || getChromePath();
         await access(chromePath, constants.X_OK);
         controller.signal.throwIfAborted();
+        let spawnError: Error | undefined;
         browser = new Launcher({ chromePath, handleSIGINT: false, logLevel: 'silent',
-          chromeFlags: ['--headless', '--disable-dev-shm-usage'], connectionPollInterval: 100, maxConnectionRetries: 30 });
+          chromeFlags: ['--headless', '--disable-dev-shm-usage'], connectionPollInterval: 100, maxConnectionRetries: 30 }, {
+          spawn: ((...args: Parameters<typeof spawn>) => {
+            const child = spawn(...args);
+            child.once('error', error => { spawnError = error; });
+            return child;
+          }) as typeof spawn,
+        });
         // Await launch settlement before cleanup, so a late launch cannot escape it.
-        await browser.launch();
+        try { await browser.launch(); }
+        catch (error) { throw spawnError || error; }
         controller.signal.throwIfAborted();
         worker = new Worker(new URL('./lighthouse-worker.mjs', import.meta.url), {
           workerData: { url, port: browser.port }, stdout: true, stderr: true,
