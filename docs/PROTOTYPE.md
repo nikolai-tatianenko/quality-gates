@@ -13,20 +13,23 @@ URLs, explicit category thresholds, durable evidence, and CI exit codes.
 - Timeout, interruption and failures always clean up Chrome; errors remain visible.
 - Install, lint, typecheck, unit tests, build, local Chrome smoke and tarball install pass.
 
-## Existing defects
+## Historical defects in Lighthouse v1
 
-The legacy service suppresses audit and write errors, only kills Chrome on success,
-and relies on a transitive chrome-launcher dependency. The workflow has no trigger,
-uses an unsupported Node release and references a nonexistent entrypoint. There are
-no tests. Legacy `pnpm start <url>` remains available during migration.
+The legacy service suppressed audit and write errors, only killed Chrome on success,
+and relied on a transitive chrome-launcher dependency. The former workflow had no trigger,
+used an unsupported Node release and referenced a nonexistent entrypoint. There were
+no tests. That implementation is now archived in `legacy/lighthouse-v1/`, outside
+the main workspace; the root CLI is QualityGate.
 
 ## Scope
 
 Only protocol, plugin SDK, core, policy, CLI, Lighthouse, JSON reporter and filesystem
 storage packages. Plugins are trusted local code, without sandbox protection.
-Dashboards, dedicated ESLint/Vitest plugins, Ink, desktop and license changes are
-outside this prototype. Command gates and the MCP server were added after the
-prototype as the MVP (T-007, T-008). The ISC license remains. All commits stay local.
+Dashboards, dedicated ESLint/Vitest plugins, Ink and desktop are outside this prototype. Command gates and the MCP server were added after the
+prototype as the MVP (T-007, T-008). QualityGate now uses MIT; the archived implementation retains ISC.
+The original local-only commit restriction has been removed. Commits, GitHub Issues,
+repository metadata and the v0.1.0 tag may be published for this release.
+Publishing a package to npm remains a separate action.
 
 ## Demonstration
 

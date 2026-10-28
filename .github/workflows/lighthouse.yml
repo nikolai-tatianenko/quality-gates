@@ -1,4 +1,4 @@
-name: QualityGate prototype
+name: QualityGate
 on:
   push:
   pull_request:

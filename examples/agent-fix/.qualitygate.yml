@@ -1,0 +1,6 @@
+schemaVersion: 1
+gates:
+  - id: test
+    run: node --test shipping.test.mjs
+    timeoutMs: 10000
+outputDir: .qualitygate
