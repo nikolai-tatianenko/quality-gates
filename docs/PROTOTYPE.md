@@ -24,8 +24,9 @@ no tests. Legacy `pnpm start <url>` remains available during migration.
 
 Only protocol, plugin SDK, core, policy, CLI, Lighthouse, JSON reporter and filesystem
 storage packages. Plugins are trusted local code, without sandbox protection.
-MCP, dashboards, ESLint/Vitest integrations, Ink, desktop and license changes are
-outside this prototype. The ISC license remains. All commits stay local.
+Dashboards, dedicated ESLint/Vitest plugins, Ink, desktop and license changes are
+outside this prototype. Command gates and the MCP server were added after the
+prototype as the MVP (T-007, T-008). The ISC license remains. All commits stay local.
 
 ## Demonstration
 
