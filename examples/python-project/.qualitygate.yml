@@ -1,0 +1,8 @@
+schemaVersion: 1
+gates:
+  - id: python-analysis
+    type: eslint
+    run: node ../../packages/code-analysis/dist/cli.mjs --language python . --json
+  - id: python-tests
+    run: python3 -m unittest discover -v
+outputDir: .qualitygate

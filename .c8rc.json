@@ -1,0 +1,22 @@
+{
+  "all": true,
+  "include": [
+    "packages/**/*.{ts,tsx}"
+  ],
+  "exclude": [
+    "packages/plugin-sdk/src/index.ts"
+  ],
+  "reporter": [
+    "text",
+    "html",
+    "json",
+    "json-summary",
+    "lcov"
+  ],
+  "reports-dir": "coverage",
+  "exclude-after-remap": true,
+  "lines": 100,
+  "statements": 100,
+  "functions": 100,
+  "branches": 95
+}

@@ -2,10 +2,14 @@
 schemaVersion: 1
 gates:
   - id: lint
-    run: pnpm lint
+    type: eslint
+    run: pnpm exec eslint packages tests scripts --no-error-on-unmatched-pattern --format json
   - id: typecheck
     run: pnpm typecheck
+  - id: analysis
+    type: eslint
+    run: pnpm --silent analyze --json
   - id: test
-    run: pnpm test
+    run: pnpm test:coverage
     timeoutMs: 300000
 outputDir: .qualitygate

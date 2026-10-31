@@ -6,11 +6,14 @@ import assert from 'node:assert/strict';
 execFileSync('pnpm', ['build'], { stdio: 'inherit' });
 const directory = await mkdtemp(join(tmpdir(), 'qualitygate-package-'));
 try {
-  const packed = JSON.parse(execFileSync('npm', ['pack', '--json', '--pack-destination', directory], { encoding: 'utf8' }));
+  const output = JSON.parse(execFileSync('pnpm', ['--silent', 'pack', '--json', '--pack-destination', directory], { encoding: 'utf8' }));
+  const packed = Array.isArray(output) ? output : [output];
   const files = packed[0].files.map(file => file.path);
+  assert.ok(files.includes('scripts/require-pnpm.mjs'));
   assert.ok(files.includes('dist/qualitygate.mjs')); assert.ok(files.includes('dist/lighthouse-worker.mjs'));
-  execFileSync('npm', ['install', '--prefix', directory, '--ignore-scripts', '--no-audit', '--no-fund', join(directory, packed[0].filename)], { stdio: 'inherit' });
+  execFileSync('npm', ['install', '--prefix', directory, '--ignore-scripts', '--no-audit', '--no-fund', resolve(directory, packed[0].filename)], { cwd: directory, stdio: 'inherit' });
   const entry = join(directory, 'node_modules', 'qualitygate-prototype', 'dist', 'qualitygate.mjs');
+  execFileSync(process.execPath, [join(directory, 'node_modules/qualitygate-prototype/scripts/require-pnpm.mjs')], { cwd: directory, env: { ...process.env, npm_config_user_agent: 'npm/11.0.0' } });
   const config = join(directory, 'init.yml');
   execFileSync(process.execPath, [entry, 'init', '--config', config], { cwd: directory, stdio: 'inherit' });
   assert.match(await readFile(config, 'utf8'), /schemaVersion: 1/);

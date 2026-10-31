@@ -25,6 +25,24 @@ checks. Lighthouse opens configured URLs in Chrome; only audit authorized target
 Raw reports and command logs may contain sensitive project data. Review artifacts
 before sharing them or uploading them to public CI storage.
 
+## Local dashboard and analysis
+
+The React dashboard binds only to 127.0.0.1 and validates Host, Origin and a custom
+header for state-changing requests. Each instance uses one trusted config selected
+at startup. Do not expose it through a public proxy or tunnel; it is a local tool
+without user authentication. Browser access does not sandbox the underlying gates.
+
+The code-analysis package scans TS/JS with fixed ESLint/SonarJS rules and Python
+with Ruff's isolated configuration. It does not execute scanned Python code or
+apply fixes. Ruff is a trusted executable from PATH (or an explicit API path), run
+without a shell, with bounded output and a timeout. Analysis can process untrusted
+source data, but the analyzer/runtime itself is not a security sandbox.
+
+`qualitygate ask` sends prompts and invoked tool results to the explicitly selected
+model endpoint. Ollama/vLLM defaults point to localhost; a custom endpoint may be
+remote. Review the destination and logs before using private projects. API keys
+come from a named environment variable; never store them in URLs or project files.
+
 ## Report a vulnerability
 
 Use GitHub's private reporting page:

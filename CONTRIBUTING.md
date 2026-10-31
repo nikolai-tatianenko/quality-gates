@@ -6,17 +6,40 @@ the same verdict and evidence. See [VISION.md](VISION.md) for scope and directio
 ## Set up
 
 Use Node 22.19+ and pnpm 11.5.1 (the version in `packageManager`).
+The development baseline is pinned in `.nvmrc`. npm uses `.npmrc`; pnpm 11 uses
+the matching engine/version settings in `pnpm-workspace.yaml`.
+Use pnpm 11.5.1 for checkout installs and scripts. Native developer-engine checks
+and a local preinstall guard enforce it; the checks are repository-scoped.
+New registry dependency versions must be at least seven days old, including
+transitives. Do not bypass the cutoff with overrides/exclusions to make an install
+pass: select an eligible compatible version and regenerate/review the lockfile.
 
 ```sh
+nvm install
+nvm use
 pnpm install --frozen-lockfile
+uv tool install ruff==0.9.2
 pnpm check
 node dist/qualitygate.mjs run
 ```
 
-`pnpm check` runs lint, strict TypeScript checks, tests and the build. The repository's
+Ruff 0.9.2 is required for the Python adapter tests. If you do not use uv, choose
+another method from the [Ruff installation docs](https://docs.astral.sh/ruff/installation/).
+
+`pnpm check` runs lint, strict TypeScript checks, complexity/code smell analysis,
+tests with enforced coverage thresholds, and all workspace builds. Open
+`coverage/index.html` for uncovered lines/branches; JSON and LCOV are also emitted.
+The only coverage exclusion is the SDK's interfaces-only file. New runtime files
+are included even before a test imports them. See `.c8rc.json` for the exact floors.
+
+`pnpm analyze` checks product code with the standalone `@qualitygate/code-analysis`
+workspace package. Refactor a reported hotspot rather than raising its threshold.
+Tests are outside the complexity scan, but remain linted and typechecked. The repository's
 `.qualitygate.yml` defines its own command gates. MCP clients use the built CLI;
 rebuild after changing source code. Gate commands execute on your machine: review
 configuration before running it. See [SECURITY.md](SECURITY.md).
+See [CODE_QUALITY.md](docs/CODE_QUALITY.md) for the exact defaults and how another
+project uses its own lint/test policy. Formatting is not yet fully standardized.
 
 For changes to browser execution, cancellation, storage or packaging, also run:
 

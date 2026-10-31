@@ -1,0 +1,68 @@
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { join } from 'node:path';
+import { z } from 'zod';
+import { runResultSchema, type RunResult } from '../../protocol/src/index.js';
+import { execute, loadConfig } from '../../cli/src/runner.js';
+export const runArgsSchema = z.object({ gates: z.array(z.string().min(1)).min(1).optional() }).strict();
+export const getRunArgsSchema = z.object({ runId: z.string().optional() }).strict();
+export function summarize(run: RunResult) {
+  return { ...run, gates: run.gates.map(g => g.decision === 'PASS' ? { ...g, outputTail: '' } : g) };
+}
+export async function readRun(outputDir: string, runId: string): Promise<RunResult> {
+  if (!z.string().uuid().safeParse(runId).success) throw new Error('Invalid run ID');
+  return runResultSchema.parse(JSON.parse(await readFile(join(outputDir, runId, 'report.json'), 'utf8')));
+}
+export async function getRun(configPath: string, runId?: string): Promise<RunResult> {
+  const { config } = await loadConfig(configPath);
+  if (runId) return readRun(config.outputDir, runId);
+  const entries = await readdir(config.outputDir, { withFileTypes: true }).catch(error => {
+    if (error.code === 'ENOENT') return []; throw error;
+  });
+  let newest: { id: string; time: number } | undefined;
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !z.string().uuid().safeParse(entry.name).success) continue;
+    const record = await stat(join(config.outputDir, entry.name, 'report.json')).catch(error => {
+      if (error.code === 'ENOENT') return undefined; throw error;
+    });
+    if (record?.isFile() && (!newest || record.mtimeMs > newest.time)) newest = { id: entry.name, time: record.mtimeMs };
+  }
+  if (!newest) throw new Error('No runs found');
+  return readRun(config.outputDir, newest.id);
+}
+/** One mutation at a time per service. Read tools remain available during execution. */
+export class QualityGateService {
+  private closed = false;
+  private active?: { controller: AbortController; promise: Promise<RunResult> };
+  constructor(readonly configPath: string) {}
+  async list() {
+    this.assertOpen();
+    const { config } = await loadConfig(this.configPath);
+    return { gates: config.gates.map(g => ({ id: g.id, type: g.type, run: g.run })), urls: config.urls, thresholds: config.thresholds };
+  }
+  async get(args: unknown = {}) { this.assertOpen(); return summarize(await getRun(this.configPath, getRunArgsSchema.parse(args).runId)); }
+  async run(args: unknown = {}, signal?: AbortSignal): Promise<RunResult> {
+    this.assertOpen();
+    const { gates } = runArgsSchema.parse(args);
+    signal?.throwIfAborted();
+    if (this.active) throw new Error('A quality gate run is already active; retry after it completes');
+    const controller = new AbortController();
+    const abort = () => controller.abort(signal?.reason);
+    signal?.addEventListener('abort', abort, { once: true });
+    const promise = execute(this.configPath, controller.signal, gates);
+    const active = { controller, promise };
+    this.active = active;
+    try { return summarize(await promise); }
+    finally {
+      signal?.removeEventListener('abort', abort);
+      if (this.active === active) this.active = undefined;
+    }
+  }
+  async close(): Promise<void> {
+    this.closed = true;
+    const active = this.active;
+    active?.controller.abort(new Error('Client disconnected'));
+    // Drain execution and evidence writes before the server process exits.
+    await active?.promise.catch(() => undefined);
+  }
+  private assertOpen() { if (this.closed) throw new Error('QualityGate service is closed'); }
+}

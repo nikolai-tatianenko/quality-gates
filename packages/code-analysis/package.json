@@ -1,0 +1,32 @@
+{
+  "name": "@qualitygate/code-analysis",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./dist/index.mjs",
+  "bin": {
+    "qualitygate-analyze": "./dist/cli.mjs"
+  },
+  "scripts": {
+    "build": "node build.mjs"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "eslint": "9.37.0",
+    "eslint-plugin-sonarjs": "4.2.2",
+    "typescript-eslint": "8.46.1",
+    "zod": "3.25.76",
+    "typescript": "5.9.3"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

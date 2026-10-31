@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { join } from 'node:path';
-import { auditDataSchema, configSchema, gateDataSchema, message, runResultSchema, type AuditResult, type Config, type GateResult, type RunResult } from '../../protocol/src/index.js';
+import { configSchema, message, runResultSchema, type Config, type RunResult } from '../../protocol/src/index.js';
 import type { AuditPlugin, GatePlugin, Plugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
+import { executeGate, executeAudit, executionStatus, saveReport } from './execution.js';
 import { evaluate } from '../../policy/src/index.js';
 export class Registry {
   private plugins = new Map<string, Plugin>();
@@ -16,102 +16,46 @@ export class Registry {
     return plugin as Extract<Plugin, {kind: K}>;
   }
 }
-const OUTPUT_TAIL = 4000;
-/** Runs the configured command gates, then URL audits; `only` limits gates by id and skips URL audits. */
-export async function run(configInput: Config, plugins: {
+export interface RunPlugins {
   audit?: AuditPlugin; gate?: GatePlugin; storage: StoragePlugin; reporter: ReporterPlugin;
-}, signal: AbortSignal = new AbortController().signal, only?: string[]): Promise<RunResult> {
-  const config = configSchema.parse(configInput);
+}
+function selectPlugins(config: Config, plugins: RunPlugins, only?: string[]) {
   const registry = new Registry();
   for (const plugin of Object.values(plugins)) if (plugin) registry.register(plugin);
   const gateSpecs = only ? config.gates.filter(g => only.includes(g.id)) : config.gates;
-  if (only) {
-    const unknown = only.filter(id => !config.gates.some(g => g.id === id));
-    if (unknown.length) throw new Error(`Unknown gate: ${unknown.join(', ')}`);
-  }
+  const unknown = only?.filter(id => !config.gates.some(g => g.id === id));
+  if (unknown?.length) throw new Error(`Unknown gate: ${unknown.join(', ')}`);
   const urls = only ? [] : config.urls;
-  const audit = urls.length ? registry.get(plugins.audit?.id ?? 'audit', 'audit') : undefined;
-  const gate = gateSpecs.length ? registry.get(plugins.gate?.id ?? 'gate', 'gate') : undefined;
-  const storage = registry.get(plugins.storage.id, 'storage');
-  const reporter = registry.get(plugins.reporter.id, 'reporter');
+  return { gateSpecs, urls,
+    audit: urls.length ? registry.get(plugins.audit?.id ?? 'audit', 'audit') : undefined,
+    gate: gateSpecs.length ? registry.get(plugins.gate?.id ?? 'gate', 'gate') : undefined,
+    storage: registry.get(plugins.storage.id, 'storage'), reporter: registry.get(plugins.reporter.id, 'reporter') };
+}
+/** Runs configured gates then audits; selection by gate ID skips URL audits. */
+export async function run(configInput: Config, plugins: RunPlugins,
+  signal: AbortSignal = new AbortController().signal, only?: string[]): Promise<RunResult> {
+  const config = configSchema.parse(configInput);
+  const selected = selectPlugins(config, plugins, only);
   const result: RunResult = {
     schemaVersion: 1, runId: randomUUID(), startedAt: new Date().toISOString(),
     finishedAt: new Date().toISOString(), execution: 'completed', decision: 'PASS',
-    thresholds: config.thresholds, results: [], gates: [], errors: [],
+    thresholds: config.thresholds, results: [], gates: [], errors: [], findings: [],
   };
   let directory: string | undefined;
-  try { directory = await storage.createRun(result.runId); }
+  try { directory = await selected.storage.createRun(result.runId); }
   catch (error) { result.errors.push(`Storage initialization: ${message(error)}`); }
-  for (const [index, spec] of gateSpecs.entries()) {
-    const item: GateResult = { id: spec.id, command: spec.run, execution: 'completed', decision: 'BLOCK',
-      exitCode: null, durationMs: 0, outputTail: '', errors: [] };
-    const cleanups: (() => void | Promise<void>)[] = [];
-    const started = Date.now();
-    if (signal.aborted) {
-      item.execution = 'skipped'; item.errors.push('Interrupted before gate');
-    } else {
-      try {
-        const data = gateDataSchema.parse(await gate!.run(spec, { signal, defer: fn => cleanups.push(fn) }));
-        item.exitCode = data.exitCode; item.outputTail = data.output.slice(-OUTPUT_TAIL);
-        item.decision = data.exitCode === 0 ? 'PASS' : 'BLOCK';
-        if (directory) item.evidencePath = await storage.write(directory, `gate-${index + 1}-${spec.id}.log`, data.output);
-      } catch (error) {
-        item.execution = signal.aborted ? 'interrupted' : 'error';
-        item.decision = 'BLOCK'; item.errors.push(message(error));
-      } finally {
-        for (const cleanup of cleanups.reverse()) {
-          try { await cleanup(); }
-          catch (error) { item.execution = 'error'; item.errors.push(`Cleanup: ${message(error)}`); }
-        }
-      }
-    }
-    item.durationMs = Date.now() - started;
-    result.gates.push(item);
+  const environment = { signal, storage: selected.storage, directory };
+  for (const [index, spec] of selected.gateSpecs.entries()) {
+    const item = await executeGate(spec, index, environment, selected.gate!);
+    result.gates.push(item); result.findings.push(...item.findings);
   }
-  for (const [index, url] of urls.entries()) {
-    const item: AuditResult = { url, execution: 'completed', scores: {}, decision: 'BLOCK', violations: [], errors: [] };
-    const cleanups: (() => void | Promise<void>)[] = [];
-    if (signal.aborted) {
-      item.execution = 'skipped'; item.errors.push('Interrupted before audit');
-    } else {
-      try {
-        const data = auditDataSchema.parse(await audit!.audit(url, { signal, defer: fn => cleanups.push(fn) }));
-        item.scores = data.scores;
-        if (data.error) { item.execution = 'error'; item.errors.push(data.error); }
-        if (directory && data.raw !== undefined) {
-          item.evidencePath = await storage.write(directory, `${index + 1}-audit.json`, JSON.stringify(data.raw, null, 2));
-        }
-      } catch (error) {
-        item.execution = signal.aborted ? 'interrupted' : 'error';
-        item.errors.push(message(error));
-      } finally {
-        for (const cleanup of cleanups.reverse()) {
-          try { await cleanup(); }
-          catch (error) { item.execution = 'error'; item.errors.push(`Cleanup: ${message(error)}`); }
-        }
-      }
-    }
-    Object.assign(item, evaluate(item.scores, config.thresholds!));
-    result.results.push(item);
+  for (const [index, url] of selected.urls.entries()) {
+    const item = await executeAudit(url, index, environment, selected.audit!);
+    Object.assign(item, evaluate(item.scores, config.thresholds!)); result.results.push(item);
   }
-  result.execution = signal.aborted ? 'interrupted' : result.errors.length || [...result.results, ...result.gates].some(r => r.execution !== 'completed') ? 'error' : 'completed';
+  result.execution = executionStatus(result, signal);
   result.decision = [...result.results, ...result.gates].some(r => r.decision === 'BLOCK') ? 'BLOCK' : 'PASS';
   result.finishedAt = new Date().toISOString();
-  if (directory) {
-    result.reportPath = join(directory, 'report.json');
-    try {
-      await storage.write(directory, 'report.json', reporter.render(runResultSchema.parse(result)));
-      // A signal can arrive while the filesystem write is in flight.
-      if (signal.aborted && result.execution !== 'interrupted') {
-        result.execution = 'interrupted';
-        await storage.write(directory, 'report.json', reporter.render(runResultSchema.parse(result)));
-      }
-    }
-    catch (error) {
-      delete result.reportPath;
-      result.errors.push(`Report write: ${message(error)}`);
-      result.execution = signal.aborted ? 'interrupted' : 'error';
-    }
-  }
+  await saveReport(result, environment, selected.reporter);
   return runResultSchema.parse(result);
 }
