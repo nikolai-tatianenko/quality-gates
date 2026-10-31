@@ -2,6 +2,9 @@
 
 ## Unreleased — local workspace and analysis
 
+- Update `yaml` to 2.8.4 (advisory fix), add a bug-report issue template and document
+  remaining transitive dependency advisories and the LGPL analyzer dependency.
+
 - Pin the supported runtime to Node.js 22.23.4 across nvm, package engines and
   CI examples. Translate remaining project documentation to English while
   preserving multibyte-output regression coverage.

@@ -1,0 +1,21 @@
+name: Bug report
+description: Something in QualityGate does not behave as documented
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems: do not open a public issue. See SECURITY.md.
+  - type: input
+    id: version
+    attributes:
+      label: QualityGate version and Node version
+      placeholder: "0.1.0, Node 22.23.4"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: What you ran and what you expected
+      description: The command, the relevant part of .qualitygate.yml, and the output.
+    validations:
+      required: true
