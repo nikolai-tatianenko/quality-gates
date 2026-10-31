@@ -1,0 +1,24 @@
+schemaVersion: 1
+reviewSources:
+  - id: cloudflare
+    repository: https://github.com/cloudflare/security-audit-skill
+    ref: main
+    path: skills/security-audit
+# Replace this command with your project's scanner invocation and put SONAR_TOKEN
+# in the environment. The scanner must use the same server URL below.
+gates:
+  - id: sonar
+    type: sonarqube
+    run: sonar-scanner -Dsonar.host.url=http://127.0.0.1:9000 -Dsonar.qualitygate.wait=false
+    timeoutMs: 300000
+    sonar:
+      serverUrl: http://127.0.0.1:9000
+      tokenEnv: SONAR_TOKEN
+      taskFile: .scannerwork/report-task.txt
+# Add a review gate only after implementing a producer that actually performs
+# the review and prints the documented envelope. Downloading a skill is not a scan.
+#  - id: security-review
+#    type: review
+#    run: node scripts/review-producer.mjs
+#    review:
+#      sourceId: cloudflare

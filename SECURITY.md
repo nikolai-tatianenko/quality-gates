@@ -13,6 +13,15 @@ They can read or modify files, access the network and launch processes. A timeou
 and process-group cleanup are lifecycle controls, not a security isolation boundary.
 Plugins are trusted local code and also run without a sandbox.
 
+External review methodologies are trusted reference material selected in config.
+Source synchronization downloads bare Git objects, disables Git hooks and system/
+global Git configuration, and executes no downloaded scripts. Updates are explicit
+and pinned in a separate lockfile. This is not an OS sandbox or a guarantee that
+upstream instructions are safe. MCP may read pinned methodology files; it cannot
+update the lock or select a new repository URL. Review producers are ordinary
+unsandboxed gate commands. Cloudflare's audit workflow requires additional agent
+capabilities and isolation that this application does not provide.
+
 Review the repository and configuration before running gates, including when an
 MCP client or AI agent asks to execute them. The MCP server only exposes gates and
 URLs declared in the selected configuration; its tools accept no arbitrary command,
@@ -43,7 +52,16 @@ model endpoint. Ollama/vLLM defaults point to localhost; a custom endpoint may b
 remote. Review the destination and logs before using private projects. API keys
 come from a named environment variable; never store them in URLs or project files.
 
+## CI publication
+
+CI publication is an explicit `qualitygate pr --write` action, outside MCP and the
+gate runner. Keep PR-write tokens in a trusted serialized publisher, never in
+target-code check jobs. Read the [CI trust boundary and concurrency limits](docs/CI.md)
+before enabling description updates. Provider API roots are HTTPS (loopback HTTP
+only for tests), redirects are rejected, and generated tool text is escaped.
+
 ## Report a vulnerability
+
 
 Use GitHub's private reporting page:
 https://github.com/example-org/qualitygate/security/advisories/new

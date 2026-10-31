@@ -37,7 +37,8 @@ export class QualityGateService {
   async list() {
     this.assertOpen();
     const { config } = await loadConfig(this.configPath);
-    return { gates: config.gates.map(g => ({ id: g.id, type: g.type, run: g.run })), urls: config.urls, thresholds: config.thresholds };
+    return { gates: config.gates.map(g => ({ id: g.id, type: g.type, run: g.run })), urls: config.urls, thresholds: config.thresholds,
+      ...(config.reviewSources ? { reviewSources: config.reviewSources } : {}) };
   }
   async get(args: unknown = {}) { this.assertOpen(); return summarize(await getRun(this.configPath, getRunArgsSchema.parse(args).runId)); }
   async run(args: unknown = {}, signal?: AbortSignal): Promise<RunResult> {

@@ -13,17 +13,27 @@ flowchart TD
   Runner --> Core[Core lifecycle]
   Core --> Gates[Command / JSON report gates]
   Gates --> Analyzer[code-analysis package]
+  Gates --> Sonar[SonarScanner + exact SonarQube analysis]
+  Gates --> Review[Project-owned review producer]
+  MCP --> Sources[Pinned review-source Git objects]
   Analyzer --> TS[ESLint + SonarJS]
   Analyzer --> Python[Ruff]
   Core --> Lighthouse[Lighthouse worker + owned Chrome]
   Core --> Policy[Threshold policy]
   Core --> Evidence[JSON reporter + filesystem storage]
+  Evidence --> CI[CI Markdown report]
+  CI --> Publisher[Explicit trusted PR publisher]
+  Publisher --> Forges[GitHub / GitLab / Bitbucket Cloud]
 ```
 
 - **protocol / plugin-sdk:** versioned Zod data and TypeScript plugin contracts.
 - **core / policy:** sequential execution, cleanup stack, partial results and
   deterministic decisions. Execution error and quality BLOCK remain distinct.
 - **plugins:** trusted tool execution, report parsing and durable evidence.
+- **review-sources:** inert Git downloads, explicit updates and frozen restore;
+  pinned methodology reads for MCP. Review execution remains a configured producer.
+- **ci:** bounded Markdown rendering, manual/automatic description sections and
+  explicit provider writes. Publication is separate from gates and MCP.
 - **service:** shared list/run/inspect behavior; one active mutation per instance,
   cancellation and disconnect drain. CLI calls the runner directly.
 - **code-analysis:** independently installable API/CLI; fixed TS/JS and Python

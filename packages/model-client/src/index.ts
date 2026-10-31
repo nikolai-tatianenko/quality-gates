@@ -57,7 +57,7 @@ export async function askModel(options: ModelOptions, host: ToolHost, signal: Ab
   const endpoint = modelEndpoint(options.provider, options.baseUrl);
   const native = options.provider === 'ollama';
   const { tools: descriptors } = await host.listTools();
-  const allowlist = new Set(['list_gates', 'run_gates', 'get_run']);
+  const allowlist = new Set(['list_gates', 'run_gates', 'get_run', 'get_review_methodology']);
   const tools = descriptors.filter(tool => allowlist.has(tool.name)).map(tool => ({ type: 'function', function: {
     name: tool.name, description: tool.description, parameters: tool.inputSchema,
   } }));

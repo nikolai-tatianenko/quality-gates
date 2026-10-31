@@ -269,6 +269,8 @@ importers:
         specifier: 8.46.1
         version: 8.46.1(eslint@9.37.0)(typescript@5.9.3)
 
+  packages/ci: {}
+
   packages/cli: {}
 
   packages/code-analysis:
@@ -324,11 +326,17 @@ importers:
 
   packages/plugins/reporter-json: {}
 
+  packages/plugins/review: {}
+
+  packages/plugins/sonarqube: {}
+
   packages/plugins/storage-fs: {}
 
   packages/policy: {}
 
   packages/protocol: {}
+
+  packages/review-sources: {}
 
   packages/service: {}
 

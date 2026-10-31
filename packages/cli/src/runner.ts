@@ -5,6 +5,8 @@ import { configSchema, type Config, type RunResult } from '../../protocol/src/in
 import { run } from '../../core/src/index.js';
 import { lighthousePlugin } from '../../plugins/lighthouse/src/index.js';
 import { eslintPlugin } from '../../plugins/eslint/src/index.js';
+import { sonarQubePlugin } from '../../plugins/sonarqube/src/index.js';
+import { reviewPlugin } from '../../plugins/review/src/index.js';
 import { commandPlugin } from '../../plugins/command/src/index.js';
 import { filesystemPlugin } from '../../plugins/storage-fs/src/index.js';
 import { jsonReporter } from '../../plugins/reporter-json/src/index.js';
@@ -21,8 +23,11 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
   const { config, directory } = await loadConfig(configPath);
   const command = commandPlugin(directory);
   const eslint = eslintPlugin(directory);
+  const sonar = sonarQubePlugin(directory);
+  const review = reviewPlugin(directory, config.reviewSources ?? []);
+  const gates = { command, eslint, sonarqube: sonar, review };
   return run(config, {
-    audit: lighthousePlugin(config.timeoutMs, config.chrome), gate: { ...command, run: (spec, context) => (spec.type === 'eslint' ? eslint : command).run(spec, context) },
+    audit: lighthousePlugin(config.timeoutMs, config.chrome), gate: { ...command, run: (spec, context) => gates[spec.type].run(spec, context) },
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
   }, signal, only);
 }

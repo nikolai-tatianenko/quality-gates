@@ -33,7 +33,7 @@ async function chromeChildren(pid: number): Promise<number[]> {
 }
 async function audit(name: string, urls: string[], patch = {}, options: { env?: Record<string, string>; interrupt?: boolean; text?: boolean } = {}) {
   const path = join(directory, `${name}.yml`);
-  const config = configSchema.parse({ schemaVersion: 1, urls, thresholds, outputDir: name, timeoutMs: 60000,
+  const config = configSchema.parse({ schemaVersion: 1, urls, thresholds, outputDir: name,
     chrome: { noSandbox: process.env.QUALITYGATE_CHROME_NO_SANDBOX === '1' }, ...patch });
   await writeFile(path, stringify(config));
   let visited: (() => void) | undefined;

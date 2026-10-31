@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-30T23:04:53.807Z",
+  "sourceBaseCommit": "c89eaaf9c674e68c83010a62550fe7b02861858a",
+  "testedFilesSha256": {
+    "packages/protocol/src/index.ts": "1fd7239854a9b943879ac5e87c28d0661bc6d14a149b064947e6fb13a119678c",
+    "packages/cli/src/index.ts": "ff9b031ac56a5b31b6e014909e66d41c2c4dced30642c0dbbb2e0d94950dab22",
+    "packages/cli/src/runner.ts": "8979d91398ed0e8eaf68fc50585eccd6f7fef9468d2196acdd03b4ab173c2374",
+    "packages/mcp/src/index.ts": "37349e52ac43e64d4087cd050e8dda2a50ca705bd965fd4aac7b0dc05d757365",
+    "packages/model-client/src/index.ts": "63fd8522e4e9bd10cdc5de43f189072aa923e3a83b7c05d37c22eae7cdef24dd",
+    "packages/service/src/index.ts": "5b399ab7103d365fc3d65d9e765747e075e6f38733a808e2cca586e150afe9d4",
+    "packages/review-sources/src/index.ts": "81d590edf573010fe4f0869525b40a3bdedf9d74cdd29d592283df5b6beb79af",
+    "packages/plugins/sonarqube/src/index.ts": "7ac91c5f0f2972eda2c45660663a706590aa0530d0b46d08f6dd4d2c2e0ba392",
+    "packages/plugins/review/src/index.ts": "c164da8759f7ae1a7c91611baa506ea5382316387e29db4e41475d41db9a52fe",
+    "tests/review.test.ts": "f6b1f9e9d778eceb60d1849a0bd38563ce0fcf1163f2f5c151e4c85c8aadfaf2",
+    "tests/sonarqube.test.ts": "af942b1e18f5fcdaeb8e8b62c2d6b2c4150d14fb877857f9e750cd8b8f87fc9b",
+    "tests/gates.test.ts": "522b007451130017806c6d2bcffe3fb8e562b67c6ae6aac298eee228588acdb8",
+    "tests/cli-extended.test.ts": "331fe16b51b4556e563b80c22ed2150eb7bceae3561e4b25ae6b3c0387b84ac2",
+    "scripts/smoke.ts": "97c220aede7dcff9c3d2df2cc6746b34cdfa2339e2da0e9df5e3b955e0355c31",
+    "package.json": "ef2e86c2d90fd1dd4fc36095f67c290900e3f844b065fa1ebf21161827108ba6",
+    "pnpm-lock.yaml": "f6f03d8d24ee7fa53ec04878cdb1d6fcb08914e7535af23c9fddf25d905122b3",
+    "examples/security-review/.qualitygate.yml": "e96d856d5b4ec5a7f341bc8be9af717f16139087c3458bb41447f76f8f08c2f6",
+    "examples/security-review/qualitygate.sources.lock.json": "eb3ea37e36e50f6430db956f42949685e2fe566f92b546312fb7530d5ec243d7"
+  },
+  "checks": {
+    "workspace": {
+      "command": "pnpm check",
+      "exitCode": 0,
+      "tests": 68,
+      "coverage": {
+        "lines": {
+          "total": 1453,
+          "covered": 1453,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 1453,
+          "covered": 1453,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 115,
+          "covered": 115,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 907,
+          "covered": 874,
+          "skipped": 0,
+          "pct": 96.36
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "consumer": {
+      "command": "pnpm verify:package",
+      "exitCode": 0,
+      "smokeEvidence": ".qualitygate/smoke-OVfIye",
+      "scenarios": [
+        "PASS",
+        "BLOCK",
+        "mixed URL results",
+        "missing Chrome",
+        "timeout",
+        "SIGINT",
+        "write failure"
+      ],
+      "ownedChromeCleanup": true,
+      "installedSourceRead": true,
+      "downloadedCacheExcluded": true
+    },
+    "upstream": {
+      "repository": "https://github.com/cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "sync": true,
+      "frozenRestore": true,
+      "check": true,
+      "stdioMcpRead": true,
+      "validatorReturnedAsText": true,
+      "downloadedScriptsExecuted": false
+    }
+  },
+  "initialConsumerFailure": {
+    "evidence": ".qualitygate/smoke-POOuoQ",
+    "cause": "Fixture audit exceeded the smoke-only 60000ms deadline",
+    "completedLighthouseDurationsMs": [
+      36274.45,
+      39701.56,
+      49062.99
+    ],
+    "cleanupVerified": true,
+    "change": "Use production 120000ms default for normal smoke cases; explicit timeout stays 2500ms"
+  },
+  "limits": {
+    "sonarHttpReplies": "fixtures, not a live SonarQube deployment",
+    "liveSonarQubeVerified": false,
+    "fullCloudflareAuditImplemented": false,
+    "upstreamArtifactValidationImplemented": false,
+    "targetSandboxImplemented": false,
+    "exactWorktreeBindingImplemented": false
+  },
+  "remoteWrites": false
+}
