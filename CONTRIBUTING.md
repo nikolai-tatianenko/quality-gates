@@ -5,7 +5,7 @@ the same verdict and evidence. See [VISION.md](VISION.md) for scope and directio
 
 ## Set up
 
-Use Node 22.19+ and pnpm 11.5.1 (the version in `packageManager`).
+Use Node 22.23.4+ and pnpm 11.5.1 (the version in `packageManager`).
 The development baseline is pinned in `.nvmrc`. npm uses `.npmrc`; pnpm 11 uses
 the matching engine/version settings in `pnpm-workspace.yaml`.
 Use pnpm 11.5.1 for checkout installs and scripts. Native developer-engine checks
@@ -41,9 +41,18 @@ configuration before running it. See [SECURITY.md](SECURITY.md).
 See [CODE_QUALITY.md](docs/CODE_QUALITY.md) for the exact defaults and how another
 project uses its own lint/test policy. Formatting is not yet fully standardized.
 
+For local UI development, build once and run `pnpm dev:ui` at
+http://qualitygate.localhost:1355. Portless is pinned to a Node-22-compatible release;
+its proxy and backend remain loopback-only. `pnpm dashboard --port 4173` remains
+a direct fallback. Rebuild dashboard source with `pnpm build:dashboard`.
+See [project setup](docs/PROJECT_SETUP.md) for attaching the CLI to another app,
+CI and optional Husky hooks. This checkout's hooks are not installed automatically.
+
 For changes to browser execution, cancellation, storage or packaging, also run:
 
 ```sh
+pnpm smoke:portless # Named-origin UI/CSRF/cleanup in Chrome
+pnpm verify:hooks   # Real Husky in an isolated temporary Git repository
 pnpm smoke          # Requires an installed Chrome; CHROME_PATH may select it
 pnpm verify:clean   # Fresh workspace install and checks
 pnpm verify:package # Local tarball install and real Chrome smoke

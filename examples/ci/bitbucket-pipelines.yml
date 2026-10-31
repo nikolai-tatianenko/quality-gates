@@ -1,11 +1,12 @@
 # Copy into bitbucket-pipelines.yml. Target code gets no PR-write credentials.
-image: node:22.19.0
+image: node:22.23.4
 pipelines:
   pull-requests:
     '**':
       - step:
           name: QualityGate
           script:
+            - export HUSKY=0
             - corepack enable
             - corepack prepare pnpm@11.5.1 --activate
             - pnpm install --frozen-lockfile

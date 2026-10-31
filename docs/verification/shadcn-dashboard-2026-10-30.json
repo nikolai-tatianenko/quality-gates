@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-31T06:36:22.019Z",
+  "sourceBaseCommit": "2036d726072fd619315dcff8efb060e09c5aba86",
+  "testedFilesSha256": {
+    "packages/dashboard/src/App.tsx": "10d4e695fead2b7a47d0d7d0bc07137d0b336c4c94fbc08293cc36575e322390",
+    "packages/dashboard/src/Icon.tsx": "a962989988f22ce9650699e31a81e37cc956dd18a406dca9cd18009ebf415236",
+    "packages/dashboard/src/style.css": "12ff1d119cde770c6473f47b3b6d07ca022a9e8e0ca5354a58ddd983067be708",
+    "packages/dashboard/README.md": "aec42d34a27b5f60b96aca29a4045012833705a5ae84e15855d09ce8a121d87e",
+    "tests/dashboard-ui.test.ts": "984fce30a9650668f077b50644764e8e740d635aaf41b67b21a113da0b19394e",
+    "scripts/dashboard-smoke.mjs": "e66eb7ffc7676d6951fb790eccc63ca8270fba788d430e04c69ebd81cdf8403a"
+  },
+  "style": "shadcn-inspired neutral semantic tokens; local React/CSS/SVG implementation",
+  "checks": {
+    "workspace": {
+      "command": "pnpm check",
+      "exitCode": 0,
+      "tests": 73,
+      "coverage": {
+        "lines": {
+          "total": 1722,
+          "covered": 1722,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 1722,
+          "covered": 1722,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 145,
+          "covered": 145,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 1119,
+          "covered": 1083,
+          "skipped": 0,
+          "pct": 96.78
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "focusedUI": {
+      "tests": 4,
+      "exitCode": 0,
+      "durationFormattingAsserted": true
+    },
+    "browser": {
+      "command": "pnpm smoke:dashboard",
+      "exitCode": 0,
+      "decision": "PASS",
+      "gates": [
+        "python-analysis",
+        "python-tests"
+      ],
+      "themes": [
+        "light",
+        "dark",
+        "system"
+      ],
+      "persisted": true,
+      "contrastChecked": true,
+      "screenshots": [
+        "block.png",
+        "block-dark.png",
+        "pass.png",
+        "mobile.png",
+        "mobile-dark.png",
+        "mobile-small-dark.png"
+      ],
+      "browser": "Chrome/156.0.8078.74",
+      "errors": [],
+      "viewportWidths": [
+        1440,
+        390,
+        320
+      ],
+      "selectedTextContrastMinimum": 4.5,
+      "screenshotSha256": {
+        "block.png": "063d6771004d0fae055ae2474763be3663d2be248f4d6e3f81179c362dc7f124",
+        "block-dark.png": "b50028b5ec780dfb8647485996583dd5d50869f18536688209d66cec74b81010",
+        "pass.png": "0a9dcd6eb5de2c42ddf99d7a59277a5e57915cd805b85fc47e65e2a41710bd09",
+        "mobile.png": "8bc2a634c2f1240f244fb752270bb60dc34a892f315eab2ca9b96955d92de784",
+        "mobile-dark.png": "10c648bddfb7148b898c79dec64d96ef6fac6ffc10bb35b86af9d06e057f2a42",
+        "mobile-small-dark.png": "fb50ccfb881ac41a8c92885d6c2e8fe8f834765b8815e308db18945d49bc7b98"
+      },
+      "steadyStateCaptures": true,
+      "visuallyInspected": [
+        "block.png",
+        "block-dark.png",
+        "mobile-small-dark.png"
+      ]
+    }
+  },
+  "limits": {
+    "crossBrowserVerified": false,
+    "syntheticAnalytics": false
+  },
+  "remoteWrites": false
+}

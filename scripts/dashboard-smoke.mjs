@@ -22,6 +22,27 @@ const app = spawn('pnpm', ['--silent', 'dashboard', '--config', config, '--port'
 });
 const closed = new Promise(resolve => app.once('close', resolve));
 let stderr = ''; app.stderr.on('data', chunk => { stderr += chunk; });
+async function capture(page, filename) {
+  await page.mouse.move(0, 0);
+  await page.evaluate(() => Promise.all(document.getAnimations().map(animation => animation.finished.catch(() => undefined))));
+  await page.screenshot({ path: join(directory, filename), fullPage: true });
+}
+async function verifyContrast(page) {
+  const results = await page.evaluate(() => {
+    const luminance = color => {
+      const rgb = color.match(/[\d.]+/g).slice(0, 3).map(Number).map(value => value / 255);
+      const linear = rgb.map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
+      return linear[0] * .2126 + linear[1] * .7152 + linear[2] * .0722;
+    };
+    return ['.muted', '.metrics small', '.run-checks', '.theme-switcher button[aria-pressed="true"]', '.pill', 'footer'].map(selector => {
+      const element = document.querySelector(selector); let surface = element;
+      while (getComputedStyle(surface).backgroundColor === 'rgba(0, 0, 0, 0)') surface = surface.parentElement;
+      const foreground = luminance(getComputedStyle(element).color); const background = luminance(getComputedStyle(surface).backgroundColor);
+      return { selector, ratio: (Math.max(foreground, background) + .05) / (Math.min(foreground, background) + .05) };
+    });
+  });
+  for (const { selector, ratio } of results) assert.ok(ratio >= 4.5, `${selector}: text contrast ${ratio.toFixed(2)} is below 4.5`);
+}
 let browser;
 try {
   const url = await new Promise((resolve, reject) => {
@@ -39,23 +60,44 @@ try {
   const page = await browser.newPage(); const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.setViewport({ width: 1440, height: 1050 });
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
   await page.goto(url, { waitUntil: 'networkidle0' });
-  await page.waitForFunction(() => !document.querySelector('button').disabled);
-  await page.click('button');
+  await page.waitForFunction(() => !document.querySelector('.run-checks').disabled);
+  await page.click('.run-checks');
   await page.waitForFunction(() => document.body.innerText.includes('F401'));
-  await page.screenshot({ path: join(directory, 'block.png'), fullPage: true });
+  await capture(page, 'block.png');
+  await verifyContrast(page);
+  await page.click('[aria-label="Use dark theme"]');
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+  await page.reload({ waitUntil: 'networkidle0' });
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'dark', 'Theme persists after reload');
+  await capture(page, 'block-dark.png');
+  await verifyContrast(page);
+  await page.click('[aria-label="Use system theme"]');
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'light');
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
+  await page.waitForFunction(() => document.documentElement.dataset.theme === 'dark');
+  await page.click('[aria-label="Use light theme"]');
+  assert.equal(await page.evaluate(() => document.documentElement.dataset.theme), 'light');
+
   await writeFile(join(directory, 'calculator.py'), source);
-  await page.click('button');
+  await page.click('.run-checks');
   await page.waitForFunction(() => document.body.innerText.includes('All configured gates passed.'));
-  await page.screenshot({ path: join(directory, 'pass.png'), fullPage: true });
+  await capture(page, 'pass.png');
   await page.setViewport({ width: 390, height: 844 });
-  await page.screenshot({ path: join(directory, 'mobile.png'), fullPage: true });
+  await capture(page, 'mobile.png');
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'Mobile layout must not overflow');
+  await page.click('[aria-label="Use dark theme"]');
+  await capture(page, 'mobile-dark.png');
+  await verifyContrast(page);
+  await page.setViewport({ width: 320, height: 740 });
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, '320px layout must not overflow');
+  await capture(page, 'mobile-small-dark.png');
   assert.deepEqual(errors, []);
   const latest = await (await fetch(`${url}/api/run`)).json();
   assert.equal(latest.decision, 'PASS'); assert.equal(latest.gates.length, 2);
   assert.equal(stderr, '');
-  await writeFile(join(directory, 'verification.json'), JSON.stringify({ decision: latest.decision, gates: latest.gates.map(g => g.id), screenshots: ['block.png', 'pass.png', 'mobile.png'], browser: await browser.version(), errors }, null, 2));
+  await writeFile(join(directory, 'verification.json'), JSON.stringify({ decision: latest.decision, gates: latest.gates.map(g => g.id), themes: ['light', 'dark', 'system'], persisted: true, contrastChecked: true, screenshots: ['block.png', 'block-dark.png', 'pass.png', 'mobile.png', 'mobile-dark.png', 'mobile-small-dark.png'], browser: await browser.version(), errors }, null, 2));
   console.log(`React + Python BLOCK → fix → PASS verified in real Chrome. Screenshots: ${directory}`);
 } finally {
   try { await browser?.close(); }

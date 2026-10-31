@@ -1,3 +1,96 @@
+# Node 22 runtime acceptance — 2026-10-31
+
+The supported baseline is **Node.js 22.23.4**, the latest stable Node 22 patch
+listed in the [official release index](https://nodejs.org/dist/index.json) at
+verification time. The macOS arm64 binary was checked against the official
+SHA-256 manifest before installation. nvm, package engines and CI examples agree.
+
+Frozen-lockfile installation and the complete release verification passed:
+lint, strict types, complexity analysis, **76 tests**, builds, standalone analyzer
+and CLI tarball installation, real Chrome failure/timeout/interruption/cleanup
+scenarios, and the React/Python BLOCK → fix → PASS workflow. Runtime coverage is
+100% lines/statements/functions and 96.84% branches. Portless browser verification,
+real Husky fixture checks and all three CI template checks also passed.
+
+Remaining Russian prose was translated to English. Tracked text was scanned for
+Cyrillic characters; the UTF-8 output regression still splits a multibyte character
+across chunks. Historical verification records retain their original environments.
+
+[Machine-readable record](verification/node22-release-2026-10-31.json). These are
+local results; the GitHub workflow triggered by the subsequent push is a separate
+verification boundary. No npm package was published.
+
+---
+
+# Portless, project hooks and README verification — 2026-10-31
+
+`pnpm check` passed: **76 tests**, lint, strict types, complexity analysis and
+build. Runtime lines/statements/functions are 100% covered; branches are 96.84%.
+
+A dedicated Vercel Portless 0.12.0 proxy was verified in real Chrome using a named
+`.localhost` origin. The test ran an actual gate, rejected invalid origins and
+missing mutation headers, and checked proxy shutdown. Both listeners bind to
+loopback; no CA, hosts-file or global proxy changes were made.
+
+Real Husky 9.1.7 hooks in a disposable Git fixture blocked a failing commit,
+accepted a passing commit, and ran the complete gate set before local dry-run
+pushes. The fixture used the built CLI; this checkout's hooks were unchanged.
+CI template verification passed for GitHub, GitLab and Bitbucket. The source
+workflow YAML was parsed locally; no remote workflow was run.
+
+The README now includes the recorded agent demo, real light/dark/mobile captures,
+a native Mermaid architecture diagram, rationale and project/CI/Husky setup.
+44 local links were checked. A local tarball includes the setup guide, screenshots
+and hook examples. Mermaid rendering was not independently verified.
+
+Machine-readable [verification snapshot](verification/portless-hooks-readme-2026-10-31.json)
+records coverage, source hashes and browser/hook results. No push, publication or
+remote provider write was performed.
+
+---
+
+# Neutral dashboard styling verification — 2026-10-30
+
+The dashboard now uses a shadcn-inspired neutral layout and semantic tokens with
+locally implemented React/CSS/SVG components. Four cards display actual verdict,
+configured check count, findings and recorded run duration. Inset panels, sidebar
+navigation, section anchors and outline actions retain light/dark/system themes.
+
+`pnpm check` passed with **73 tests**, lint, strict types, complexity checks and
+build; runtime lines/statements/functions are 100% covered, branches 96.78%.
+Focused UI tests additionally assert the elapsed-time formatting. Chrome smoke
+verification passed again after the final mobile run-ID fix; desktop and 320px
+screenshots were visually inspected. Selected text contrast remains at least
+4.5:1, preference persistence/live system changes work, and mobile screens have no
+horizontal overflow. Captures wait for transitions to settle. No synthetic chart
+or trend data is displayed. Other browser engines are not verified.
+
+Machine-readable [styling snapshot](verification/shadcn-dashboard-2026-10-30.json)
+contains source/screenshot hashes and local browser results. No push, publication
+or remote CI run was performed.
+
+---
+
+# Dashboard appearance verification — 2026-10-30
+
+Light, dark and system appearance modes are implemented with local preference
+persistence and a CSP-compatible pre-stylesheet bootstrap. `pnpm check` passed
+with **73 tests**, lint, strict types, complexity analysis and build. Runtime
+line/statement/function coverage is 100%; branches are 96.67%. Focused UI tests
+also passed after the final assertions for error status and theme behavior.
+
+`pnpm smoke:dashboard` passed in Chrome 156.0.8078.74: a real Python analysis/test
+BLOCK → fix → PASS workflow, reload persistence, live system-theme changes,
+selected text contrast at least 4.5:1, and no horizontal overflow at 390px/320px.
+Six light/dark desktop/mobile screenshots were captured; desktop light/dark and
+the 320px layout were visually inspected. No browser JavaScript errors occurred.
+Screenshots remain local under `.qualitygate/dashboard-smoke/`; their hashes and
+browser results are in the [theme verification snapshot](verification/dashboard-themes-2026-10-30.json).
+CSS is verified visually/in-browser, outside runtime coverage. Other browser
+engines have not been verified. No publication or remote CI run was performed.
+
+---
+
 # CI and PR-description integration verification — 2026-10-30
 
 `pnpm check` passed with **72 tests**, lint, strict types, complexity analysis and
