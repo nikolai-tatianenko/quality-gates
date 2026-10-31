@@ -13,6 +13,7 @@
     "smoke": "node --import tsx scripts/smoke.ts",
     "fixture": "node --import tsx scripts/fixture.ts",
     "verify:package": "node scripts/verify-package.mjs",
+    "verify:ci-templates": "node scripts/verify-ci-templates.mjs",
     "verify:clean": "node scripts/verify-clean.mjs",
     "test:coverage": "c8 --check-coverage node --experimental-test-module-mocks --import tsx --test tests/*.test.ts",
     "analyze": "node --import tsx packages/code-analysis/src/cli.ts",
@@ -55,7 +56,12 @@
     "docs/RELEASING.md",
     "docs/verification/*.json",
     "scripts/require-pnpm.mjs",
-    "docs/CODE_QUALITY.md"
+    "docs/CODE_QUALITY.md",
+    "docs/SECURITY_REVIEW.md",
+    "docs/CI.md",
+    "examples/ci",
+    "examples/security-review/.qualitygate.yml",
+    "examples/security-review/qualitygate.sources.lock.json"
   ],
   "engines": {
     "node": ">=22.19.0"

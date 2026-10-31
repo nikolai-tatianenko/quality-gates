@@ -8,3 +8,6 @@ dist
 coverage/
 __pycache__/
 .ruff_cache/
+.qualitygate-review-sources/
+qualitygate.sources.lock.json.*.tmp
+.qualitygate-ci/

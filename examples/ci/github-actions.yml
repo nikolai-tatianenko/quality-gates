@@ -1,0 +1,76 @@
+name: QualityGate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+permissions:
+  contents: read
+concurrency:
+  group: qualitygate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Run gates and render report
+        shell: bash
+        run: |
+          mkdir -p .qualitygate-ci
+          set +e
+          pnpm exec qualitygate run --json > .qualitygate-ci/result.json
+          status=$?
+          set -e
+          printf '%s\n' "$status" > .qualitygate-ci/exit-code
+          pnpm exec qualitygate report --input .qualitygate-ci/result.json --output .qualitygate-ci/report.md
+          exit "$status"
+      - if: always()
+        shell: bash
+        run: |
+          if [ -f .qualitygate-ci/report.md ]; then cat .qualitygate-ci/report.md >> "$GITHUB_STEP_SUMMARY"; fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: qualitygate-report
+          include-hidden-files: true
+          path: |
+            .qualitygate-ci/
+            .qualitygate/
+  publish:
+    needs: check
+    if: ${{ always() && needs.check.result != 'cancelled' && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Publication runs trusted base code, never code from the pull request.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - uses: actions/download-artifact@v4
+        with:
+          name: qualitygate-report
+          path: incoming
+      - name: Update the managed description block
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          pnpm exec qualitygate pr --provider github --repository "$PR_REPOSITORY"
+          --number "$PR_NUMBER" --head "$PR_HEAD" --input incoming/.qualitygate-ci/result.json --write --json

@@ -1,0 +1,25 @@
+# Copy into bitbucket-pipelines.yml. Target code gets no PR-write credentials.
+image: node:22.19.0
+pipelines:
+  pull-requests:
+    '**':
+      - step:
+          name: QualityGate
+          script:
+            - corepack enable
+            - corepack prepare pnpm@11.5.1 --activate
+            - pnpm install --frozen-lockfile
+            - |
+              mkdir -p .qualitygate-ci
+              set +e
+              pnpm exec qualitygate run --json > .qualitygate-ci/result.json
+              status=$?
+              set -e
+              printf '%s\n' "$status" > .qualitygate-ci/exit-code
+              pnpm exec qualitygate report --input .qualitygate-ci/result.json --output .qualitygate-ci/report.md
+              exit "$status"
+          artifacts:
+            - .qualitygate-ci/**
+            - .qualitygate/**
+# Publish from a trusted serialized job with a scoped OAuth/repository access token.
+# See docs/CI.md; BITBUCKET_TOKEN must not be available to the check step.

@@ -29,6 +29,16 @@
 - [x] T-019: MCP cancellation/disconnect/concurrency and client configuration/model adapters
 
 ## Verification limits / follow-up
+- [x] CI Markdown artifacts and managed PR/MR descriptions for GitHub, GitLab and Bitbucket Cloud
+- [x] Manual-content migration, tagged replacement, stale-head/older-run guards and edit re-read
+- [x] Local API/CLI contract tests and pipeline exit-code preservation checks
+- [ ] Live provider pipeline execution and separately provisioned GitLab/Bitbucket trusted publishers
+- [x] SonarQube gate adapter with exact CE analysis identity and error/cancellation tests
+- [x] Pinned review sources, explicit updates/frozen restore and MCP methodology reads
+- [x] Review producer contract with provenance and unresolved-candidate blocking
+- [ ] Live SonarQube Community Build + supported scanner end-to-end verification
+- [ ] Cloudflare full audit producer, upstream schema/ledger verification and isolated execution runner
+- [ ] Bind agent reviews and PASS to the exact source-tree and policy digests
 - [ ] Live tool-calling inference with an installed Ollama model and a running vLLM server
 - [ ] Interactive Cursor/Codex client validation beyond generated configuration tests
 - [ ] Dedicated Vitest/coverage result plugin (generic project test commands already work)

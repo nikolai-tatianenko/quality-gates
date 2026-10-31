@@ -16,12 +16,20 @@ they are not a capture of the interactive Claude Code TUI.
 [Vision](VISION.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md) ·
 [Verification](docs/VERIFICATION.md) · [Environments](docs/ENVIRONMENTS.md) · [Agent integrations](docs/INTEGRATIONS.md)
 · [Architecture](docs/ARCHITECTURE.md)
+· [SonarQube and security review](docs/SECURITY_REVIEW.md)
 
 **Status:** working developer preview for local use and CI. The CLI, React UI,
 TS/JS and Python analysis, real Chrome audits and local package installs are
 verified. Claude Code has a recorded end-to-end demo. Other editor configurations
 and model adapters have automated contract tests; live Cursor/Codex sessions and
 Ollama/vLLM inference remain experimental. See the [verification record](docs/VERIFICATION.md).
+
+Optional SonarQube gates wait for the specific scanner analysis and save its gate
+conditions as evidence. External review methodologies can be pinned, updated and
+read through MCP; configured review producers return structured findings into the
+same report. These adapters have contract tests; live SonarQube compatibility and
+a complete Cloudflare multi-agent audit remain unverified. See the
+[setup and execution boundaries](docs/SECURITY_REVIEW.md).
 
 ## Local workspace and code analysis
 
@@ -121,6 +129,10 @@ Lint, types, complexity and coverage configuration, including how a target proje
 uses its own rules: [code-quality policy](docs/CODE_QUALITY.md).
 
 ## Check another project
+
+For GitHub Actions, GitLab CI and Bitbucket Pipelines, see the
+[CI templates and managed PR/MR report setup](docs/CI.md). Existing descriptions
+are preserved as manual text; later runs replace only the tagged report block.
 
 Create `.qualitygate.yml` in the target project and choose its actual check commands:
 
