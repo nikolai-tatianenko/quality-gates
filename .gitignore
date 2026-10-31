@@ -5,3 +5,6 @@ dist
 *.tgz
 .ops/
 .jellybot/
+coverage/
+__pycache__/
+.ruff_cache/

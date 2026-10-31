@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir, mkdtemp } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { spawn, execFileSync } from 'node:child_process';
+import { spawn, execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { setTimeout as delay } from 'node:timers/promises';
 import { stringify } from 'yaml';
 import { configSchema, runResultSchema, cliErrorSchema, type RunResult } from '../packages/protocol/src/index.js';
@@ -22,15 +23,18 @@ const address = server.address();
 assert.ok(address && typeof address !== 'string');
 const url = `http://127.0.0.1:${address.port}`;
 const thresholds = { performance: 0, accessibility: 0, seo: 0, 'best-practices': 0 };
-function chromeChildren(pid: number): number[] {
-  return execFileSync('ps', ['-axo', 'pid=,ppid=,command='], { encoding: 'utf8' }).split('\n').flatMap(line => {
+const processList = promisify(execFile);
+async function chromeChildren(pid: number): Promise<number[]> {
+  const { stdout } = await processList('ps', ['-axo', 'pid=,ppid=,command='], { encoding: 'utf8', maxBuffer: 4_000_000 });
+  return stdout.split('\n').flatMap(line => {
     const row = line.trim().match(/^(\d+)\s+(\d+)\s+(.*)$/);
     return row && Number(row[2]) === pid && /--remote-debugging-port/.test(row[3]!) ? [Number(row[1])] : [];
   });
 }
 async function audit(name: string, urls: string[], patch = {}, options: { env?: Record<string, string>; interrupt?: boolean; text?: boolean } = {}) {
   const path = join(directory, `${name}.yml`);
-  const config = configSchema.parse({ schemaVersion: 1, urls, thresholds, outputDir: name, timeoutMs: 60000, ...patch });
+  const config = configSchema.parse({ schemaVersion: 1, urls, thresholds, outputDir: name, timeoutMs: 60000,
+    chrome: { noSandbox: process.env.QUALITYGATE_CHROME_NO_SANDBOX === '1' }, ...patch });
   await writeFile(path, stringify(config));
   let visited: (() => void) | undefined;
   const arrived = new Promise<void>(resolve => { visited = resolve; });
@@ -39,20 +43,59 @@ async function audit(name: string, urls: string[], patch = {}, options: { env?: 
   let stdout = ''; let stderr = '';
   child.stdout.on('data', data => { stdout += data; }); child.stderr.on('data', data => { stderr += data; });
   const owned = new Set<number>();
-  const poll = setInterval(() => { if (child.pid) for (const pid of chromeChildren(child.pid)) owned.add(pid); }, 100);
-  const watchdog = setTimeout(() => child.kill('SIGKILL'), 90000);
+  let sampling: Promise<void> | undefined;
+  let samplingError: unknown;
+  const sample = () => {
+    if (sampling || !child.pid) return;
+    sampling = chromeChildren(child.pid).then(pids => { for (const pid of pids) owned.add(pid); })
+      .catch(error => { samplingError = error; }).finally(() => { sampling = undefined; });
+  };
+  // Process enumeration must not block the HTTP fixture or overlap itself.
+  const poll = setInterval(sample, 500); sample();
+  const killOwned = () => {
+    for (const pid of owned) {
+      try { process.kill(-pid, 'SIGKILL'); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
+    }
+  };
+  const watchdog = setTimeout(() => { child.kill('SIGKILL'); killOwned(); }, config.timeoutMs * urls.length + 30000);
   const closed = new Promise<number | null>((resolve, reject) => {
     child.once('error', reject); child.once('close', code => resolve(code));
   });
-  if (options.interrupt) {
-    await Promise.race([arrived, closed.then(() => { throw new Error(`CLI exited before fixture request: ${stdout} ${stderr}`); }), delay(15000).then(() => { throw new Error('No fixture request before Ctrl+C'); })]);
-    child.kill('SIGINT');
-  }
+  const readiness = new AbortController();
   let code: number | null;
-  try { code = await closed; }
-  finally { clearInterval(poll); clearTimeout(watchdog); hangingRequest = undefined; }
+  try {
+    if (options.interrupt) {
+      await Promise.race([arrived,
+        closed.then(() => { throw new Error(`CLI exited before fixture request: ${stdout} ${stderr}`); }),
+        delay(config.timeoutMs + config.chrome.launchTimeoutMs, undefined, { signal: readiness.signal })
+          .then(() => { throw new Error(`No fixture request within the audit startup budget: ${stdout} ${stderr}`); }),
+      ]);
+      readiness.abort(); child.kill('SIGINT');
+    }
+    code = await closed;
+  } finally {
+    readiness.abort(); hangingRequest = undefined;
+    try {
+      if (child.exitCode === null && child.signalCode === null) child.kill('SIGTERM');
+      await closed;
+    } finally {
+      clearInterval(poll); clearTimeout(watchdog); await sampling;
+      // Verify the CLI's cleanup first; emergency cleanup must not hide a leak.
+      const leaked: number[] = [];
+      for (const pid of owned) {
+        for (let i = 0; i < 100; i++) {
+          try { process.kill(pid, 0); } catch { break; }
+          await delay(50);
+        }
+        try { process.kill(pid, 0); leaked.push(pid); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ESRCH') throw error; }
+      }
+      if (leaked.length) { killOwned(); throw new Error(`${name} leaked Chrome: ${leaked.join(', ')}`); }
+    }
+  }
+  if (samplingError) throw samplingError;
   assert.equal(stderr, '', `${name} stderr`);
-  for (const pid of owned) assert.throws(() => process.kill(pid, 0), { code: 'ESRCH' }, `${name} leaked Chrome ${pid}`);
   if (options.text) return { code, text: stdout, result: undefined };
   let result: RunResult;
   try { result = runResultSchema.parse(JSON.parse(stdout)); }

@@ -13,26 +13,37 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '22.19.0'
+          node-version-file: '.nvmrc'
       - uses: pnpm/action-setup@v4
-        with:
-          version: '11.5.1'
       - run: pnpm install --frozen-lockfile
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install ruff==0.9.2
       - run: pnpm check
       - uses: browser-actions/setup-chrome@v2
         id: chrome
         with:
           chrome-version: stable
           install-dependencies: true
+      - run: pnpm verify:analysis-package
       - run: pnpm smoke
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          QUALITYGATE_CHROME_NO_SANDBOX: '1'
       - run: pnpm verify:package
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          QUALITYGATE_CHROME_NO_SANDBOX: '1'
+      - run: pnpm smoke:dashboard
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          QUALITYGATE_CHROME_NO_SANDBOX: '1'
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: qualitygate-evidence
-          path: .qualitygate/
+          path: |
+            .qualitygate/
+            coverage/
           include-hidden-files: true

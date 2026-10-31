@@ -3,3 +3,8 @@ packages:
   - packages/plugins/*
 allowBuilds:
   esbuild: true
+engineStrict: true
+saveExact: true
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+pmOnFail: error

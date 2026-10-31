@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "sourceBaseCommit": "9b0ca63114b314de5d0efca234c9757fd0cec7b6",
+  "policy": {
+    "packageManager": "pnpm@11.5.1",
+    "minimumReleaseAgeMinutes": 10080,
+    "minimumReleaseAgeStrict": true,
+    "ageExclusions": []
+  },
+  "workingTreeFilesSha256": {
+    "package.json": "c5a3c766a0b1e09eb32efe09bebcb86a906b63b0f0bb87d0df5f17cf0ac46aa8",
+    "pnpm-workspace.yaml": "816d7090f236d10087373ba912d9986dd758498034c20d9f72cfeb601d45a20d",
+    "pnpm-lock.yaml": "56ca7374edfc8ae710a56e6b4f0f24b73f4f5f1dff41403978a8050abbca429c",
+    "scripts/require-pnpm.mjs": "213383978801a9172ab17268096c2cb8f179890b33ec788252ff76527423baf4",
+    "scripts/verify-package.mjs": "6c5e84964c8329456090800703f373eaf7ed95acb3bddbc752a9861671a06b75",
+    "scripts/verify-analysis-package.mjs": "5a22de644c20a8ad59f96f989da9f189f855e0575cae45275f7446596a1fcff6",
+    "tests/package-manager.test.ts": "3b521492ec6368d5131eb8c2fb6c6996776bb4bfb312e60ad99d7689ac13ded9"
+  },
+  "releaseVerification": {
+    "startedAt": "2026-10-30T20:32:41.239Z",
+    "node": "v22.19.0",
+    "platform": "darwin",
+    "status": "PASS",
+    "steps": [
+      {
+        "name": "check",
+        "code": 0,
+        "durationMs": 160929
+      },
+      {
+        "name": "verify:analysis-package",
+        "code": 0,
+        "durationMs": 55410
+      },
+      {
+        "name": "verify:package",
+        "code": 0,
+        "durationMs": 157328
+      },
+      {
+        "name": "smoke:dashboard",
+        "code": 0,
+        "durationMs": 13814
+      }
+    ],
+    "finishedAt": "2026-10-30T20:39:08.726Z"
+  },
+  "testCount": 62,
+  "coverage": {
+    "lines": {
+      "total": 1196,
+      "covered": 1196,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1196,
+      "covered": 1196,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 97,
+      "covered": 97,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 743,
+      "covered": 712,
+      "skipped": 0,
+      "pct": 95.82
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "lockedSourceChromeSmoke": {
+    "command": "pnpm smoke",
+    "status": "PASS",
+    "evidenceDirectory": ".qualitygate/smoke-EavjRZ"
+  },
+  "remoteWorkflowExecuted": false,
+  "packagesPublished": false
+}

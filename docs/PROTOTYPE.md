@@ -1,5 +1,9 @@
 # QualityGate prototype
 
+This is the historical scope of the first CLI deliverable. The current workspace
+also includes command gates, MCP, structured analysis and a React dashboard;
+see the [README](../README.md) and [architecture](ARCHITECTURE.md).
+
 The first deliverable is a local CLI for sequential Lighthouse audits of HTTP(S)
 URLs, explicit category thresholds, durable evidence, and CI exit codes.
 
@@ -44,7 +48,8 @@ The test audit plugin demonstrates extension without Lighthouse coupling in core
 
 The Lighthouse adapter owns its Chrome instance and terminates its audit worker on
 completion, timeout or interruption. Launch settlement is awaited before cleanup;
-Chrome startup can add up to roughly three seconds to a timeout. Each URL has a
+The current startup connection budget defaults to 10 seconds, bounded by the audit
+timeout; process exit is awaited before profile cleanup. Each URL has a
 separate result, including skipped URLs after interruption. Lighthouse runtime
 errors retain their raw evidence. Evidence failures and cleanup errors are visible
 separately from the threshold decision. Storage uses a unique run directory and
