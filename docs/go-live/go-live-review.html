@@ -1,0 +1,809 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Go-live review</title>
+    <style>
+      /* Same tokens as the competitor dashboard: the two pages sit side by side in
+         docs/ and a reader should not have to re-learn what a colour means. */
+      :root {
+        --bg: #0f1117;
+        --panel: #171a23;
+        --panel-2: #1d212c;
+        --border: #2a2f3c;
+        --text: #e6e9ef;
+        --muted: #9aa3b2;
+        --green: #34d399;
+        --amber: #fbbf24;
+        --blue: #60a5fa;
+        --red: #f87171;
+        --accent: #818cf8;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+          sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      header {
+        padding: 32px 24px 20px;
+        border-bottom: 1px solid var(--border);
+        background: linear-gradient(180deg, #14171f, #0f1117);
+      }
+      h1 {
+        margin: 0 0 6px;
+        font-size: 24px;
+      }
+      .sub {
+        color: var(--muted);
+        font-size: 14px;
+        max-width: 1000px;
+      }
+      main {
+        padding: 24px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h2 {
+        font-size: 16px;
+        margin: 34px 0 14px;
+      }
+      /* The call. Big, coloured, and never hand-written: render.mjs refuses to emit
+         "Go" while a blocking check is failing. */
+      .verdict {
+        margin-top: 18px;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 18px 20px;
+        background: var(--panel);
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+      .call {
+        font-size: 22px;
+        font-weight: 700;
+        padding: 6px 16px;
+        border-radius: 999px;
+        white-space: nowrap;
+      }
+      .c-go {
+        background: rgba(52, 211, 153, 0.16);
+        color: var(--green);
+      }
+      .c-conditions {
+        background: rgba(251, 191, 36, 0.16);
+        color: var(--amber);
+      }
+      .c-no-go {
+        background: rgba(248, 113, 113, 0.16);
+        color: var(--red);
+      }
+      .vtext {
+        flex: 1;
+        min-width: 280px;
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .vtext b {
+        color: var(--text);
+      }
+      .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-left-width: 3px;
+        border-radius: 10px;
+        padding: 12px 14px;
+      }
+      .card .num {
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .card .lbl {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .card.pass {
+        border-left-color: var(--green);
+      }
+      .card.warn {
+        border-left-color: var(--amber);
+      }
+      .card.fail {
+        border-left-color: var(--red);
+      }
+      .card.unknown {
+        border-left-color: var(--blue);
+      }
+      .card.na {
+        border-left-color: var(--border);
+      }
+      .dims {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 14px;
+      }
+      .dim {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        text-align: left;
+        width: 100%;
+        color: inherit;
+        font: inherit;
+      }
+      .dim:hover,
+      .dim:focus-visible {
+        border-color: var(--accent);
+      }
+      .dim .dtitle {
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: center;
+      }
+      .bar {
+        display: flex;
+        height: 6px;
+        border-radius: 999px;
+        overflow: hidden;
+        margin: 10px 0 8px;
+        background: var(--panel-2);
+      }
+      .bar i {
+        display: block;
+        height: 100%;
+      }
+      .b-pass {
+        background: var(--green);
+      }
+      .b-warn {
+        background: var(--amber);
+      }
+      .b-fail {
+        background: var(--red);
+      }
+      .b-unknown {
+        background: var(--blue);
+      }
+      .b-na {
+        background: var(--border);
+      }
+      .dim .dmeta {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dim .more {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--accent);
+      }
+      .pill {
+        display: inline-block;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 2px 8px;
+        border-radius: 999px;
+      }
+      .p-pass {
+        background: rgba(52, 211, 153, 0.16);
+        color: var(--green);
+      }
+      .p-warn {
+        background: rgba(251, 191, 36, 0.16);
+        color: var(--amber);
+      }
+      .p-fail {
+        background: rgba(248, 113, 113, 0.16);
+        color: var(--red);
+      }
+      .p-unknown {
+        background: rgba(96, 165, 250, 0.16);
+        color: var(--blue);
+      }
+      .p-na {
+        background: var(--panel-2);
+        color: var(--muted);
+      }
+      .blk {
+        background: rgba(248, 113, 113, 0.12);
+        color: var(--red);
+        border: 1px solid rgba(248, 113, 113, 0.3);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 1px 7px;
+        border-radius: 999px;
+        margin-left: 6px;
+      }
+      .eff {
+        font-size: 10px;
+        color: var(--muted);
+        margin-left: 6px;
+      }
+      .blockers {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .blockers .row {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--red);
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .blockers .row small,
+      .chk small {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 4px;
+      }
+      .trk {
+        display: inline-block;
+        margin-top: 6px;
+        font-size: 11px;
+      }
+      .trk code {
+        background: var(--panel-2);
+        padding: 1px 5px;
+        border-radius: 4px;
+      }
+      dialog#detail {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 0;
+        width: min(820px, 92vw);
+        max-height: 88vh;
+      }
+      dialog#detail::backdrop {
+        background: rgba(8, 10, 15, 0.72);
+      }
+      .dh {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 20px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .dh h3 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      .dh .dsub {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .dclose {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        color: var(--muted);
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 6px 10px;
+      }
+      .dclose:hover {
+        color: var(--text);
+      }
+      .dbody {
+        padding: 8px 20px 20px;
+        overflow: auto;
+        max-height: calc(88vh - 76px);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .chk {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 13px;
+      }
+      .chk .ctop {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .chk .ctitle {
+        font-weight: 600;
+      }
+      .lbl-in {
+        color: var(--muted);
+      }
+      footer {
+        color: var(--muted);
+        font-size: 12px;
+        padding: 24px;
+        text-align: center;
+        border-top: 1px solid var(--border);
+        margin-top: 32px;
+      }
+      a {
+        color: var(--accent);
+      }
+      code {
+        background: var(--panel-2);
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="title"></h1>
+      <div class="sub" id="prov"></div>
+      <div class="verdict">
+        <div class="call" id="call"></div>
+        <div class="vtext" id="vtext"></div>
+      </div>
+    </header>
+    <main>
+      <div class="cards" id="cards"></div>
+
+      <h2 id="blockersHead">Blocking</h2>
+      <div class="blockers" id="blockers"></div>
+
+      <h2>Readiness by dimension</h2>
+      <div class="dims" id="dims"></div>
+    </main>
+    <footer id="foot"></footer>
+
+    <dialog id="detail" aria-labelledby="dtitle">
+      <div class="dh">
+        <div>
+          <h3 id="dtitle"></h3>
+          <div class="dsub" id="dsub"></div>
+        </div>
+        <button class="dclose" id="dclose" aria-label="Close">✕</button>
+      </div>
+      <div class="dbody" id="dbody"></div>
+    </dialog>
+
+    <script id="readiness-data" type="application/json">
+      {
+  "product": "QualityGate v0.1.0 (developer preview)",
+  "generatedAt": "2026-10-31",
+  "target": {
+    "url": "n/a — local CLI + 127.0.0.1 dashboard",
+    "build": "main@eb1cfe7",
+    "env": "local macOS, Node 22.23.4; remote CI run 41248871047"
+  },
+  "verdict": {
+    "call": "conditions",
+    "summary": "Ready to publish as a \u003cb>GitHub developer preview\u003c/b>. It is a local CLI, not a hosted service, so billing, accounts and cookies do not apply. \u003ccode>pnpm verify:release\u003c/code> passed and remote CI is green on HEAD. Fix the open items below first, and do \u003cb>not\u003c/b> publish to npm until the dependency advisories and the package name are settled."
+  },
+  "trackerLinks": {
+    "base": "https://github.com/example-org/qualitygate/issues/"
+  },
+  "provenance": "Reviewed \u003ccode>main@eb1cfe7\u003c/code> locally on Node 22.23.4 (the default Node 22.19.0 is rejected by \u003ccode>engines\u003c/code>). Evidence: \u003ccode>pnpm verify:release\u003c/code> (4/4 steps PASS, 126 s), \u003ccode>gh run list\u003c/code>, \u003ccode>pnpm audit --prod\u003c/code>, repo files. Recheck after fixes on branch features/october31: pnpm check and pnpm verify:release both pass.",
+  "footer": "Source: docs/go-live/readiness.json. Re-run \u003ccode>/golive recheck\u003c/code> after the open items are fixed.",
+  "dimensions": [
+    {
+      "key": "legal",
+      "title": "Legal & privacy",
+      "notes": "No accounts or hosted data. MIT licence."
+    },
+    {
+      "key": "security",
+      "title": "Auth & security",
+      "notes": "No auth surface; execution-boundary risks are documented."
+    },
+    {
+      "key": "billing",
+      "title": "Payments & billing",
+      "notes": "No payments."
+    },
+    {
+      "key": "data",
+      "title": "Data, backups & migrations",
+      "notes": "No server-side data."
+    },
+    {
+      "key": "observability",
+      "title": "Monitoring & alerting",
+      "notes": "No hosted service."
+    },
+    {
+      "key": "reliability",
+      "title": "Reliability & rollback"
+    },
+    {
+      "key": "performance",
+      "title": "Performance"
+    },
+    {
+      "key": "a11y",
+      "title": "Accessibility",
+      "notes": "Local dashboard only."
+    },
+    {
+      "key": "ux",
+      "title": "Experience & conversion"
+    },
+    {
+      "key": "seo",
+      "title": "Findability & sharing"
+    },
+    {
+      "key": "analytics",
+      "title": "Measurement"
+    },
+    {
+      "key": "support",
+      "title": "Support & comms"
+    }
+  ],
+  "checks": [
+    {
+      "id": "privacy-policy",
+      "dimension": "legal",
+      "title": "Privacy policy exists",
+      "status": "na",
+      "finding": "Not applicable: the tool collects nothing and has no hosted component. Revisit if a history service is added."
+    },
+    {
+      "id": "licences",
+      "dimension": "legal",
+      "title": "Third-party licences permit commercial use",
+      "status": "pass",
+      "blocker": false,
+      "evidence": "packages/code-analysis/package.json:21 lists eslint-plugin-sonarjs as a runtime dependency (installed, not bundled); grep -c sonarjs dist/qualitygate.mjs = 0. Documented in SECURITY.md."
+    },
+    {
+      "id": "secrets-not-shipped",
+      "dimension": "security",
+      "title": "No secrets in repo or shipped build",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "grep for AKIA/ghp_/sk-/PRIVATE KEY patterns over the repo excluding node_modules returned nothing. verify:package inspects the packed file list."
+    },
+    {
+      "id": "dep-audit",
+      "dimension": "security",
+      "title": "No known advisory in production dependencies",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "After bumping yaml to 2.8.4: pnpm audit --prod 24 vulnerabilities (was 25). Remaining runtime ones are transitive via lighthouse and @modelcontextprotocol/sdk; pnpm ones are repo tooling. Documented in SECURITY.md.",
+      "finding": "Transitive advisories remain and reachability is not established. Not a blocker for a GitHub preview, but resolve before an npm release.",
+      "fix": "Upgrade lighthouse and @modelcontextprotocol/sdk when fixed versions pass the 7-day age policy; bump packageManager to >=11.11 (touches 12 files); add pnpm audit --prod to CI once clean.",
+      "effort": "m",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "execution-boundary",
+      "dimension": "security",
+      "title": "Unsandboxed command execution is documented",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "SECURITY.md 'Execution boundary': gate commands and plugins are not sandboxed. MCP exposes only declared gates; dashboard binds 127.0.0.1 and validates Host/Origin."
+    },
+    {
+      "id": "threat-model",
+      "dimension": "security",
+      "title": "Threat model exists for the reviewed ref",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "docs/threat-model/ does not exist. docs/SECURITY_REVIEW.md and SECURITY.md cover the execution boundary in prose.",
+      "finding": "Downgraded from blocker: a local developer tool with no hosted surface. The MCP-with-AI-agent path (an agent running arbitrary configured commands) is the real exposure and deserves a STRIDE pass.",
+      "fix": "Run /threat on the MCP server and the dashboard server.",
+      "effort": "m",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "live-keys",
+      "dimension": "billing",
+      "title": "Payments configured",
+      "status": "na",
+      "finding": "No payments in the product."
+    },
+    {
+      "id": "backup-restore",
+      "dimension": "data",
+      "title": "Backup and restore",
+      "status": "na",
+      "finding": "No server-side data. Run history is local files under .qualitygate/."
+    },
+    {
+      "id": "error-tracking",
+      "dimension": "observability",
+      "title": "Errors reach a human",
+      "status": "na",
+      "finding": "No hosted service. Users report problems through GitHub issues (see support)."
+    },
+    {
+      "id": "e2e-green",
+      "dimension": "reliability",
+      "title": "Critical-path suite passes on the reviewed build",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "pnpm verify:release: check, verify:analysis-package, verify:package (real Chrome: pass/block/mixed/no-chrome/timeout/interrupt/write-error), smoke:dashboard all PASS (.qualitygate/release-check.json). Remote CI run 41248871047 success on eb1cfe7."
+    },
+    {
+      "id": "rollback",
+      "dimension": "reliability",
+      "title": "Last release can be reverted",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "Nothing published to npm (README: 'not published to npm yet'). A GitHub push is revertible, and v0.1.0 tag exists at 30fb120."
+    },
+    {
+      "id": "node-version",
+      "dimension": "reliability",
+      "title": "Supported runtime is enforced and obvious",
+      "status": "pass",
+      "blocker": false,
+      "evidence": "README.md:77 and CONTRIBUTING.md state Node 22.23.4+; .nvmrc and engines enforce it. (Earlier warn was wrong: the README already said this.)"
+    },
+    {
+      "id": "lcp-key-routes",
+      "dimension": "performance",
+      "title": "Dashboard loads quickly",
+      "status": "na",
+      "finding": "Local 127.0.0.1 dashboard, not an internet-facing page. Smoke test loads it in real Chrome at desktop and mobile widths."
+    },
+    {
+      "id": "contrast",
+      "dimension": "a11y",
+      "title": "Dashboard meets AA contrast",
+      "status": "pass",
+      "blocker": false,
+      "evidence": "CHANGELOG and docs/verification/dashboard-themes-2026-10-30.json: selected text contrast checks in light and dark themes, plus screenshots at 320 px and 390 px widths. Not re-run in this review."
+    },
+    {
+      "id": "first-run",
+      "dimension": "ux",
+      "title": "First-time user reaches value from the README",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "README Quickstart + 'Add to an existing project'; verify:package performs a clean tarball install, init and run against real Chrome. Install-from-tarball flow is documented (README:116-132)."
+    },
+    {
+      "id": "package-name",
+      "dimension": "ux",
+      "title": "Package name is final",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "package.json name is 'qualitygate-prototype'; README line 116 says not on npm yet. npm view could not be run (EBADDEVENGINES under pnpm-managed config), so name availability is unchecked.",
+      "finding": "'prototype' in the published name will stick and looks unfinished. Not an issue for a GitHub-only preview.",
+      "fix": "Choose the final name and scope (for example @qualitygate/cli), verify availability, and rename before the first npm publish.",
+      "effort": "s",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "sitemap-robots",
+      "dimension": "seo",
+      "title": "Sitemap and robots",
+      "status": "na",
+      "finding": "No website. Repository discoverability comes from the README and GitHub topics."
+    },
+    {
+      "id": "consent-gated",
+      "dimension": "analytics",
+      "title": "Analytics respects consent",
+      "status": "na",
+      "finding": "No analytics or telemetry in the project docs or README (grep for telemetry/analytics found none)."
+    },
+    {
+      "id": "contact-path",
+      "dimension": "support",
+      "title": "A user can reach a human",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "Added .github/ISSUE_TEMPLATE/bug_report.yml; SECURITY.md and CONTRIBUTING.md exist.",
+      "finding": "Issue template is done. Private vulnerability reporting is a GitHub repo setting that has not been enabled or verified.",
+      "fix": "In GitHub: Settings > Code security > Private vulnerability reporting > Enable, then name it in SECURITY.md.",
+      "effort": "s",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "release-tag",
+      "dimension": "support",
+      "title": "Release tag and changelog match",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "Local tag v0.1.0 points to 30fb120 (git rev-list), but git ls-remote --tags origin returns no tags. CHANGELOG has a large 'Unreleased' section above '0.1.0 baseline'.",
+      "finding": "The v0.1.0 tag predates five later commits, and it is not pushed. Publishing a preview with a stale tag would point users at an older state than the README describes.",
+      "fix": "Move the work under a new version heading (for example 0.2.0-preview), tag that commit, and push the tag after authorization.",
+      "effort": "s",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    }
+  ]
+}
+    </script>
+    <script>
+      const R = JSON.parse(document.getElementById("readiness-data").textContent);
+
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+        );
+      const safeHref = (u) => (/^(https?:|\.\.?\/|\/|#|mailto:)/i.test(u) ? u : "#");
+      const TL = R.trackerLinks || {};
+
+      const STATUS = {
+        pass: "Pass",
+        warn: "Warn",
+        fail: "Fail",
+        unknown: "Not checked",
+        na: "N/A",
+      };
+      const ORDER = ["fail", "unknown", "warn", "pass", "na"];
+      const EFFORT = { s: "S · quick win", m: "M · 1–2 wk", l: "L · 3–6 wk", xl: "XL · quarter+" };
+      const CALLS = { go: "Go", conditions: "Go with conditions", "no-go": "No-go" };
+
+      const heading = `${R.product} — Go-live review`;
+      document.title = heading;
+      document.getElementById("title").textContent = heading;
+      document.getElementById("prov").innerHTML = R.provenance || "";
+      document.getElementById("foot").innerHTML = R.footer || "";
+      const callEl = document.getElementById("call");
+      callEl.textContent = CALLS[R.verdict.call];
+      callEl.className = `call c-${R.verdict.call}`;
+      document.getElementById("vtext").innerHTML = R.verdict.summary || "";
+
+      const trkHtml = (c) => {
+        const t = c.tracker;
+        if (!t) return "";
+        const workflow = {
+          clarifying: "Clarifying",
+          "in-progress": "In progress",
+          untracked: "Untracked",
+        };
+        if (typeof t === "string" && workflow[t])
+          return `<span class="trk"><code>${esc(workflow[t])}</code></span>`;
+        if (!Array.isArray(t.refs)) return "";
+        const parts = t.refs.map((r) => {
+          const href = r.href || (TL.base ? TL.base + r.id + (TL.suffix || "") : "");
+          return href
+            ? `<a href="${esc(safeHref(href))}">${esc(r.id)}</a>`
+            : `<code>${esc(r.id)}</code>`;
+        });
+        return `<span class="trk">🔗 ${parts.join(" · ")}</span>`;
+      };
+
+      // Stat cards — counted from checks, so they cannot drift from the panels.
+      const cardsEl = document.getElementById("cards");
+      ORDER.forEach((st) => {
+        const n = R.checks.filter((c) => c.status === st).length;
+        if (!n && (st === "na" || st === "unknown")) return;
+        const div = document.createElement("div");
+        div.className = "card " + st;
+        div.innerHTML = `<div class="num">${n}</div><div class="lbl">${esc(STATUS[st])}</div>`;
+        cardsEl.appendChild(div);
+      });
+
+      // Blocking section — the reason the page exists. Anything marked blocker that
+      // is not passing is repeated at the top, above every other detail.
+      const blocking = R.checks.filter(
+        (c) => c.blocker && c.status !== "pass" && c.status !== "na",
+      );
+      const blkEl = document.getElementById("blockers");
+      if (!blocking.length) {
+        document.getElementById("blockersHead").remove();
+        blkEl.remove();
+      } else {
+        blkEl.innerHTML = blocking
+          .map(
+            (c) =>
+              `<div class="row"><b>${esc(c.title)}</b>` +
+              `<span class="pill p-${c.status}">${esc(STATUS[c.status])}</span>` +
+              `<small>${esc(c.finding || "")}</small>` +
+              (c.fix ? `<small><b class="lbl-in">Fix:</b> ${esc(c.fix)}</small>` : "") +
+              trkHtml(c) +
+              `</div>`,
+          )
+          .join("");
+      }
+
+      // Dimension cards with a proportional status bar.
+      const dimsEl = document.getElementById("dims");
+      const byDim = (key) => R.checks.filter((c) => c.dimension === key);
+      R.dimensions.forEach((d) => {
+        const list = byDim(d.key);
+        const seg = ORDER.map((st) => {
+          const n = list.filter((c) => c.status === st).length;
+          return n ? `<i class="b-${st}" style="flex:${n}"></i>` : "";
+        }).join("");
+        const worst = ORDER.find((st) => list.some((c) => c.status === st)) || "na";
+        const openN = list.filter((c) => c.status !== "pass" && c.status !== "na").length;
+        const blockN = list.filter(
+          (c) => c.blocker && c.status !== "pass" && c.status !== "na",
+        ).length;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "dim";
+        btn.innerHTML =
+          `<div class="dtitle"><span>${esc(d.title)}</span>` +
+          `<span class="pill p-${worst}">${esc(STATUS[worst])}</span></div>` +
+          `<div class="bar">${seg}</div>` +
+          `<div class="dmeta">${list.length} checks · ${openN} open` +
+          (blockN ? ` · <b style="color:var(--red)">${blockN} blocking</b>` : "") +
+          `</div>` +
+          (d.notes ? `<div class="dmeta" style="margin-top:6px">${esc(d.notes)}</div>` : "") +
+          `<div class="more">Checks →</div>`;
+        btn.onclick = () => openDim(d.key);
+        dimsEl.appendChild(btn);
+      });
+
+      /* ------------------------------------------------------- drill-down */
+
+      const dlg = document.getElementById("detail");
+      function openDim(key) {
+        const d = R.dimensions.find((x) => x.key === key);
+        const list = byDim(key)
+          .slice()
+          .sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
+        document.getElementById("dtitle").textContent = d.title;
+        document.getElementById("dsub").textContent =
+          [d.owner ? `Owner: ${d.owner}` : "", `${list.length} checks`]
+            .filter(Boolean)
+            .join(" · ");
+        document.getElementById("dbody").innerHTML = list
+          .map(
+            (c) =>
+              `<div class="chk"><div class="ctop">` +
+              `<span class="pill p-${c.status}">${esc(STATUS[c.status])}</span>` +
+              `<span class="ctitle">${esc(c.title)}</span>` +
+              (c.blocker ? `<span class="blk">Blocker</span>` : "") +
+              (c.effort && EFFORT[c.effort]
+                ? `<span class="eff">${esc(EFFORT[c.effort])}</span>`
+                : "") +
+              `</div>` +
+              (c.evidence
+                ? `<small><b class="lbl-in">Evidence:</b> ${esc(c.evidence)}</small>`
+                : "") +
+              (c.finding
+                ? `<small><b class="lbl-in">Finding:</b> ${esc(c.finding)}</small>`
+                : "") +
+              (c.fix ? `<small><b class="lbl-in">Fix:</b> ${esc(c.fix)}</small>` : "") +
+              trkHtml(c) +
+              `</div>`,
+          )
+          .join("");
+        dlg.showModal();
+      }
+
+      document.getElementById("dclose").onclick = () => dlg.close();
+      dlg.addEventListener("click", (e) => {
+        if (e.target === dlg) dlg.close();
+      });
+    </script>
+  </body>
+</html>

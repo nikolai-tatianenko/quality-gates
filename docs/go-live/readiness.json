@@ -1,0 +1,254 @@
+{
+  "product": "QualityGate v0.1.0 (developer preview)",
+  "generatedAt": "2026-10-31",
+  "target": {
+    "url": "n/a — local CLI + 127.0.0.1 dashboard",
+    "build": "main@eb1cfe7",
+    "env": "local macOS, Node 22.23.4; remote CI run 41248871047"
+  },
+  "verdict": {
+    "call": "conditions",
+    "summary": "Ready to publish as a <b>GitHub developer preview</b>. It is a local CLI, not a hosted service, so billing, accounts and cookies do not apply. <code>pnpm verify:release</code> passed and remote CI is green on HEAD. Fix the open items below first, and do <b>not</b> publish to npm until the dependency advisories and the package name are settled."
+  },
+  "trackerLinks": {
+    "base": "https://github.com/example-org/qualitygate/issues/"
+  },
+  "provenance": "Reviewed <code>main@eb1cfe7</code> locally on Node 22.23.4 (the default Node 22.19.0 is rejected by <code>engines</code>). Evidence: <code>pnpm verify:release</code> (4/4 steps PASS, 126 s), <code>gh run list</code>, <code>pnpm audit --prod</code>, repo files. Recheck after fixes on branch features/october31: pnpm check and pnpm verify:release both pass.",
+  "footer": "Source: docs/go-live/readiness.json. Re-run <code>/golive recheck</code> after the open items are fixed.",
+  "dimensions": [
+    {
+      "key": "legal",
+      "title": "Legal & privacy",
+      "notes": "No accounts or hosted data. MIT licence."
+    },
+    {
+      "key": "security",
+      "title": "Auth & security",
+      "notes": "No auth surface; execution-boundary risks are documented."
+    },
+    {
+      "key": "billing",
+      "title": "Payments & billing",
+      "notes": "No payments."
+    },
+    {
+      "key": "data",
+      "title": "Data, backups & migrations",
+      "notes": "No server-side data."
+    },
+    {
+      "key": "observability",
+      "title": "Monitoring & alerting",
+      "notes": "No hosted service."
+    },
+    {
+      "key": "reliability",
+      "title": "Reliability & rollback"
+    },
+    {
+      "key": "performance",
+      "title": "Performance"
+    },
+    {
+      "key": "a11y",
+      "title": "Accessibility",
+      "notes": "Local dashboard only."
+    },
+    {
+      "key": "ux",
+      "title": "Experience & conversion"
+    },
+    {
+      "key": "seo",
+      "title": "Findability & sharing"
+    },
+    {
+      "key": "analytics",
+      "title": "Measurement"
+    },
+    {
+      "key": "support",
+      "title": "Support & comms"
+    }
+  ],
+  "checks": [
+    {
+      "id": "privacy-policy",
+      "dimension": "legal",
+      "title": "Privacy policy exists",
+      "status": "na",
+      "finding": "Not applicable: the tool collects nothing and has no hosted component. Revisit if a history service is added."
+    },
+    {
+      "id": "licences",
+      "dimension": "legal",
+      "title": "Third-party licences permit commercial use",
+      "status": "pass",
+      "blocker": false,
+      "evidence": "packages/code-analysis/package.json:21 lists eslint-plugin-sonarjs as a runtime dependency (installed, not bundled); grep -c sonarjs dist/qualitygate.mjs = 0. Documented in SECURITY.md."
+    },
+    {
+      "id": "secrets-not-shipped",
+      "dimension": "security",
+      "title": "No secrets in repo or shipped build",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "grep for AKIA/ghp_/sk-/PRIVATE KEY patterns over the repo excluding node_modules returned nothing. verify:package inspects the packed file list."
+    },
+    {
+      "id": "dep-audit",
+      "dimension": "security",
+      "title": "No known advisory in production dependencies",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "After bumping yaml to 2.8.4: pnpm audit --prod 24 vulnerabilities (was 25). Remaining runtime ones are transitive via lighthouse and @modelcontextprotocol/sdk; pnpm ones are repo tooling. Documented in SECURITY.md.",
+      "finding": "Transitive advisories remain and reachability is not established. Not a blocker for a GitHub preview, but resolve before an npm release.",
+      "fix": "Upgrade lighthouse and @modelcontextprotocol/sdk when fixed versions pass the 7-day age policy; bump packageManager to >=11.11 (touches 12 files); add pnpm audit --prod to CI once clean.",
+      "effort": "m",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "execution-boundary",
+      "dimension": "security",
+      "title": "Unsandboxed command execution is documented",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "SECURITY.md 'Execution boundary': gate commands and plugins are not sandboxed. MCP exposes only declared gates; dashboard binds 127.0.0.1 and validates Host/Origin."
+    },
+    {
+      "id": "threat-model",
+      "dimension": "security",
+      "title": "Threat model exists for the reviewed ref",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "docs/threat-model/ does not exist. docs/SECURITY_REVIEW.md and SECURITY.md cover the execution boundary in prose.",
+      "finding": "Downgraded from blocker: a local developer tool with no hosted surface. The MCP-with-AI-agent path (an agent running arbitrary configured commands) is the real exposure and deserves a STRIDE pass.",
+      "fix": "Run /threat on the MCP server and the dashboard server.",
+      "effort": "m",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "live-keys",
+      "dimension": "billing",
+      "title": "Payments configured",
+      "status": "na",
+      "finding": "No payments in the product."
+    },
+    {
+      "id": "backup-restore",
+      "dimension": "data",
+      "title": "Backup and restore",
+      "status": "na",
+      "finding": "No server-side data. Run history is local files under .qualitygate/."
+    },
+    {
+      "id": "error-tracking",
+      "dimension": "observability",
+      "title": "Errors reach a human",
+      "status": "na",
+      "finding": "No hosted service. Users report problems through GitHub issues (see support)."
+    },
+    {
+      "id": "e2e-green",
+      "dimension": "reliability",
+      "title": "Critical-path suite passes on the reviewed build",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "pnpm verify:release: check, verify:analysis-package, verify:package (real Chrome: pass/block/mixed/no-chrome/timeout/interrupt/write-error), smoke:dashboard all PASS (.qualitygate/release-check.json). Remote CI run 41248871047 success on eb1cfe7."
+    },
+    {
+      "id": "rollback",
+      "dimension": "reliability",
+      "title": "Last release can be reverted",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "Nothing published to npm (README: 'not published to npm yet'). A GitHub push is revertible, and v0.1.0 tag exists at 30fb120."
+    },
+    {
+      "id": "node-version",
+      "dimension": "reliability",
+      "title": "Supported runtime is enforced and obvious",
+      "status": "pass",
+      "blocker": false,
+      "evidence": "README.md:77 and CONTRIBUTING.md state Node 22.23.4+; .nvmrc and engines enforce it. (Earlier warn was wrong: the README already said this.)"
+    },
+    {
+      "id": "lcp-key-routes",
+      "dimension": "performance",
+      "title": "Dashboard loads quickly",
+      "status": "na",
+      "finding": "Local 127.0.0.1 dashboard, not an internet-facing page. Smoke test loads it in real Chrome at desktop and mobile widths."
+    },
+    {
+      "id": "contrast",
+      "dimension": "a11y",
+      "title": "Dashboard meets AA contrast",
+      "status": "pass",
+      "blocker": false,
+      "evidence": "CHANGELOG and docs/verification/dashboard-themes-2026-10-30.json: selected text contrast checks in light and dark themes, plus screenshots at 320 px and 390 px widths. Not re-run in this review."
+    },
+    {
+      "id": "first-run",
+      "dimension": "ux",
+      "title": "First-time user reaches value from the README",
+      "status": "pass",
+      "blocker": true,
+      "evidence": "README Quickstart + 'Add to an existing project'; verify:package performs a clean tarball install, init and run against real Chrome. Install-from-tarball flow is documented (README:116-132)."
+    },
+    {
+      "id": "package-name",
+      "dimension": "ux",
+      "title": "Package name is final",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "package.json name is 'qualitygate-prototype'; README line 116 says not on npm yet. npm view could not be run (EBADDEVENGINES under pnpm-managed config), so name availability is unchecked.",
+      "finding": "'prototype' in the published name will stick and looks unfinished. Not an issue for a GitHub-only preview.",
+      "fix": "Choose the final name and scope (for example @qualitygate/cli), verify availability, and rename before the first npm publish.",
+      "effort": "s",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "sitemap-robots",
+      "dimension": "seo",
+      "title": "Sitemap and robots",
+      "status": "na",
+      "finding": "No website. Repository discoverability comes from the README and GitHub topics."
+    },
+    {
+      "id": "consent-gated",
+      "dimension": "analytics",
+      "title": "Analytics respects consent",
+      "status": "na",
+      "finding": "No analytics or telemetry in the project docs or README (grep for telemetry/analytics found none)."
+    },
+    {
+      "id": "contact-path",
+      "dimension": "support",
+      "title": "A user can reach a human",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "Added .github/ISSUE_TEMPLATE/bug_report.yml; SECURITY.md and CONTRIBUTING.md exist.",
+      "finding": "Issue template is done. Private vulnerability reporting is a GitHub repo setting that has not been enabled or verified.",
+      "fix": "In GitHub: Settings > Code security > Private vulnerability reporting > Enable, then name it in SECURITY.md.",
+      "effort": "s",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    },
+    {
+      "id": "release-tag",
+      "dimension": "support",
+      "title": "Release tag and changelog match",
+      "status": "warn",
+      "blocker": false,
+      "evidence": "Local tag v0.1.0 points to 30fb120 (git rev-list), but git ls-remote --tags origin returns no tags. CHANGELOG has a large 'Unreleased' section above '0.1.0 baseline'.",
+      "finding": "The v0.1.0 tag predates five later commits, and it is not pushed. Publishing a preview with a stale tag would point users at an older state than the README describes.",
+      "fix": "Move the work under a new version heading (for example 0.2.0-preview), tag that commit, and push the tag after authorization.",
+      "effort": "s",
+      "tracker": "untracked",
+      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+    }
+  ]
+}
