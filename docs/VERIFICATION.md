@@ -1,3 +1,110 @@
+# Dependency policy verification — 2026-10-30
+
+The repository now requires pnpm 11.5.1 and a strict seven-day minimum registry
+release age (10080 minutes), without age exclusions. Native developer-engine
+checks reject npm checkout installs even with scripts disabled; a dependency-free
+preinstall guard covers other managers/versions. Packaged CLI consumers retain
+package-manager choice.
+
+The initial lockfile was rejected for six too-recent entries. Fresh resolution
+selected compatible eligible versions rather than bypassing the age policy:
+MCP SDK 1.32.1, Hono 4.13.13, ignore 7.0.13, ip-address 10.7.4,
+legacy-javascript 0.0.3 and qs 6.16.1. Fresh and frozen-lockfile installs passed.
+
+`pnpm verify:release` passed all four stages with **62 tests**, 100% runtime
+lines/statements/functions and 95.82% branches. Packaging uses pnpm; npm consumer
+installation checks run outside the checkout. The packaged guard is also checked
+in consumer mode. `pnpm smoke` separately passed against the locked source graph,
+including real Chrome, timeout, SIGINT and owned-process cleanup. CI now checks
+both source and consumer browser workflows.
+
+Machine-readable [policy verification snapshot](verification/dependency-policy-2026-10-30.json)
+includes tested configuration hashes, test totals and local run results. No push,
+publication or remote CI run was performed. Code-style configuration and the
+current limits of project overrides are documented in [CODE_QUALITY.md](CODE_QUALITY.md).
+
+---
+
+# GitHub developer-preview acceptance — 2026-10-30
+
+Source commit: `b33356b92a053b329204ffb38fc0d209a82ec653` (local branch `feature/new_solution`).
+Machine-readable [verification snapshot](verification/local-release-2026-10-30.json).
+
+`pnpm install --frozen-lockfile` and the complete `pnpm verify:release` passed:
+
+| Step | Result |
+| --- | --- |
+| Lint, types, code analysis, 60 tests, coverage and builds | PASS |
+| Standalone analyzer tarball API/CLI, TypeScript and Python | PASS |
+| Installed CLI tarball: Chrome, errors, timeout, SIGINT and no owned Chrome leaks | PASS |
+| Documented `pnpm dashboard` command in real Chrome: Python BLOCK → source fix → PASS | PASS |
+
+Coverage remains 100% lines/statements/functions and 95.83% branches. The
+workflow now includes the analyzer package and actual dashboard command/browser
+check. README/CHANGELOG distinguish verified features from experimental model
+and editor integrations; local links and referenced Python fixtures are committed.
+
+The first release run exposed an overly short 15-second fixture-readiness wait in
+the SIGINT smoke test. Process monitoring now runs asynchronously without blocking
+the HTTP fixture; readiness uses the configured audit budget. Test failure also
+waits for CLI cleanup and diagnoses leaks before emergency cleanup, so cleanup
+cannot turn a leak into a passing assertion. The complete release command then
+passed all four stages sequentially.
+
+This is ready to share as a **developer preview**. No push, package publication or
+remote GitHub Actions run occurred. The first remote CI result still has to be
+checked after an authorized push. Existing tags were left intact.
+
+---
+
+# Local self-analysis, Python and React verification — 2026-10-29
+
+- Final `pnpm check` passed: lint, strict typecheck, code analysis, **60 tests**,
+  enforced coverage and all workspace builds.
+- Runtime TypeScript/TSX coverage: **100% statements/lines (1196/1196), 100%
+  functions (97/97), 95.83% branches (713/744)**. The floors are 100/100/100/95 in
+  `.c8rc.json`. HTML, JSON summary, raw JSON and LCOV are in `coverage/`.
+- Every runtime file in `packages/` is included even if never imported. The only
+  explicit source exclusion is `plugin-sdk/src/index.ts`, which contains only
+  TypeScript interfaces/types. Dependencies, generated bundles, tests, tooling
+  scripts, CSS and the legacy archive are outside this runtime coverage scope.
+- A fresh temporary workspace excluded all node_modules/dist/coverage from its
+  copy, installed the frozen lockfile, and passed the complete check/build pipeline.
+- Self-check through QualityGate used the repository's actual four gates (lint,
+  typecheck, analysis, coverage tests) plus a local HTML preview of its README.
+  Result: PASS, scores performance 100 / accessibility 100 / SEO 91 /
+  best-practices 100. This is self-use on this repository, not an external adoption
+  claim. Evidence: `.qualitygate/project-verification/`.
+- The standalone `@qualitygate/code-analysis` tarball installed with npm in a
+  temporary directory and passed executable/API checks and TS/Python BLOCK → PASS.
+  It uses ESLint/SonarJS and Ruff 0.9.2, not a new parser or hand-written complexity
+  algorithm. Its configured rules report no current product-code violations.
+- A real Chrome 156 session used the React UI to run Python analysis + unittest,
+  received F401/BLOCK, then PASS after removing the unused import. Desktop and
+  mobile screenshots were visually inspected; mobile overflow and browser JS
+  errors were checked. Evidence: `.qualitygate/dashboard-smoke/`.
+- The updated CLI tarball passed real Chrome PASS, BLOCK, mixed URL failure,
+  missing Chrome, timeout, SIGINT, storage failure and plain/JSON output scenarios.
+  The harness checked owned Chrome PIDs after each run. An earlier concurrent smoke
+  exposed a timeout/profile-cleanup race; cleanup now kills and reaps the owned
+  process before asking the launcher to remove its profile. A regression test
+  asserts that ordering using real child processes; the repeated smoke passed.
+  Evidence: `.qualitygate/smoke-mQ8qEE/`.
+- A local Linux arm64 container reproduced the root Chrome sandbox startup failure
+  and passed a real audit with the explicit isolated-container opt-in. Startup
+  diagnostics now read the actual launcher file, `chrome-err.log`. See
+  [environments](ENVIRONMENTS.md) for exact versions, commands and limits.
+- MCP tests cover active cancellation, child-process cleanup, disconnect drain,
+  and overlapping-run rejection while reads remain available. Model adapters have
+  local HTTP contract tests and a real stdio MCP roundtrip. Live model inference
+  and every editor's UI have not been validated; see [integrations](INTEGRATIONS.md).
+
+All work and verification in this stage stayed local. GitHub Actions YAML was
+updated/parsed but no remote workflow, push or package publication was performed.
+The earlier release notes below remain historical verification records.
+
+---
+
 # v0.1.0 release verification — 2026-10-28
 
 - Frozen-lockfile install, lint, strict typecheck, 24 tests and build passed after

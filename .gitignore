@@ -4,3 +4,6 @@ dist
 .qualitygate/
 *.tgz
 .ops/
+coverage/
+__pycache__/
+.ruff_cache/

@@ -1,6 +1,6 @@
 import { mkdtemp, cp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { join, resolve, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
 const directory = await mkdtemp(join(tmpdir(), 'qualitygate-clean-'));
@@ -11,8 +11,10 @@ async function command(args) {
   assert.equal(code, 0, `pnpm ${args.join(' ')} failed`);
 }
 try {
-  for (const path of ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', 'tsconfig.json', 'eslint.config.mjs', 'LICENSE', 'packages', 'tests', 'scripts']) {
-    await cp(join(root, path), join(directory, path), { recursive: true });
+  for (const path of ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml', '.nvmrc', '.npmrc', 'tsconfig.json', 'eslint.config.mjs', '.c8rc.json', 'LICENSE', 'packages', 'tests', 'scripts']) {
+    await cp(join(root, path), join(directory, path), { recursive: true,
+      filter: source => !source.split(sep).some(segment => ['node_modules', 'dist', 'coverage'].includes(segment)),
+    });
   }
   await command(['install', '--frozen-lockfile']);
   await command(['check']);
