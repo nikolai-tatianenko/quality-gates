@@ -77,3 +77,19 @@ behavior, and the impact. Remove credentials and private data from attachments.
 Do not put exploit details or secrets in a public issue. If private reporting is
 unavailable, open an issue that only requests a private contact channel, without
 vulnerability details. There is no guaranteed response time for this project.
+
+## Known dependency advisories
+
+`pnpm audit --prod` (2026-10-31) still reports advisories that arrive transitively
+through `lighthouse` (puppeteer-core, Sentry/OpenTelemetry) and
+`@modelcontextprotocol/sdk` (zod). They are not patched upstream within the
+seven-day release-age policy, and reachability from QualityGate's code paths has
+not been established. They will be re-checked on each release and the dependencies
+upgraded when fixed versions are eligible. The `pnpm` advisories apply to the
+repository's own tooling (`packageManager`), not to the published CLI.
+
+## Licences
+
+`@qualitygate/code-analysis` depends on `eslint-plugin-sonarjs` (LGPL-3.0-only) as
+a normal runtime dependency. It is installed alongside the package, not copied
+into it or into the CLI bundle.
