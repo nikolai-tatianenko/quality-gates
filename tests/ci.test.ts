@@ -30,7 +30,7 @@ test('Markdown summarizes decisions, execution errors, findings, output and evid
 });
 
 test('PR migration preserves untagged prose; later runs replace only the automated block', () => {
-  for (const human of ['', 'Original text without newline', 'Описание\r\n\r\n- manual detail\r\n']) {
+  for (const human of ['', 'Original text without newline', 'Manual description\r\n\r\n- manual detail\r\n']) {
     const first = updateDescription(human, '## Result\nBLOCK', metadata);
     assert.ok(first.body.includes(human)); assert.ok(first.body.indexOf(markers.manualEnd) < first.body.indexOf(markers.autoStart));
     const second = updateDescription(first.body, '## Result\nPASS', { ...metadata, finishedAt: '2026-10-30T20:02:00.000Z' });

@@ -1,116 +1,115 @@
-# QualityGate — видение продукта
+# QualityGate product vision
 
-QualityGate помогает разработчику, CI и AI-агенту одинаково отвечать на вопрос:
-соответствует ли изменение требованиям качества и какими результатами это доказано.
-Политика задаётся в проекте, существующие инструменты выполняют проверки, а
-QualityGate сохраняет их результаты и принимает воспроизводимое решение.
+QualityGate gives developers, CI and AI agents a shared answer to two questions:
+does this change satisfy the project's quality policy, and what evidence supports
+that decision? Projects own their policy. Existing tools perform the analysis.
+QualityGate coordinates execution, evaluates results and preserves the evidence.
 
-## Для кого и зачем
+## The problem
 
-Разработчик должен иметь возможность проверить проект локально до отправки изменений.
-CI должен применять те же правила и возвращать понятный код завершения. AI-агенту
-нужен структурированный результат с причинами блокировки и путями к доказательствам.
+Teams often distribute quality requirements across package scripts, CI jobs,
+editor settings and agent prompts. Those entry points can disagree about thresholds,
+required checks and failure semantics. An agent may see a failed command without
+the source location or raw report needed to act on it.
 
-Сейчас пороги, команды и трактовка ошибок часто разбросаны между скриптами и CI.
-QualityGate собирает их в один проверяемый процесс. Ошибка запуска инструмента,
-отсутствующая метрика и нарушение порога должны оставаться различимыми.
+QualityGate makes that contract explicit and available through CLI, MCP and a local
+dashboard. A policy violation, missing metric and tool execution failure remain
+distinct outcomes. None can silently become a successful CI result.
 
-## Основной рабочий процесс
+## Execution model
 
-1. В репозитории хранится версия конфигурации, список целей и явные требования.
-2. Пользователь или CI запускает проверки через CLI.
-3. Плагины вызывают инструменты и приводят результаты к общему контракту.
-4. Policy engine сопоставляет результаты с требованиями.
-5. Запуск получает уникальный ID, решение, причины и сохранённые артефакты.
+1. Commit a versioned configuration containing targets, checks and requirements.
+2. Invoke the shared service from the CLI, CI, a Git hook, MCP or the dashboard.
+3. Plugins execute tools and normalize their output into a versioned result schema.
+4. The policy engine evaluates the recorded measurements against explicit rules.
+5. Persist the run ID, execution status, decision, reasons and evidence paths.
 
-Один сохранённый набор метрик должен давать одинаковое решение при одинаковых
-порогах. Повторный запуск Lighthouse может дать другие измерения; воспроизводимость
-policy engine не означает неизменность производительности сайта.
+Identical recorded metrics and thresholds must produce the same policy decision.
+That guarantee does not make repeated browser measurements identical: Lighthouse
+results can vary with the page, machine and execution environment.
 
-## Принципы
+## Design principles
 
-- **Локальная работа без аккаунта.** Базовая проверка не требует облачного сервиса.
-- **Небольшое ядро.** Контракты, lifecycle и orchestration отделены от инструментов,
-  представления отчётов и хранения. Новая проверка добавляется через плагин.
-- **Явная политика.** Обязательная отсутствующая метрика блокирует результат.
-  Плагин не должен подменять итоговое решение policy engine.
-- **Раздельные статусы.** Успех выполнения и соответствие требованиям — разные поля.
-  Успешно запущенный аудит может дать BLOCK; ошибка записи может сопровождать PASS
-  по метрикам, но всё равно завершить CLI с кодом ошибки.
-- **Доказательства рядом с решением.** Исходные отчёты и общий результат доступны
-  по путям, связанным с конкретным запуском.
-- **Предсказуемое завершение.** Таймауты, прерывания и ошибки не скрываются;
-  ресурсы запущенных проверок освобождаются.
-- **Версионированные контракты.** TypeScript и Zod задают проверяемые форматы
-  конфигурации, результатов и интерфейсов плагинов.
+- **Project-owned policy.** Required missing metrics block the result. Plugins
+  supply measurements and execution outcomes; policy determines acceptance.
+- **Separate execution and acceptance.** A completed audit can yield BLOCK. A
+  report-write failure remains an execution error even when measured scores pass.
+- **A small shared core.** Contracts, orchestration and lifecycle are independent
+  of individual tools, report presentation and storage implementations.
+- **Evidence accompanies the verdict.** Keep raw tool output and normalized
+  results associated with the same run, with atomic summary writes.
+- **Explicit resource ownership.** Timeouts, interruption and cleanup failures
+  are observable. The runner must terminate the processes it starts.
+- **Versioned boundaries.** TypeScript and Zod define configuration and result
+  contracts. Compatibility checks reject unsupported plugin contracts early.
+- **Local operation.** The core workflow requires no hosted account. Remote
+  integrations are explicit dependencies with documented trust boundaries.
 
-## Первый рабочий прототип
+## Implemented developer preview
 
-Первый продуктовый срез — CLI для Lighthouse, а не вся платформа сразу:
+The initial Lighthouse CLI supports sequential HTTP(S) audits, explicit category
+thresholds, raw JSON evidence and machine-readable output. Configuration creation
+does not overwrite existing files. Exit codes distinguish PASS (`0`), BLOCK (`1`),
+execution/configuration/storage errors (`2`) and interruption (`130`).
 
-- `qualitygate init` создаёт конфигурацию без перезаписи существующего файла.
-- `qualitygate run` последовательно проверяет один или несколько HTTP(S) URL.
-- Performance, accessibility, SEO и best-practices оцениваются по шкале 0–100.
-- JSON reporter и filesystem plugin сохраняют исходные аудиты и атомарный общий отчёт.
-- `--json` возвращает машинный результат; обычный вывод показывает оценки и пути.
-- Коды завершения: PASS — 0, BLOCK — 1, ошибка — 2, прерывание — 130.
-- Контракты плагинов, policy engine, негативные сценарии и реальный Chrome проверяются
-  тестами; CLI проверяется после установки из локального tarball.
+The current Node.js/TypeScript monorepo extends that foundation with:
 
-Плагины этого прототипа — доверенный локальный код. Sandbox-защита и безопасное
-исполнение произвольных сторонних плагинов не заявляются. Действующая лицензия QualityGate — MIT; архив Lighthouse v1 сохраняет ISC.
+- Command gates for existing project scripts and an ESLint JSON adapter with
+  structured file, line, rule, severity and evidence fields.
+- A reusable TS/JS and Python analysis package using ESLint/SonarJS and Ruff.
+  QualityGate applies the same analyzer to its own sources.
+- A stdio MCP server exposing configured checks, execution, saved runs and pinned
+  review methodologies. The recorded Claude Code session demonstrates
+  BLOCK → inspect → implementation fix → PASS without weakening tests or policy.
+- A local React dashboard for execution, cancellation, findings and evidence,
+  including light/dark/system themes and loopback-only Portless routing.
+- A SonarQube adapter tied to a specific scanner analysis and a normalized
+  contract for externally produced review findings.
+- GitHub, GitLab and Bitbucket CI templates, report rendering and explicit
+  PR/MR description publication that preserves handwritten content.
 
-## Текущий MVP
+External review methodologies are downloaded explicitly, pinned by Git commit
+and read as reference material. Updating a source lock and restoring its frozen
+revision are separate operations. Unresolved review candidates block acceptance.
+Loading a methodology does not constitute a completed security audit.
 
-После первого прототипа добавлены command gates для любых проектных проверок и
-MCP stdio-сервер с `list_gates`, `run_gates`, `get_run`. Настоящий сеанс Claude Code
-показывает полный цикл BLOCK → чтение причины → исправление исходника → PASS.
-Старый CommonJS-сервис перемещён в `legacy/lighthouse-v1/`; основной CLI и его
-зависимости находятся в корне workspace и `packages/`.
+## Trust boundaries and limits
 
-Следующий реализованный срез — пакет `@qualitygate/code-analysis` для TS/JS и Python
-и локальный React-интерфейс `@qualitygate/dashboard`. Анализатор использует
-ESLint/SonarJS и Ruff, отдаёт структурированные findings с расположением в коде.
-QualityGate проверяет этим же пакетом собственные исходники. Dashboard использует
-общий сервис выполнения: запуск, отмена, PASS/BLOCK, findings и evidence.
-Код остаётся Node.js/TypeScript-монорепозиторием; Python — поддерживаемый язык
-проверяемых проектов, со своими инструментами и тестовыми командами.
+Configured commands and local plugins are trusted code, **not sandboxed**. They
+inherit the invoking user's permissions. MCP exposes the selected configuration;
+it does not accept arbitrary commands or replacement project paths. The local
+dashboard has no authentication and must not be exposed as a public service.
 
-Добавлены адаптер SonarQube для конкретного scanner analysis и контракт результатов
-агентного review. Внешние методики, включая Cloudflare security-audit-skill,
-скачиваются явно, фиксируются по commit SHA и читаются через MCP-инструмент
-`get_review_methodology`. Обновления и восстановление закреплённой версии разделены.
-Неподтверждённые кандидаты блокируют review-гейт; методика сама по себе не считается
-выполненным аудитом. Полный агентный security-аудит, проверка его upstream-артефактов
-и изолированное исполнение проверяемого кода остаются следующим этапом.
+A complete Cloudflare audit harness, independent verification of upstream audit
+artifacts, isolated target execution and exact worktree binding remain future work.
+Live provider/editor/model compatibility is limited to the evidence recorded in
+[verification](docs/VERIFICATION.md), not inferred from adapter availability.
 
-## Направления развития
+## Next product increments
 
-Развитие идёт небольшими законченными этапами, каждый с рабочим примером и проверками:
+1. Validate adoption in independent repositories and tighten installation,
+   environment diagnostics and failure recovery around observed problems.
+2. Extend structured adapters for tests and coverage while preserving the common
+   result contract and explicit evaluation rules.
+3. Bind review results to the exact source tree and verify producer evidence;
+   introduce isolation before executing untrusted targets.
+4. Build run comparison and history from persisted evidence, with actionable
+   regressions rather than synthetic analytics.
+5. Expand interfaces or remote execution only after validating demand, resource
+   ownership and the corresponding security model.
 
-1. Расширить SDK и добавить проверки ESLint, тестов и покрытия, сохранив общий
-   контракт и единые правила оценки.
-2. Развить CLI: просмотр запусков, диагностика окружения и удобное представление
-   прогресса; сохранить пригодность JSON и кодов завершения для CI.
-3. Развивать реализованный MCP-адаптер, чтобы агенты получали те же результаты, что CLI, с явными
-   границами проекта и разрешённых операций.
-4. Построить dashboard и историю запусков поверх существующих результатов:
-   причины блокировок, артефакты, сравнение изменений и регрессии.
-5. Рассматривать desktop, расширение браузера, удалённое выполнение и экосистему
-   сторонних плагинов после проверки потребности и границ безопасности.
+New interfaces must use the existing runner and policy engine. Package publication
+and hosted operation are separate release decisions. The archived CommonJS service
+in `legacy/lighthouse-v1/` retains ISC; the maintained implementation uses MIT.
 
-MCP, dashboard, Ink, дополнительные quality-инструменты и desktop не входят
-в первый прототип. Публикация пакетов — отдельное решение.
-Новые интерфейсы должны использовать существующий runner и policy engine.
+## Acceptance criteria
 
-## Как понять, что продукт полезен
+A user can configure a project from the quickstart, run the same policy locally
+and in CI, and explain each BLOCK through a metric, finding or explicit failure.
+A new audit plugin can integrate without changing the core. One failed target
+does not erase earlier results. A saved report identifies both the decision and
+the raw evidence needed to inspect it.
 
-Проект можно настроить и проверить по quickstart. Локальная команда и CI применяют
-одни пороги. Любую блокировку можно объяснить метрикой, ошибкой или отсутствующим
-результатом. Новый audit-плагин подключается без изменения ядра. Сбой одной цели
-не уничтожает результаты остальных. Сохранённого отчёта достаточно, чтобы проверить
-принятое решение и найти исходные доказательства.
-
-Практические команды находятся в [README](README.md), границы прототипа —
-в [PROTOTYPE.md](docs/PROTOTYPE.md), выполненные проверки —
-в [VERIFICATION.md](docs/VERIFICATION.md), текущие задачи — в [TODO.md](TODO.md).
+See the [README](README.md) for usage, [prototype scope](docs/PROTOTYPE.md) for the
+original boundary, [verification](docs/VERIFICATION.md) for observed behavior and
+[roadmap](TODO.md) for outstanding work.

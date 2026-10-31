@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { QualityGateService } from '../../service/src/index.js';
 import { message } from '../../protocol/src/index.js';
+import { portlessOrigin, dashboardHost } from './address.js';
 
 const headers = { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store',
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" };
@@ -10,7 +11,8 @@ function json(res: ServerResponse, status: number, value: unknown) {
   res.writeHead(status, { ...headers, 'Content-Type': 'application/json' }); res.end(JSON.stringify(value));
 }
 /** Bound to one trusted configuration. No endpoint accepts paths, commands or new configuration. */
-export function createDashboard(configPath: string, assets = resolve('packages/dashboard/dist')) {
+export function createDashboard(configPath: string, assets = resolve('packages/dashboard/dist'), publicOrigin?: string) {
+  const externalOrigin = portlessOrigin(publicOrigin);
   const service = new QualityGateService(resolve(configPath));
   let active: AbortController | undefined;
   const server = createServer((req, res) => { void route(req, res).catch(error => json(res, 500, { error: message(error) })); });
@@ -28,10 +30,12 @@ export function createDashboard(configPath: string, assets = resolve('packages/d
     finally { active = undefined; }
   }
   async function route(req: IncomingMessage, res: ServerResponse) {
-    if (`http://${req.headers.host}` !== origin()) { json(res, 403, { error: 'Invalid host' }); return; }
-    const path = new URL(req.url!, origin()).pathname;
+    const backendOrigin = origin();
+    const expectedOrigin = externalOrigin ?? backendOrigin;
+    if (!dashboardHost(req.headers.host, backendOrigin, expectedOrigin)) { json(res, 403, { error: 'Invalid host' }); return; }
+    const path = new URL(req.url!, expectedOrigin).pathname;
     if (req.method === 'POST') {
-      if (req.headers.origin !== origin() || req.headers['x-qualitygate-request'] !== '1') { json(res, 403, { error: 'Invalid origin or request header' }); return; }
+      if (req.headers.origin !== expectedOrigin || req.headers['x-qualitygate-request'] !== '1') { json(res, 403, { error: 'Invalid origin or request header' }); return; }
       if (req.headers['transfer-encoding'] || Number(req.headers['content-length'] ?? 0) > 0) { json(res, 400, { error: 'Request body is not supported' }); return; }
       await mutate(path, res); return;
     }
@@ -46,6 +50,7 @@ export function createDashboard(configPath: string, assets = resolve('packages/d
       return;
     }
     const files: Record<string, [string, string]> = { '/': ['index.html', 'text/html; charset=utf-8'],
+      '/theme-init.js': ['theme-init.js', 'text/javascript; charset=utf-8'],
       '/app.js': ['app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app.css', 'text/css; charset=utf-8'] };
     const file = files[path];
     if (!file) { json(res, 404, { error: 'Not found' }); return; }

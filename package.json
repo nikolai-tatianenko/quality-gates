@@ -24,7 +24,10 @@
     "dashboard": "node --import tsx packages/dashboard/src/cli.ts",
     "build:dashboard": "node packages/dashboard/build.mjs",
     "verify:release": "node scripts/verify-release.mjs",
-    "preinstall": "node scripts/require-pnpm.mjs"
+    "preinstall": "node scripts/require-pnpm.mjs",
+    "dev:ui": "node --import tsx scripts/dashboard-portless.ts",
+    "smoke:portless": "node scripts/portless-smoke.mjs",
+    "verify:hooks": "node scripts/verify-hooks.mjs"
   },
   "author": "QualityGate contributors",
   "license": "MIT",
@@ -61,10 +64,13 @@
     "docs/CI.md",
     "examples/ci",
     "examples/security-review/.qualitygate.yml",
-    "examples/security-review/qualitygate.sources.lock.json"
+    "examples/security-review/qualitygate.sources.lock.json",
+    "docs/PROJECT_SETUP.md",
+    "examples/hooks",
+    "docs/screenshots"
   ],
   "engines": {
-    "node": ">=22.19.0"
+    "node": ">=22.23.4"
   },
   "packageManager": "pnpm@11.5.1",
   "devDependencies": {
@@ -77,6 +83,7 @@
     "eslint": "9.37.0",
     "eslint-plugin-sonarjs": "4.2.2",
     "jsdom": "26.1.0",
+    "portless": "0.12.0",
     "puppeteer-core": "24.43.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",

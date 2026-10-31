@@ -1,0 +1,10 @@
+schemaVersion: 1
+gates:
+  - id: lint
+    run: pnpm run lint
+  - id: typecheck
+    run: pnpm run typecheck
+  - id: tests
+    run: pnpm run test:ci
+    timeoutMs: 300000
+outputDir: .qualitygate

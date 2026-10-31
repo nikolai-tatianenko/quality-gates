@@ -5,6 +5,8 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+env:
+  HUSKY: '0'
 jobs:
   qualitygate:
     runs-on: ubuntu-latest
@@ -22,6 +24,7 @@ jobs:
       - run: python -m pip install ruff==0.9.2
       - run: pnpm check
       - run: pnpm verify:ci-templates
+      - run: pnpm verify:hooks
       - uses: browser-actions/setup-chrome@v2
         id: chrome
         with:
@@ -37,6 +40,10 @@ jobs:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
           QUALITYGATE_CHROME_NO_SANDBOX: '1'
       - run: pnpm smoke:dashboard
+        env:
+          CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
+          QUALITYGATE_CHROME_NO_SANDBOX: '1'
+      - run: pnpm smoke:portless
         env:
           CHROME_PATH: ${{ steps.chrome.outputs.chrome-path }}
           QUALITYGATE_CHROME_NO_SANDBOX: '1'

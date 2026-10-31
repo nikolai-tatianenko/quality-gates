@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-31",
+  "sourceBaseCommit": "3c4c9923f3800d441d640c398f968f9e9f032414",
+  "checks": {
+    "tests": 76,
+    "passed": 76,
+    "failed": 0,
+    "lint": "PASS",
+    "typecheck": "PASS",
+    "complexity": "PASS",
+    "build": "PASS"
+  },
+  "runtimeCoverage": {
+    "lines": {
+      "total": 1742,
+      "covered": 1742,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1742,
+      "covered": 1742,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 148,
+      "covered": 148,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 1141,
+      "covered": 1105,
+      "skipped": 0,
+      "pct": 96.84
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "portless": {
+    "version": "0.12.0",
+    "url": "http://qualitygate.localhost:56698",
+    "decision": "PASS",
+    "browser": "Chrome/156.0.8078.74",
+    "errors": [],
+    "csrfChecked": true,
+    "namedOriginVerified": true,
+    "systemCertificatesChanged": false,
+    "hostsFileChanged": false
+  },
+  "husky": {
+    "husky": "9.1.7",
+    "preCommitBlocks": true,
+    "preCommitPasses": true,
+    "fastSelection": [
+      "lint",
+      "typecheck"
+    ],
+    "prePushRunsAllGates": true,
+    "prePushBlocks": true,
+    "remoteType": "temporary local bare Git; dry-run only",
+    "rootHooksUnchanged": true,
+    "cli": "actual built CLI linked into fixture",
+    "status": "PASS"
+  },
+  "documentation": {
+    "localLinksChecked": 44,
+    "packagedScreenshotsAndHooks": true,
+    "sourceWorkflowYamlParsed": true,
+    "mermaid": "Native GitHub Mermaid source; no renderer verification claimed"
+  },
+  "boundaries": {
+    "remoteWrites": false,
+    "remoteCiRun": false,
+    "publication": false,
+    "rootHooksChanged": false
+  },
+  "sha256": {
+    "README.md": "3352eb1a45b200a39e1f1b38bc4c3e1e1eb95eeaa23b4623d4f7818c5ede5646",
+    "package.json": "8bc214305a664bb0d0ab7ecb4fe3fedb0ea56ac298d3a8d4c936ee3740b9b16d",
+    "pnpm-lock.yaml": "483a5d5ed127cdf7063032f815564379ce99890bb1fd370bbc0f875a8802cfcd",
+    "packages/dashboard/src/address.ts": "e53f6accb36783fdbc712675a81ade2aa8aecf706e3c2ab5356e5d4b32fb540b",
+    "packages/dashboard/src/server.ts": "c9e39e99d54107ff4b3e076366d193a207ae567ca8441fd467a2f5fad26d1237",
+    "packages/dashboard/src/cli.ts": "3473dc421fa4b16d19cb1c82b690fe60d209892d696ea134414018406810030f",
+    "scripts/dashboard-portless.ts": "d940df3e5335c1e4a517f0fcb9b6d8b6e22d818cd71349bbff2700ccdc7187f8",
+    "scripts/portless-smoke.mjs": "432fd08f9419a05da83d384dc57fa386dc1de27da590a0c6afd1bffc274c7bf6",
+    "scripts/verify-hooks.mjs": "d07906b41b0497975521c0b4eea456bf70d41ea35d1850b16c0e974236306679",
+    "tests/dashboard-portless.test.ts": "024ddb3710a7de4478e9b47cb5b0e40f5e508a344bd5a30b22c305dcb90f3216",
+    "docs/PROJECT_SETUP.md": "112970b435f2bc7ceb64b1f04a4a3dbed8fc0466cc0c1185dc6ff9810313e23d",
+    ".github/workflows/lighthouse.yml": "bfc391afe33727cc2a23a23021f05fc087610f438362f8abb8ad1959aeb85f94",
+    "docs/screenshots/dashboard-dark.png": "b50028b5ec780dfb8647485996583dd5d50869f18536688209d66cec74b81010",
+    "docs/screenshots/dashboard-light.png": "063d6771004d0fae055ae2474763be3663d2be248f4d6e3f81179c362dc7f124",
+    "docs/screenshots/dashboard-mobile.png": "fb50ccfb881ac41a8c92885d6c2e8fe8f834765b8815e308db18945d49bc7b98"
+  }
+}

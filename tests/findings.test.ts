@@ -61,13 +61,13 @@ test('Chrome diagnostics retain sandbox errors and recommend an explicit isolate
 test('captured ESLint JSON preserves UTF-8 characters split across stdout chunks', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'qg-eslint-utf8-'));
   try {
-    const report = JSON.stringify([{ filePath: join(dir, 'source.mjs'), messages: [{ severity: 2, message: 'ошибка', ruleId: 'test', line: 1 }] }]);
-    const data = Buffer.from(report); const split = data.indexOf(Buffer.from('ошибка')) + 1;
+    const report = JSON.stringify([{ filePath: join(dir, 'source.mjs'), messages: [{ severity: 2, message: 'caf\u00e9', ruleId: 'test', line: 1 }] }]);
+    const data = Buffer.from(report); const split = data.indexOf(Buffer.from('\u00e9')) + 1;
     await writeFile(join(dir, 'writer.cjs'), `const b=Buffer.from(${JSON.stringify(data.toString('base64'))},'base64');process.exitCode=1;process.stdout.write(b.subarray(0,${split}));setTimeout(()=>process.stdout.write(b.subarray(${split})),20);`);
     const config = join(dir, '.qualitygate.yml');
     await writeFile(config, JSON.stringify({ schemaVersion: 1, gates: [{ id: 'lint', type: 'eslint', run: 'node writer.cjs' }] }));
     const result = await execute(config, new AbortController().signal);
-    assert.equal(result.execution, 'completed'); assert.equal(result.findings[0]?.message, 'ошибка');
+    assert.equal(result.execution, 'completed'); assert.equal(result.findings[0]?.message, 'caf\u00e9');
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 test('ESLint distinguishes info findings, inconsistent exit codes and capture overflow', async () => {

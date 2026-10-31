@@ -250,6 +250,9 @@ importers:
       jsdom:
         specifier: 26.1.0
         version: 26.1.0
+      portless:
+        specifier: 0.12.0
+        version: 0.12.0
       puppeteer-core:
         specifier: 24.43.1
         version: 24.43.1
@@ -1973,6 +1976,12 @@ packages:
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
+
+  portless@0.12.0:
+    resolution: {integrity: sha512-zE8EYJ5xIEtKEBu1wnD+FavOE90/GNxRixF4Mu2hxMvDuVx1ftUbA6VbjbxI9sP9LUt0L26l6OiENGo4EFtLfw==}
+    engines: {node: '>=20'}
+    os: [darwin, linux, win32]
+    hasBin: true
 
   postgres-array@2.0.0:
     resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
@@ -4245,6 +4254,8 @@ snapshots:
   picomatch@2.3.2: {}
 
   pkce-challenge@5.0.1: {}
+
+  portless@0.12.0: {}
 
   postgres-array@2.0.0: {}
 

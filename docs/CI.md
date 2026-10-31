@@ -4,6 +4,10 @@ QualityGate runs the same project configuration on GitHub Actions, GitLab CI and
 Bitbucket Pipelines. The CI exit code enforces the gate; JSON, Markdown and raw
 files remain downloadable artifacts even when a gate blocks.
 
+CI invokes the CLI directly; it does not host the local dashboard or require
+Portless. The templates set `HUSKY=0` during installation. Local hooks and CI can
+share the same gate configuration; see [project installation and Husky setup](PROJECT_SETUP.md).
+
 ## Install in a target repository
 
 The package is not published to npm yet. Build a tarball from the local QualityGate
@@ -22,7 +26,7 @@ Commit the tarball, package manifest, pnpm lockfile and `.qualitygate.yml` to yo
 own repository. Review the archive before sharing it. Pin your package manager
 in `package.json`; the GitHub example reads `packageManager`. This repository is
 still local-only in this development session: these instructions do not publish it.
-Node 22.19+ is required. Projects supply their own lint/typecheck/test commands;
+Node 22.23.4+ is required. Projects supply their own lint/typecheck/test commands;
 use non-watch commands in CI. Chrome/Ruff/SonarScanner are separate prerequisites
 only when the selected configuration requires them. The supplied Node container
 images do not include Chrome, Ruff or a SonarQube server.
