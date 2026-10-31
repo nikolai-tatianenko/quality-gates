@@ -73,7 +73,7 @@ test('model bridge and ask CLI run through actual stdio MCP; model prose cannot 
     await writeFile(config, JSON.stringify({ schemaVersion: 1, gates: [{ id: 'test', run: 'echo failing; exit 1' }] }));
     const connection = await connectTools(entry, config);
     try {
-      assert.equal((await connection.host.listTools()).tools.length, 3);
+      assert.equal((await connection.host.listTools()).tools.length, 4);
       assert.ok(await connection.host.callTool('list_gates', {}, new AbortController().signal));
     } finally { await connection.close(); }
     for (const json of [true, false]) {

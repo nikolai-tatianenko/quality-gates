@@ -130,15 +130,16 @@ async function mcpClient(dir: string) {
   };
   return { client, call };
 }
-test('MCP exposes only list_gates, run_gates and get_run; none accepts a command or path', async () => {
+test('MCP exposes configured gates and pinned methodology; none accepts a command or arbitrary path', async () => {
   const { dir } = await project([{ id: 'good', run: 'true' }]);
   try {
     const { client } = await mcpClient(dir);
     const { tools } = await client.listTools();
-    assert.deepEqual(tools.map(t => t.name).sort(), ['get_run', 'list_gates', 'run_gates']);
+    assert.deepEqual(tools.map(t => t.name).sort(), ['get_review_methodology', 'get_run', 'list_gates', 'run_gates']);
     for (const tool of tools) {
       const properties = Object.keys((tool.inputSchema.properties ?? {}) as object);
-      assert.ok(properties.every(p => ['gates', 'runId'].includes(p)), `${tool.name}: ${properties}`);
+      const allowed = tool.name === 'get_review_methodology' ? ['sourceId', 'file'] : ['gates', 'runId'];
+      assert.ok(properties.every(p => allowed.includes(p)), `${tool.name}: ${properties}`);
     }
     await client.close();
   } finally { await rm(dir, { recursive: true, force: true }); }

@@ -1,8 +1,12 @@
 # Agent clients and local models
 
 All integrations use the same runner and saved report schema. The MCP service
-exposes `list_gates`, `run_gates`, `get_run`; calls never accept arbitrary shell
+exposes `list_gates`, `run_gates`, `get_run`, `get_review_methodology`; calls never accept arbitrary shell
 commands or replacement project paths. Gates are trusted code, not sandboxed.
+
+`get_review_methodology` reads files from a configured source's pinned Git commit.
+It does not download updates or run an audit. SonarQube and review producer gates
+use the same `run_gates` path; see [security review setup](SECURITY_REVIEW.md).
 
 ## Editor / agent clients
 

@@ -2,6 +2,21 @@
 
 ## Unreleased — local workspace and analysis
 
+- CI Markdown reports and GitHub/GitLab/Bitbucket Cloud PR-description adapters;
+  migrate handwritten content, replace only managed sections, skip stale heads
+  and older runs, and re-read concurrent manual edits before explicit writes.
+- CI templates preserve gate exit codes and failure artifacts; GitHub separates
+  checks from a trusted publisher. GitLab/Bitbucket publication needs a separately
+  configured trusted publisher pipeline.
+
+- SonarQube scanner gates: fresh task metadata, exact analysis identity, bounded
+  polling, token redaction, quality-gate condition findings and raw evidence.
+- Versioned external review sources with explicit update/check/frozen restore,
+  local bare Git cache and read-only `get_review_methodology` MCP tool.
+- Review producer contracts retain provenance and confirmed/unresolved/rejected
+  records. Unresolved candidates block; incomplete/malformed reports are errors.
+  Full Cloudflare orchestration and a target-execution sandbox are not included.
+
 - Enforce pnpm 11.5.1 for checkout installs, with native developer-engine checks
   and a dependency-free guard. Packaged CLI consumers retain manager choice.
 - Delay registry dependency versions by seven days, fail when no eligible version

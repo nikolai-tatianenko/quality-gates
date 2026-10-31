@@ -1,3 +1,59 @@
+# CI and PR-description integration verification — 2026-10-30
+
+`pnpm check` passed with **72 tests**, lint, strict types, complexity analysis and
+build. Runtime line/statement/function coverage is 100%; branches are 96.66%.
+Four focused tests also passed with CLI subprocesses using the built bundle.
+
+`pnpm verify:ci-templates` parsed GitHub/GitLab/Bitbucket YAML and executed the
+report shell blocks against fixture commands. Each provider preserved gate exits
+0/1/2/130 and propagated renderer failure. GitHub's base-checkout, separate write
+permissions, fork guard and non-edited trigger were checked locally.
+
+The packed CLI includes the CI guide and all three templates. API tests use fixture
+responses for all providers and a real localhost HTTP server for the CLI. No real
+PR/MR, remote pipeline or account configuration was changed. GitLab/Bitbucket need
+separately provisioned trusted publishers. Last-read/write races and the lack of
+cryptographic source binding remain explicit limits in [CI setup](CI.md).
+Machine-readable [CI verification snapshot](verification/ci-integrations-2026-10-30.json).
+
+---
+
+# SonarQube and review integration verification — 2026-10-30
+
+`pnpm check` passed: **68 tests**, lint, strict typecheck, complexity analysis and
+build. Runtime coverage remains 100% lines/statements/functions and 96.36% branches.
+New adapters use real subprocesses and local Git repositories; Sonar HTTP replies
+are mocked, and MCP requests use real client/server transports.
+
+The official Cloudflare source was downloaded, restored by exact SHA and checked
+against upstream locally. The example pins commit
+`c1c8a8c1471069fb0e188eeaff69b8e8db6564a8`. A real stdio MCP client retrieved its
+methodology and provenance. No downloaded scripts were executed. Failed downloads
+preserve the lock; update checks do not activate new versions.
+
+The first consumer smoke run exposed a fixture audit exceeding its hard-coded
+60-second budget. Completed fixture audits took 36–49 seconds inside Lighthouse,
+including 14–30 seconds clearing browser caches, before Chrome startup/cleanup.
+The runner correctly saved an execution error and cleaned its Chrome processes.
+The smoke harness now uses the production default of 120 seconds; its explicit
+2.5-second timeout and SIGINT checks remain separate. This is a test-budget
+alignment, not a claim that the underlying Chrome/cache latency has been fixed.
+
+The final `pnpm verify:package` passed: local tarball installation, real Chrome
+PASS/BLOCK, mixed URL results, missing Chrome, timeout, SIGINT and write failure.
+Every browser scenario asserted owned-process cleanup. The installed CLI also
+read the pinned Cloudflare CJS validator as inert text; the package example
+contains only config/lock files, without the downloaded Git cache.
+Machine-readable [integration snapshot](verification/review-integrations-2026-10-30.json).
+No push, publication or remote CI run was performed.
+
+Live SonarQube server/scanner compatibility, a complete Cloudflare multi-agent
+audit, upstream report/coverage-ledger verification and an isolated target runner
+remain unverified or unimplemented. Review producer assertions are trusted and
+are not yet bound to an exact worktree digest. See [setup and limits](SECURITY_REVIEW.md).
+
+---
+
 # Dependency policy verification — 2026-10-30
 
 The repository now requires pnpm 11.5.1 and a strict seven-day minimum registry

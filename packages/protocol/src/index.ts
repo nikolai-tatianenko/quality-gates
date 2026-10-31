@@ -5,17 +5,36 @@ export const thresholdsSchema = z.object({
   performance: scoreSchema, accessibility: scoreSchema, seo: scoreSchema,
   'best-practices': scoreSchema,
 }).strict();
+export const reviewSourceSchema = z.object({
+  id: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/),
+  repository: z.string().regex(/^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+(?:\.git)?$/),
+  ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/).default('main'),
+  path: z.string().regex(/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/),
+}).strict();
 export const gateSchema = z.object({
   id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, 'Gate id: letters, digits, - and _'),
-  type: z.enum(['command', 'eslint']).default('command'),
+  type: z.enum(['command', 'eslint', 'sonarqube', 'review']).default('command'),
   run: z.string().min(1),
   timeoutMs: z.number().int().min(1).max(3600000).optional(),
-}).strict();
+  sonar: z.object({
+    serverUrl: z.string().url().refine(value => {
+      const url = new URL(value);
+      return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password && !url.search && !url.hash;
+    }, 'Expected HTTP(S) server URL without credentials, query or fragment'),
+    tokenEnv: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).default('SONAR_TOKEN'),
+    taskFile: z.string().min(1).default('.scannerwork/report-task.txt'),
+  }).strict().optional(),
+  review: z.object({ sourceId: z.string().min(1) }).strict().optional(),
+}).strict().superRefine((gate, ctx) => {
+  if ((gate.type === 'sonarqube') !== !!gate.sonar) ctx.addIssue({ code: 'custom', message: 'sonar settings are required only for sonarqube gates' });
+  if ((gate.type === 'review') !== !!gate.review) ctx.addIssue({ code: 'custom', message: 'review settings are required only for review gates' });
+});
 export const configSchema = z.object({
   schemaVersion: z.literal(1),
   urls: z.array(z.string().url().refine(u => ['http:', 'https:'].includes(new URL(u).protocol), 'Expected HTTP(S) URL')).default([]),
   thresholds: thresholdsSchema.optional(),
   gates: z.array(gateSchema).default([]),
+  reviewSources: z.array(reviewSourceSchema).optional(),
   outputDir: z.string().min(1).default('.qualitygate'),
   timeoutMs: z.number().int().min(1).max(600000).default(120000),
   chrome: z.object({
@@ -27,6 +46,9 @@ export const configSchema = z.object({
   if (config.urls.length && !config.thresholds) ctx.addIssue({ code: 'custom', path: ['thresholds'], message: 'thresholds are required when urls are set' });
   const ids = config.gates.map(g => g.id.toLowerCase());
   if (new Set(ids).size !== ids.length) ctx.addIssue({ code: 'custom', path: ['gates'], message: 'Duplicate gate id' });
+  const sources = config.reviewSources ?? [];
+  if (new Set(sources.map(source => source.id)).size !== sources.length) ctx.addIssue({ code: 'custom', path: ['reviewSources'], message: 'Duplicate review source id' });
+  for (const gate of config.gates) if (gate.review && !sources.some(source => source.id === gate.review!.sourceId)) ctx.addIssue({ code: 'custom', message: `Unknown review source: ${gate.review.sourceId}` });
 });
 export const scoresSchema = thresholdsSchema.partial();
 export const auditDataSchema = z.object({ scores: scoresSchema, raw: z.unknown().optional(), error: z.string().optional() }).strict();

@@ -1,0 +1,31 @@
+# Copy into .gitlab-ci.yml (merge stages/jobs with your existing pipeline).
+image: node:22.19.0
+stages: [test]
+qualitygate:
+  stage: test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH'
+  before_script:
+    - corepack enable
+    - corepack prepare pnpm@11.5.1 --activate
+    - pnpm install --frozen-lockfile
+  script:
+    - |
+      mkdir -p .qualitygate-ci
+      set +e
+      pnpm exec qualitygate run --json > .qualitygate-ci/result.json
+      status=$?
+      set -e
+      printf '%s\n' "$status" > .qualitygate-ci/exit-code
+      pnpm exec qualitygate report --input .qualitygate-ci/result.json --output .qualitygate-ci/report.md
+      exit "$status"
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - .qualitygate-ci/
+      - .qualitygate/
+# Publish using a separate trusted pipeline/job, serialized by MR IID.
+# Do not expose GITLAB_TOKEN (api/write permission) to this target-code job.
+# See docs/CI.md for the provider-independent publisher command and trust boundary.

@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-31T03:35:02.951Z",
+  "sourceBaseCommit": "9fbb6d1c5a76557f7376b036321df6a630ff19f0",
+  "testedFilesSha256": {
+    "packages/ci/src/index.ts": "a8a6cdb9265fd9e0a87d3be730963575f666654d63b3fcdaf14c0d0fabe8c850",
+    "packages/ci/src/report.ts": "4d07032a2d8d630d1bc81aa9fe6c5b728676957ab835b986bce2f3a5ce9d0556",
+    "packages/ci/src/description.ts": "15405da657ae487f53684a8dd7697a9cfbaff7ee59789c86d96bdfdba27c1452",
+    "packages/cli/src/index.ts": "4010ecf1e94836838d222c9ef3104b6409962e22d1f7f413e2c9e08246a58241",
+    "tests/ci.test.ts": "1d3a984cae0bc92668585f8f03dc641e48b3b4a640ccc654798008068bb32f3b",
+    "scripts/verify-ci-templates.mjs": "5787ee0149ff8c1a1823e0203aafebe3fbbdad636051b8fb36cb66a02b90fb34",
+    "examples/ci/github-actions.yml": "060abc3bd7b57c10b18905be7400cdaff539f9a7cbc091bb1f61fb40f9f6d771",
+    "examples/ci/gitlab-ci.yml": "447976efbb8506c8b03f75220ad645ebb541d1d9e38915f0a7878cfa6f5505d7",
+    "examples/ci/bitbucket-pipelines.yml": "391ed33ed8dacd74f15b1538cebadefd731a5431df4598f8ca9542168eb69910",
+    "package.json": "b0ff3853bfaeb04f29fe9623720b387db68f933690738f47f3d0ee0e8a771fd5",
+    "pnpm-lock.yaml": "ddd388ebb9238012b88cb07dbc89f81cd6d853de21017512a1a583fbb3de8ea4",
+    ".github/workflows/lighthouse.yml": "5d950c96c61910955c73a27dc5000e1681937d83c17cd37c7d9e1d052e75cd97"
+  },
+  "checks": {
+    "workspace": {
+      "command": "pnpm check",
+      "exitCode": 0,
+      "tests": 72,
+      "coverage": {
+        "lines": {
+          "total": 1659,
+          "covered": 1659,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 1659,
+          "covered": 1659,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 136,
+          "covered": 136,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 1081,
+          "covered": 1045,
+          "skipped": 0,
+          "pct": 96.66
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "bundle": {
+      "command": "QUALITYGATE_CLI=dist/qualitygate.mjs node --experimental-test-module-mocks --import tsx --test tests/ci.test.ts",
+      "exitCode": 0,
+      "tests": 4
+    },
+    "templates": {
+      "command": "node scripts/verify-ci-templates.mjs",
+      "exitCode": 0,
+      "providers": [
+        "github",
+        "gitlab",
+        "bitbucket"
+      ],
+      "casesPerProvider": 5
+    },
+    "tarball": {
+      "manifestChecked": true,
+      "ciGuideAndThreeTemplatesIncluded": true
+    }
+  },
+  "verificationScope": {
+    "apiContracts": "fixture responses for GitHub/GitLab/Bitbucket Cloud; real localhost HTTP for CLI",
+    "manualMigration": true,
+    "idempotentReplacement": true,
+    "manualEditsRebased": true,
+    "malformedMarkersFailClosed": true,
+    "staleHeadSkipped": true,
+    "olderRunSkipped": true,
+    "realProvidersChanged": false,
+    "remotePipelinesRun": false
+  },
+  "limits": {
+    "gitlabAndBitbucketTrustedPublisherProvisioned": false,
+    "portableAtomicCompareAndSwap": false,
+    "runJsonCryptographicallyBoundToSource": false,
+    "cliConfigErrorJsonPublishable": false
+  },
+  "remoteWrites": false
+}
