@@ -1,0 +1,117 @@
+{
+  "date": "2026-10-31",
+  "runtime": "v22.23.4",
+  "releaseIndex": "https://nodejs.org/dist/index.json",
+  "installation": {
+    "source": "https://nodejs.org/dist/v22.23.4/node-v22.23.4-darwin-arm64.tar.gz",
+    "sha256": "c9e1dbc748b33ed2d14f42445191ecaf14c56259c7a9a26d0042c49ec2b66428",
+    "checksumVerified": true
+  },
+  "release": {
+    "startedAt": "2026-10-31T22:02:47.183Z",
+    "node": "v22.23.4",
+    "platform": "darwin",
+    "status": "PASS",
+    "steps": [
+      {
+        "name": "check",
+        "code": 0,
+        "durationMs": 30272
+      },
+      {
+        "name": "verify:analysis-package",
+        "code": 0,
+        "durationMs": 10191
+      },
+      {
+        "name": "verify:package",
+        "code": 0,
+        "durationMs": 58834
+      },
+      {
+        "name": "smoke:dashboard",
+        "code": 0,
+        "durationMs": 6154
+      }
+    ],
+    "finishedAt": "2026-10-31T22:04:32.636Z"
+  },
+  "tests": {
+    "total": 76,
+    "passed": 76,
+    "failed": 0
+  },
+  "runtimeCoverage": {
+    "lines": {
+      "total": 1742,
+      "covered": 1742,
+      "skipped": 0,
+      "pct": 100
+    },
+    "statements": {
+      "total": 1742,
+      "covered": 1742,
+      "skipped": 0,
+      "pct": 100
+    },
+    "functions": {
+      "total": 148,
+      "covered": 148,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 1141,
+      "covered": 1105,
+      "skipped": 0,
+      "pct": 96.84
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "portless": {
+    "url": "http://qualitygate.localhost:57513",
+    "decision": "PASS",
+    "browser": "Chrome/156.0.8078.74",
+    "errors": [],
+    "csrfChecked": true,
+    "namedOriginVerified": true,
+    "systemCertificatesChanged": false,
+    "hostsFileChanged": false
+  },
+  "hooks": {
+    "husky": "9.1.7",
+    "preCommitBlocks": true,
+    "preCommitPasses": true,
+    "fastSelection": [
+      "lint",
+      "typecheck"
+    ],
+    "prePushRunsAllGates": true,
+    "prePushBlocks": true,
+    "remoteType": "temporary local bare Git; dry-run only",
+    "rootHooksUnchanged": true,
+    "cli": "actual built CLI linked into fixture",
+    "status": "PASS"
+  },
+  "ciTemplates": "PASS: all providers preserve 0/1/2/130 and renderer failure",
+  "language": "Tracked text scanned for Cyrillic; none remains. Multibyte regression retained with escaped Unicode.",
+  "history": "Three commits above the existing published main; original local history retained in a backup branch. Published tag unchanged.",
+  "sourceHashes": {
+    ".nvmrc": "0c4bf84f9bedd485b2c4eac05f59e35addc86ce7dbf0d90435528e04384c6314",
+    "package.json": "8fa4c495d8afc7782578a708fcf6a36e1ad827bc4e0d8c2f7f6388c51ee63d39",
+    "packages/code-analysis/package.json": "2f0a5b0a2c1765cc908a8fc9a36e6f267e28f3888133a235f4ba4bf521023c0a",
+    "tests/findings.test.ts": "3a129ccff5c990b37f2e32ebddae8b39efeed36a5a980860c2d5f8cc739f243a",
+    "tests/ci.test.ts": "42c319f5efdeaab13aa0fba9d8865acf4435be1706f6fae1ca98d5134d8eb522",
+    "VISION.md": "9bf33acc368eb81c0e6552bc7e11167216475ad9deffd492be0ae81089c26e39",
+    "SECURITY.md": "ea711bd941e3cf802d06c1f51b9dfa7ae7f94a09b55ab3b9a2ecd96bfd7fbb86",
+    "README.md": "0fa396b5283ec98965a7bc82b3d79932660339cfb603e19861a78eb159484a85",
+    "examples/ci/github-actions.yml": "8a049fe33864ddfb8d416d3cd7bc881b63131f640be3133ebcefef70ce461a23",
+    "examples/ci/gitlab-ci.yml": "3fd988f7f1906f17f03aa9c0cadccdd2e943bc76ec71c4d0d3b19e32a70aad40",
+    "examples/ci/bitbucket-pipelines.yml": "a6760d59da2fa2ba43ec118d9d45286a443ac8b254bf518b0715d6da4c738ac5"
+  }
+}

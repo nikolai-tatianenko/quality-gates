@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-31T05:06:25.485Z",
+  "sourceBaseCommit": "cf44c5637f03d5c6cd4ed34298375078f5a3e678",
+  "testedFilesSha256": {
+    "packages/dashboard/src/App.tsx": "588f332084924a84cfc84776862731595ee45319eaaf78ad8e99f98c865699d8",
+    "packages/dashboard/src/style.css": "87868480a2b68fcb882df3b767d4e5a4a674e75ad635b6214e81ff13478bf443",
+    "packages/dashboard/src/appearance.ts": "b9382cf6f9b67f59343fec34a1a5c7b6edead5a1b8743c36b2aa08604ccf8211",
+    "packages/dashboard/src/theme.tsx": "c6d4d917c42cf500165c3481b2466b36d168229db7c7196649ab3d161ce3e05f",
+    "packages/dashboard/src/theme-init.ts": "45b662395004dc3680791324c0b8a43d10849e37b5b1120481461b10c98a20af",
+    "packages/dashboard/src/server.ts": "5c56f6e6dbb0d5cb1cbe49331d61847ce4dd7fda7c08e42cf24fc980d07bd586",
+    "packages/dashboard/build.mjs": "148e77acec394486172b574a56d4cd67f164f42a41c7cb3e0c425a18a660fc26",
+    "tests/dashboard-ui.test.ts": "fc57f899cf8d70f0c5bf63ce943201374d4347212766982b0aa96cb2464a7e0a",
+    "scripts/dashboard-smoke.mjs": "0f3b4cf6e5610cc64859ecdf4923495797ff8372ad30ab885a2f4ec3f1889ee3"
+  },
+  "checks": {
+    "workspace": {
+      "command": "pnpm check",
+      "exitCode": 0,
+      "tests": 73,
+      "coverage": {
+        "lines": {
+          "total": 1702,
+          "covered": 1702,
+          "skipped": 0,
+          "pct": 100
+        },
+        "statements": {
+          "total": 1702,
+          "covered": 1702,
+          "skipped": 0,
+          "pct": 100
+        },
+        "functions": {
+          "total": 143,
+          "covered": 143,
+          "skipped": 0,
+          "pct": 100
+        },
+        "branches": {
+          "total": 1112,
+          "covered": 1075,
+          "skipped": 0,
+          "pct": 96.67
+        },
+        "branchesTrue": {
+          "total": 0,
+          "covered": 0,
+          "skipped": 0,
+          "pct": 100
+        }
+      }
+    },
+    "ui": {
+      "command": "node --experimental-test-module-mocks --import tsx --test tests/dashboard-ui.test.ts",
+      "exitCode": 0,
+      "tests": 4
+    },
+    "browser": {
+      "command": "pnpm smoke:dashboard",
+      "exitCode": 0,
+      "decision": "PASS",
+      "gates": [
+        "python-analysis",
+        "python-tests"
+      ],
+      "themes": [
+        "light",
+        "dark",
+        "system"
+      ],
+      "persisted": true,
+      "contrastChecked": true,
+      "screenshots": [
+        "block.png",
+        "block-dark.png",
+        "pass.png",
+        "mobile.png",
+        "mobile-dark.png",
+        "mobile-small-dark.png"
+      ],
+      "browser": "Chrome/156.0.8078.74",
+      "errors": [],
+      "viewportWidths": [
+        1440,
+        390,
+        320
+      ],
+      "selectedTextContrastMinimum": 4.5,
+      "screenshotSha256": {
+        "block.png": "0b5bba2e56b86e726129ef65e88b9fd569e5799aca720fd05d9c0cec91699b6d",
+        "block-dark.png": "0d1e38a2ef8d2929d44f7391ac0ea771e9546bf1a0a7eb3006f99048ab86358f",
+        "pass.png": "a04e516bfd90c33c776623159b8f5c0c8cd671a8fe2d8ae3feea19fce8b75470",
+        "mobile.png": "130dd73106f16de4854757f007530fb097112344a7a1147b85ed82e8fde301c5",
+        "mobile-dark.png": "9daefa90e4b50ddaf4055d450ecab107c171b663922787be4422cf6d0f444950",
+        "mobile-small-dark.png": "71e57d2b3318902b6a5371794ba41f62e3ed31d947174f964ef19024484a20ff"
+      },
+      "visuallyInspected": [
+        "block.png",
+        "block-dark.png",
+        "mobile-small-dark.png"
+      ]
+    }
+  },
+  "limits": {
+    "coverageScope": "Runtime TypeScript/TSX; CSS and layout verified by browser checks and visual inspection",
+    "crossBrowserVerified": false,
+    "verifiedBrowser": "Chrome/156.0.8078.74"
+  },
+  "remoteWrites": false
+}

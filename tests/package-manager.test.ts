@@ -15,7 +15,7 @@ test('checkout install guard accepts the pinned pnpm and rejects other managers 
     const invoke = (userAgent: string) => spawnSync(process.execPath, [join(dir, 'scripts/require-pnpm.mjs')], {
       encoding: 'utf8', env: { ...process.env, npm_config_user_agent: userAgent },
     });
-    assert.equal(invoke('pnpm/11.5.1 npm/? node/v22.19.0').status, 0);
+    assert.equal(invoke('pnpm/11.5.1 npm/? node/v22.23.4').status, 0);
     for (const agent of ['', 'npm/11.0.0', 'yarn/1.22.0', 'bun/1.2.0', 'pnpm/11.5.2']) {
       const result = invoke(agent); assert.equal(result.status, 1); assert.match(result.stderr, /requires pnpm@11.5.1/);
     }

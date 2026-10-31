@@ -7,7 +7,7 @@ import { App, request } from '../packages/dashboard/src/App.js';
 import { runResultSchema } from '../packages/protocol/src/index.js';
 
 const project = { configPath: '/project/.qualitygate.yml', gates: [{ id: 'lint', type: 'eslint', run: 'lint' }], urls: ['http://fixture'] };
-const blocked = runResultSchema.parse({ schemaVersion: 1, runId: 'fixture', startedAt: new Date().toISOString(), finishedAt: new Date().toISOString(),
+const blocked = runResultSchema.parse({ schemaVersion: 1, runId: 'fixture', startedAt: '2026-10-30T20:00:00.000Z', finishedAt: '2026-10-30T20:00:02.500Z',
   execution: 'error', decision: 'BLOCK', errors: ['disk failure'], reportPath: '/evidence/report.json',
   gates: [{ id: 'lint', command: 'lint', execution: 'completed', decision: 'BLOCK', exitCode: 1, durationMs: 12, outputTail: 'lint output', errors: ['tool failed'] }],
   results: [{ url: 'http://fixture', execution: 'completed', decision: 'BLOCK', scores: {}, violations: ['metric missing'], errors: ['audit failed'] }],
@@ -39,6 +39,8 @@ test('React dashboard renders project checks and real findings, runs and cancels
     await click(ui, 'Run quality'); assert.match(ui.container.textContent!, /Running checks/);
     await click(ui, 'Cancel run');
     await act(async () => { finish(response(blocked)); });
+    assert.equal(ui.container.querySelector('.metrics strong')!.textContent, 'ERROR');
+    assert.equal(ui.container.querySelector('.metrics article:last-child strong')!.textContent, '2.5s');
     assert.match(ui.container.textContent!, /BLOCK/); assert.match(ui.container.textContent!, /src\/a.ts:3/);
     assert.match(ui.container.textContent!, /complexity/); assert.match(ui.container.textContent!, /disk failure/);
     assert.match(ui.container.textContent!, /lint output/); assert.ok(ui.container.querySelector('a[download]'));
@@ -94,6 +96,37 @@ test('browser entry mounts the React application', async () => {
   let root: ReturnType<typeof createRoot> | undefined;
   try {
     await act(async () => { ({ root } = await import('../packages/dashboard/src/main.js')); });
-    assert.match(ui.container.textContent!, /Know what/);
+    assert.match(ui.container.textContent!, /Quality overview/);
   } finally { await act(async () => root?.unmount()); ui.dom.window.close(); fetch.mock.restore(); }
+});
+
+test('appearance follows the OS, persists explicit themes, ignores invalid preferences and tolerates blocked storage', async () => {
+  const { readTheme, initializeTheme, themeStorageKey } = await import('../packages/dashboard/src/appearance.js');
+  const { ThemeSwitcher } = await import('../packages/dashboard/src/theme.js');
+  const ui = environment();
+  const media = Object.assign(new ui.dom.window.EventTarget(), { matches: true });
+  Object.defineProperty(ui.dom.window, 'matchMedia', { value: () => media });
+  try {
+    ui.dom.window.localStorage.setItem(themeStorageKey, 'invalid'); assert.equal(readTheme(), 'system');
+    initializeTheme(); assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'dark');
+    await act(async () => ui.root.render(createElement(ThemeSwitcher)));
+    assert.equal(ui.container.querySelector('[aria-label="Use system theme"]')!.getAttribute('aria-pressed'), 'true');
+    await act(async () => { media.matches = false; media.dispatchEvent(new ui.dom.window.Event('change')); });
+    assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'light');
+    await click(ui, 'Dark'); assert.equal(ui.dom.window.localStorage.getItem(themeStorageKey), 'dark');
+    await act(async () => media.dispatchEvent(new ui.dom.window.Event('change')));
+    assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'dark', 'An explicit mode overrides the OS');
+    initializeTheme(); assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'dark', 'Initialization restores the saved choice');
+    await click(ui, 'Light'); assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'light');
+    await click(ui, 'Auto'); assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'light');
+    const get = mock.method(ui.dom.window.Storage.prototype, 'getItem', () => { throw Error('Storage disabled'); });
+    const set = mock.method(ui.dom.window.Storage.prototype, 'setItem', () => { throw Error('Storage disabled'); });
+    try { assert.equal(readTheme(), 'system'); await click(ui, 'Dark'); assert.equal(ui.dom.window.document.documentElement.dataset.theme, 'dark'); }
+    finally { get.mock.restore(); set.mock.restore(); }
+    // The standalone, CSP-compatible bootstrap runs before the stylesheet/React bundle.
+    await import('../packages/dashboard/src/theme-init.js');
+  } finally { await ui.cleanup(); }
+  const fallback = environment();
+  try { initializeTheme(); assert.equal(fallback.dom.window.document.documentElement.dataset.theme, 'light'); }
+  finally { await fallback.cleanup(); }
 });

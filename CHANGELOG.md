@@ -2,6 +2,26 @@
 
 ## Unreleased — local workspace and analysis
 
+- Pin the supported runtime to Node.js 22.23.4 across nvm, package engines and
+  CI examples. Translate remaining project documentation to English while
+  preserving multibyte-output regression coverage.
+- Portless-backed `dev:ui` with a stable named `.localhost` URL, private loopback
+  proxy/backend, dynamic backend port and explicit public-origin validation.
+  Portless 0.12.0 preserves the Node 22 baseline and seven-day dependency policy.
+- Project installation/CI/Husky guides and copyable hooks, verified with real
+  Husky in a disposable Git fixture. README now includes real dashboard captures,
+  Mermaid flow, product rationale and clear setup/verification boundaries.
+
+- Shadcn-inspired neutral dashboard styling with semantic theme tokens, an inset
+  workspace, SVG navigation, outline actions and section navigation. A fourth
+  metric shows the latest recorded run duration; light/dark/system modes persist.
+
+- Refreshed dashboard with light/dark/system themes, persisted browser preferences,
+  a CSP-compatible early theme bootstrap, responsive cards/tables and distinct
+  error/warning/info colors. Execution errors override PASS in the headline.
+- Real Chrome theme persistence/system-change checks, selected text contrast
+  checks and screenshots at desktop, 390px and 320px widths.
+
 - CI Markdown reports and GitHub/GitLab/Bitbucket Cloud PR-description adapters;
   migrate handwritten content, replace only managed sections, skip stale heads
   and older runs, and re-read concurrent manual edits before explicit writes.

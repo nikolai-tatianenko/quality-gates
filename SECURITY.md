@@ -5,7 +5,7 @@ and the `legacy/lighthouse-v1/` archive do not receive separate security backpor
 
 ## Execution boundary
 
-**Команды гейтов не в песочнице. Gate commands are not sandboxed.**
+**Gate commands are not sandboxed.**
 
 Commands in `.qualitygate.yml` run through the system shell in the configuration
 file's directory, with the current user's permissions and inherited environment.
@@ -40,6 +40,12 @@ The React dashboard binds only to 127.0.0.1 and validates Host, Origin and a cus
 header for state-changing requests. Each instance uses one trusted config selected
 at startup. Do not expose it through a public proxy or tunnel; it is a local tool
 without user authentication. Browser access does not sandbox the underlying gates.
+
+`pnpm dev:ui` uses Portless's public proxy API on a dedicated loopback listener.
+The backend is also loopback-only. Its explicit named `.localhost` origin is
+validated; `X-Forwarded-*` headers are not trusted. The wrapper does not enable
+LAN/tunnel sharing, install certificates, edit hosts files or reuse a global proxy.
+Changing the proxy port uses `PORTLESS_PORT`; stop the wrapper to close both servers.
 
 The code-analysis package scans TS/JS with fixed ESLint/SonarJS rules and Python
 with Ruff's isolated configuration. It does not execute scanned Python code or

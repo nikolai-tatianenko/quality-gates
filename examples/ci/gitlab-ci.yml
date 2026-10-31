@@ -1,6 +1,8 @@
 # Copy into .gitlab-ci.yml (merge stages/jobs with your existing pipeline).
-image: node:22.19.0
+image: node:22.23.4
 stages: [test]
+variables:
+  HUSKY: '0'
 qualitygate:
   stage: test
   rules:
