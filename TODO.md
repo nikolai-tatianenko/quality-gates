@@ -28,6 +28,19 @@
 - [x] T-018: Chrome startup stderr, profile-cleanup ordering and local Linux sandbox reproduction
 - [x] T-019: MCP cancellation/disconnect/concurrency and client configuration/model adapters
 
+## Pluggable ecosystems and test reports
+Design: `docs/superpowers/specs/2026-11-01-pluggable-ecosystems-design.md` (approved 2026-11-01).
+Order: parsers → ecosystems → external loading; each part ships on its own. Keep exit codes
+0/1/2/130, SDK `apiVersion: 1` (additive), 100% line / 95% branch coverage.
+- [ ] T-020: `parser` plugin kind and `report: { format, path }` on command gates; built-in `junit`, `nunit`, `playwright-json`, `eslint-json`, `unity-log`. Rules: non-zero exit + no report = BLOCK with log; exit 0 + no report or unreadable report = `error`; a report never turns a non-zero exit into PASS; report path stays inside the project; size limits with truncation noted
+- [ ] T-021: `artifacts: [globs]` on command gates; copy into run evidence, additive `artifacts: string[]` on gate results and JSON output, returned by MCP tools; globs inside the project root, symlinks not followed, count/byte limits
+- [ ] T-022: `ecosystem` plugin kind and `qualitygate setup` merging proposals (id prefixed on collision, never overwrites config): move node, add python (`ruff`, `pytest --junitxml`), unity (compile + EditMode via `-runTests`, macOS Hub path, `UNITY` override, stale `Temp/UnityLockfile`), playwright, maestro (`--format junit`)
+- [ ] T-023: `plugins: [package]` in `.qualitygate.yml` loaded from the project's `node_modules`, validated against plugin schemas, duplicate ids rejected; `setup --plugin <package>` (repeatable); docs and `SECURITY.md` say plugins run unsandboxed
+- [ ] T-024: Acceptance on real projects: Unity client (`setup && run`, failing test yields a finding with file and line), Python server (`ruff` + `pytest` gates), Playwright failure with screenshot and trace in the evidence
+- [ ] T-025: Open a PR `features/october31` → `main` (merge is the owner's call); tag the next release only after CI is green
+- [ ] T-026: Re-verify and clear the stale session note that `pnpm smoke` and the stdio-close test fail with exit 2 (CI on `6c33b33` and `92e9943` passed); keep a ticket only if it reproduces
+- [ ] T-027 (backlog, only after T-020/T-021): visual regression as a thin gate over Playwright screenshots, with explicit baseline updates and a missing baseline = BLOCK; not a custom comparer
+
 ## Verification limits / follow-up
 - [x] CI Markdown artifacts and managed PR/MR descriptions for GitHub, GitLab and Bitbucket Cloud
 - [x] Manual-content migration, tagged replacement, stale-head/older-run guards and edit re-read
