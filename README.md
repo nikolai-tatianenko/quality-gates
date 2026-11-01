@@ -324,7 +324,7 @@ quality policy available to people and agents through the same execution path.
 | Validation | Zod 3.25.76, YAML 2.8.1 | Versioned config/results |
 | TS/JS analysis | ESLint 9.37.0, typescript-eslint 8.46.1, SonarJS 4.2.2 | Lint, complexity and code smells |
 | Python | External Ruff 0.9.2 and project test commands | Python analysis and checks |
-| Browser audits | Lighthouse 12.8.2, chrome-launcher 1.0.0 | Real Chrome audits |
+| Browser audits | Lighthouse 13.5.0, chrome-launcher 1.0.0 | Real Chrome audits |
 | Agent protocol | MCP SDK 1.32.1 | Stdio tool interface |
 | Models | Ollama / vLLM / compatible HTTP adapters | Bounded tool calling; live inference experimental |
 | Tests | node:test, jsdom 26.1.0, React act | Unit/integration/UI behavior |
