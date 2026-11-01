@@ -145,6 +145,16 @@ gates:
 outputDir: .qualitygate
 ```
 
+Or let QualityGate write that file from your `package.json` scripts (`lint`, `typecheck`
+/ `type-check`, `test:ci` / `test`), pick pnpm/yarn/npm from `packageManager` or the lockfile,
+and add its output folders to `.gitignore`. It never overwrites an existing config:
+
+```sh
+pnpm exec qualitygate setup
+# without installing first, from a tarball:
+npx -p ./tools/qualitygate-prototype-0.1.0.tgz qualitygate setup
+```
+
 Use a terminating test command rather than watch mode. Add `.qualitygate/` and
 `.qualitygate-ci/` to `.gitignore`, then run:
 

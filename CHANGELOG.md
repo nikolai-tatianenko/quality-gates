@@ -2,6 +2,9 @@
 
 ## Unreleased — local workspace and analysis
 
+- `qualitygate setup`: generate `.qualitygate.yml` gates from package.json scripts and
+  update `.gitignore` in one command (also usable via `npx -p <tarball>`).
+
 - Update `yaml` to 2.8.4 (advisory fix), add a bug-report issue template and document
   remaining transitive dependency advisories and the LGPL analyzer dependency.
 
