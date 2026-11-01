@@ -393,7 +393,7 @@
     <script id="readiness-data" type="application/json">
       {
   "product": "QualityGate v0.1.0 (developer preview)",
-  "generatedAt": "2026-10-31",
+  "generatedAt": "2026-11-01",
   "target": {
     "url": "n/a — local CLI + 127.0.0.1 dashboard",
     "build": "main@eb1cfe7",
@@ -494,9 +494,9 @@
       "title": "No known advisory in production dependencies",
       "status": "warn",
       "blocker": false,
-      "evidence": "After bumping yaml to 2.8.4: pnpm audit --prod 24 vulnerabilities (was 25). Remaining runtime ones are transitive via lighthouse and @modelcontextprotocol/sdk; pnpm ones are repo tooling. Documented in SECURITY.md.",
-      "finding": "Transitive advisories remain and reachability is not established. Not a blocker for a GitHub preview, but resolve before an npm release.",
-      "fix": "Upgrade lighthouse and @modelcontextprotocol/sdk when fixed versions pass the 7-day age policy; bump packageManager to >=11.11 (touches 12 files); add pnpm audit --prod to CI once clean.",
+      "evidence": "After Lighthouse 13.5.0 and MCP SDK 1.32.2: pnpm audit --prod reports 14 (12 are pnpm repo tooling; zod and minimatch reach runtime). Documented in SECURITY.md.",
+      "finding": "zod 3.x (needs zod 4 migration) and minimatch DoS remain; inputs are local config and MCP arguments. Not a blocker for GitHub; weigh before npm.",
+      "fix": "Migrate to zod 4 when the MCP SDK supports it cleanly; bump Lighthouse to 13.6.0 after Nov 3; bump packageManager pnpm to >=11.11.",
       "effort": "m",
       "tracker": "untracked",
       "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
@@ -594,14 +594,9 @@
       "id": "package-name",
       "dimension": "ux",
       "title": "Package name is final",
-      "status": "warn",
+      "status": "pass",
       "blocker": false,
-      "evidence": "package.json name is 'qualitygate-prototype'; README line 116 says not on npm yet. npm view could not be run (EBADDEVENGINES under pnpm-managed config), so name availability is unchecked.",
-      "finding": "'prototype' in the published name will stick and looks unfinished. Not an issue for a GitHub-only preview.",
-      "fix": "Choose the final name and scope (for example @qualitygate/cli), verify availability, and rename before the first npm publish.",
-      "effort": "s",
-      "tracker": "untracked",
-      "untrackedReason": "Review-only run: findings are not filed until the owner confirms which to ticket."
+      "evidence": "package.json name is qualitygate-toolbox; npm view qualitygate-toolbox returns E404 (free) on 2026-11-01. pnpm check and verify:release pass under the new name."
     },
     {
       "id": "sitemap-robots",
