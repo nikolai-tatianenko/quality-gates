@@ -2,6 +2,9 @@
 
 ## Unreleased — local workspace and analysis
 
+- Update Lighthouse to 13.5.0 and the MCP SDK to 1.32.2, clearing the `puppeteer-core`,
+  `basic-ftp`, `extract-zip` and Sentry/OpenTelemetry advisories (24 to 14 in `pnpm audit --prod`).
+
 - `qualitygate setup`: generate `.qualitygate.yml` gates from package.json scripts and
   update `.gitignore` in one command (also usable via `npx -p <tarball>`).
 

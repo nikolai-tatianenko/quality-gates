@@ -80,13 +80,16 @@ vulnerability details. There is no guaranteed response time for this project.
 
 ## Known dependency advisories
 
-`pnpm audit --prod` (2026-10-31) still reports advisories that arrive transitively
-through `lighthouse` (puppeteer-core, Sentry/OpenTelemetry) and
-`@modelcontextprotocol/sdk` (zod). They are not patched upstream within the
-seven-day release-age policy, and reachability from QualityGate's code paths has
-not been established. They will be re-checked on each release and the dependencies
-upgraded when fixed versions are eligible. The `pnpm` advisories apply to the
-repository's own tooling (`packageManager`), not to the published CLI.
+`pnpm audit --prod` (2026-11-01) reports 14 advisories. Twelve are in the repository's
+own `pnpm` tooling (`packageManager`), not in the published CLI. Two reach the runtime:
+
+- `zod` 3.x (memory exhaustion validating oversized constrained collections), via the
+  MCP SDK and our schemas. The fix exists only in zod 4, a separate migration. Inputs are
+  local config files and MCP tool arguments, not untrusted network data.
+- `minimatch` (denial of service via glob amplification) through ESLint in
+  `@qualitygate/code-analysis`. Patterns come from the project's own configuration.
+
+Both are re-checked on each release.
 
 ## Licences
 
