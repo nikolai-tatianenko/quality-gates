@@ -2,6 +2,9 @@
 
 ## Unreleased — local workspace and analysis
 
+- Rename the package to `qualitygate-toolbox` (the `qualitygate` command is unchanged);
+  tarballs are now `qualitygate-toolbox-0.1.0.tgz`.
+
 - Update Lighthouse to 13.5.0 and the MCP SDK to 1.32.2, clearing the `puppeteer-core`,
   `basic-ftp`, `extract-zip` and Sentry/OpenTelemetry advisories (24 to 14 in `pnpm audit --prod`).
 

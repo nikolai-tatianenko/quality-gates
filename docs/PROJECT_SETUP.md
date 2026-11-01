@@ -20,12 +20,12 @@ No package is published to npm by these commands. In your target project:
 
 ```sh
 mkdir -p tools
-cp /tmp/qualitygate-packages/qualitygate-prototype-0.1.0.tgz tools/
-pnpm add -D ./tools/qualitygate-prototype-0.1.0.tgz
+cp /tmp/qualitygate-packages/qualitygate-toolbox-0.1.0.tgz tools/
+pnpm add -D ./tools/qualitygate-toolbox-0.1.0.tgz
 ```
 
 Keep the archive at this repository-relative path so another checkout/CI runner
-can install it. Commit `tools/qualitygate-prototype-0.1.0.tgz`, `package.json` and
+can install it. Commit `tools/qualitygate-toolbox-0.1.0.tgz`, `package.json` and
 the target project's lockfile. The CLI package does not include the dashboard
 server/assets; the dashboard runs from the QualityGate source checkout.
 

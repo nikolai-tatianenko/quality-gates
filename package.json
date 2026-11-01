@@ -1,5 +1,5 @@
 {
-  "name": "qualitygate-prototype",
+  "name": "qualitygate-toolbox",
   "version": "0.1.0",
   "description": "Local quality gates for developers, CI and AI agents over MCP",
   "main": "dist/qualitygate.mjs",
