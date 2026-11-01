@@ -173,3 +173,16 @@
 - Spec coverage (Phase 1): `parser` kind (T1–3), `report`/`artifacts` fields (T1), failure semantics (T4), formats junit/nunit/playwright-json/eslint-json/unity-log (T2–3), limits and containment (T4–5), additive `artifacts` result field (T1, T5), docs (T6). Phases 2 and 3 are deliberately out of this plan.
 - One deliberate clarification of the spec: result `artifacts` holds paths of the stored copies (absolute, like `evidencePath`), because the spec's "project-relative" wording cannot describe copies; Task 6 updates the spec.
 - Left to the implementer: glob-to-regex details, exact XML option names, test fixture contents beyond the assertions above.
+
+## Roadmap after Phase 1 (to be done later by the owner)
+
+This plan covers Phase 1 only (T-020, T-021). The next phases each need their own plan
+written with `superpowers:writing-plans` against the approved design before any code:
+
+- **Phase 2 — ecosystem plugins for `setup`** (T-022): `ecosystem` plugin kind and
+  `qualitygate setup` merging proposals; built-ins node, python, unity, playwright, maestro.
+- **Phase 3 — external plugin loading** (T-023): `plugins: [package]` in `.qualitygate.yml`
+  resolved from `node_modules`, `setup --plugin <package>`, unsandboxed-plugin docs.
+- **Then:** T-024 acceptance on the real Unity, Python and Playwright projects.
+
+Design: `docs/superpowers/specs/2026-11-01-pluggable-ecosystems-design.md`.
