@@ -52,6 +52,10 @@ exist in your `package.json`. Use a terminating test command, for example
 For Python-only projects, gates can invoke Python commands directly; Node is still
 needed for the QualityGate CLI. See the [Python example](../examples/python-project/).
 
+`qualitygate setup` generates this file from the matching `package.json` scripts and appends
+the `.gitignore` entries below; it fails instead of overwriting an existing config. Review the
+generated test command: it must exit, not run in watch mode.
+
 Add these entries to the target project's `.gitignore`:
 
 ```gitignore
