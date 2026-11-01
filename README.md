@@ -125,8 +125,8 @@ Then, in the project you want to check:
 
 ```sh
 mkdir -p tools
-cp /tmp/qualitygate-packages/qualitygate-prototype-0.1.0.tgz tools/
-pnpm add -D ./tools/qualitygate-prototype-0.1.0.tgz
+cp /tmp/qualitygate-packages/qualitygate-toolbox-0.1.0.tgz tools/
+pnpm add -D ./tools/qualitygate-toolbox-0.1.0.tgz
 ```
 
 Keep the archive repository-relative so CI can install it. Commit it with the target
@@ -152,7 +152,7 @@ and add its output folders to `.gitignore`. It never overwrites an existing conf
 ```sh
 pnpm exec qualitygate setup
 # without installing first, from a tarball:
-npx -p ./tools/qualitygate-prototype-0.1.0.tgz qualitygate setup
+npx -p ./tools/qualitygate-toolbox-0.1.0.tgz qualitygate setup
 ```
 
 Use a terminating test command rather than watch mode. Add `.qualitygate/` and

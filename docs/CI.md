@@ -18,8 +18,8 @@ path, rather than an absolute path under `/tmp`:
 
 ```sh
 mkdir -p tools
-cp /tmp/qualitygate-packages/qualitygate-prototype-0.1.0.tgz tools/
-pnpm add -D ./tools/qualitygate-prototype-0.1.0.tgz
+cp /tmp/qualitygate-packages/qualitygate-toolbox-0.1.0.tgz tools/
+pnpm add -D ./tools/qualitygate-toolbox-0.1.0.tgz
 ```
 
 Commit the tarball, package manifest, pnpm lockfile and `.qualitygate.yml` to your
