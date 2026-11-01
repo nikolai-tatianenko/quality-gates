@@ -39,6 +39,20 @@ test('CLI help, defaults, invalid command-specific options and text errors are e
     assert.ok(JSON.parse((await cli(['connect', '--client', 'cursor'], cwd)).stdout).mcpServers);
   } finally { await rm(cwd, { recursive: true, force: true }); }
 });
+test('setup command writes gates in text and JSON modes and rejects bad arguments', async () => {
+  const cwd = await mkdtemp(join(tmpdir(), 'qg-cli-setup-'));
+  try {
+    await writeFile(join(cwd, 'package.json'), JSON.stringify({ scripts: { lint: 'x' } }));
+    const text = await cli(['setup'], cwd);
+    assert.equal(text.code, 0); assert.match(text.stdout, /lint: npm run lint[\s\S]*Added to \.gitignore[\s\S]*watch mode/);
+    const again = await cli(['setup', '--json'], cwd);
+    assert.equal(again.code, 2); assert.equal(JSON.parse(again.stdout).execution, 'error');
+    assert.equal((await cli(['setup', 'extra', '--json'], cwd)).code, 2);
+    await rm(join(cwd, '.qualitygate.yml'));
+    const json = JSON.parse((await cli(['setup', '--json'], cwd)).stdout);
+    assert.deepEqual(json.gates, [{ id: 'lint', run: 'npm run lint' }]); assert.deepEqual(json.gitignore, []);
+  } finally { await rm(cwd, { recursive: true, force: true }); }
+});
 test('text output includes findings, audit evidence, tool errors and report failures', async () => {
   const result = await run(configSchema.parse({ schemaVersion: 1, gates: [{ id: 'lint', run: 'fake' }],
     urls: ['http://fixture'], thresholds: { performance: 100, accessibility: 100, seo: 100, 'best-practices': 100 } }), {

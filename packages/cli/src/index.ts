@@ -13,6 +13,7 @@ import { connectTools } from '../../model-client/src/mcp-host.js';
 import { execute, loadConfig } from './runner.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
+import { setupProject } from './setup.js';
 import { readReport, renderMarkdown, publishDescription } from '../../ci/src/index.js';
 const args = process.argv.slice(2);
 const json = args.includes('--json');
@@ -43,7 +44,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
+    init: ['--config'], setup: ['--config'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
     report: ['--input', '--output'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--api-url', '--token-env'],
     connect: ['--config', '--client'], ask: ['--config', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms'],
   };
@@ -54,6 +55,7 @@ try {
   }
   if (help || args.length === 0) {
     const help = 'Usage: qualitygate init [URL...] [--config <path>] [--json]\n'
+      + '       qualitygate setup [--config <path>] [--json]\n'
       + '       qualitygate run [--config <path>] [--gate <id>...] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
@@ -68,6 +70,14 @@ try {
       thresholds: { performance: 80, accessibility: 90, seo: 90, 'best-practices': 90 } });
     controller.signal.throwIfAborted(); await writeFile(configPath, stringify(config), { flag: 'wx' });
     console.log(json ? JSON.stringify({ schemaVersion: 1, configPath: resolve(configPath) }) : `Created ${resolve(configPath)}`);
+  } else if (command === 'setup') {
+    if (positional.length) throw new Error('setup takes only --config');
+    controller.signal.throwIfAborted();
+    const result = await setupProject(configPath);
+    if (json) console.log(JSON.stringify({ schemaVersion: 1, ...result }));
+    else console.log([`Created ${result.configPath}`, ...result.gates.map(gate => `  ${gate.id}: ${gate.run}`),
+      ...(result.gitignore.length ? [`Added to .gitignore: ${result.gitignore.join(' ')}`] : []),
+      'Check that the test script exits (not watch mode), then run: qualitygate run'].join('\n'));
   } else if (command === 'run' || command === 'inspect') {
     if ((command === 'run' && positional.length) || positional.length > 1) throw new Error(`${command}: unexpected arguments`);
     const result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined) : await getRun(configPath, positional[0]);
