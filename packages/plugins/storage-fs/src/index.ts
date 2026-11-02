@@ -1,4 +1,5 @@
-import { mkdir, rename, writeFile, unlink } from 'node:fs/promises';
+import { copyFile, mkdir, rename, writeFile, unlink } from 'node:fs/promises';
+import { constants } from 'node:fs';
 import { join, resolve, basename } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import type { StoragePlugin } from '../../../plugin-sdk/src/index.js';
@@ -19,6 +20,16 @@ export function filesystemPlugin(outputDir: string): StoragePlugin {
       const temporary = join(dir, `.${filename}.${randomUUID()}.tmp`);
       try {
         await writeFile(temporary, data, { flag: 'wx' });
+        await rename(temporary, target);
+      } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
+      return target;
+    },
+    async copy(dir, filename, sourcePath) {
+      if (basename(filename) !== filename) throw new Error('Invalid evidence filename');
+      const target = join(dir, filename);
+      const temporary = join(dir, `.${filename}.${randomUUID()}.tmp`);
+      try {
+        await copyFile(sourcePath, temporary, constants.COPYFILE_EXCL);
         await rename(temporary, target);
       } finally { await unlink(temporary).catch(error => { if (error.code !== 'ENOENT') throw error; }); }
       return target;
