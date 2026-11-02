@@ -65,3 +65,22 @@ Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitb
 - [ ] T-031: Sticky PR comment as an alternative to editing the description (marker-based update, one comment per PR)
 - [ ] T-032: Slack incoming-webhook notification on BLOCK or error (webhook URL from an env var, HTTPS only, message = gate summary + report link)
 - [ ] T-033 (backlog): run history and trend page (blocks per week, most frequent failing gates, flaky gates) once exports from several runs exist
+
+## Plans and design notes still to write
+- [ ] T-034: Implementation plan for Phase 2 (T-022, ecosystem plugins and `setup`) with `superpowers:writing-plans`, after T-020/T-021 land
+- [ ] T-035: Implementation plan for Phase 3 (T-023, external plugin loading), after T-022
+- [ ] T-036: Short design note for T-028..T-032 (export format, tunnel read-only mode and token, status/comment permissions, Slack payload), then one plan; start with T-028 and T-030
+
+## Connect real projects
+- [ ] T-037: Owner picks the math app to connect (`math-app`, `example/math-web-app` or `example/react-native-math-app`); run `npx qualitygate-toolbox setup` there and keep the gates it proposes
+- [ ] T-038: Connect the Unity project `unity-game` and the Python server (part of T-024, after Phase 2)
+
+## Before an npm publish
+- [ ] T-039: New version, changelog and matching tag (`v0.1.0` is stale and unpushed); publish only on the owner's explicit go
+- [ ] T-040: Threat model for the CLI, dashboard, tunnel share and plugin loading (`docs/threat-model/`)
+- [ ] T-041: Enable GitHub private vulnerability reporting on the repository
+- [ ] T-042: Resolve or accept in `SECURITY.md` the zod 4 and minimatch advisories (7-day release-age policy applies, no overrides)
+
+## Optional
+- [ ] T-043: Bump pnpm to 11.11 or later (touches 12 files; re-run `pnpm verify:release`)
+- [ ] T-044: Delete `legacy/lighthouse-v1` (nothing worth keeping was found; owner confirms)
