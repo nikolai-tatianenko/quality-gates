@@ -28,3 +28,33 @@ test('eslint-json delegates to the ESLint report parser', () => {
   const raw = JSON.stringify([{ filePath: '/proj/a.ts', messages: [{ ruleId: 'r', severity: 2, message: 'bad', line: 1, column: 2 }] }]);
   assert.deepEqual(parse('eslint-json', raw), [{ gateId: 'g', severity: 'error', message: 'bad', file: 'a.ts', line: 1, column: 2, ruleId: 'r' }]);
 });
+test('junit reports failures and errors for both root shapes', () => {
+  const fail = '<testcase classname="A" name="b"><failure message="boom">stack</failure></testcase>';
+  const expected = [{ gateId: 'g', severity: 'error', message: 'A.b: boom' }];
+  assert.deepEqual(parse('junit', `<testsuite>${fail}</testsuite>`), expected);
+  assert.deepEqual(parse('junit', `<testsuites><testsuite>${fail}<testcase name="ok"/></testsuite><testsuite>${fail}</testsuite></testsuites>`).length, 2);
+  assert.deepEqual(parse('junit', '<testsuite><testcase classname="A" name="b"><error message="oops"/></testcase></testsuite>'), [{ gateId: 'g', severity: 'error', message: 'A.b: oops' }]);
+  assert.deepEqual(parse('junit', '<testsuite><testcase name="b"><failure>text body</failure></testcase></testsuite>'), [{ gateId: 'g', severity: 'error', message: 'b: text body' }]);
+  assert.deepEqual(parse('junit', '<testsuite><testcase name="b"><failure/></testcase></testsuite>'), [{ gateId: 'g', severity: 'error', message: 'b: failed' }]);
+  assert.deepEqual(parse('junit', '<testsuite><testcase name="s"><skipped/></testcase></testsuite>'), []);
+  assert.deepEqual(parse('junit', '<testsuite/>'), []);
+  assert.deepEqual(parse('junit', '<testsuite name="x" tests="0"></testsuite>'), []);
+});
+const nunit = (result: string, failure = '') => `<test-run><test-suite><test-suite><test-case fullname="N.T.m" result="${result}">${failure}</test-case></test-suite></test-suite></test-run>`;
+test('nunit reports failed cases with file and line from the stack trace', () => {
+  const failure = '<failure><message><![CDATA[expected 1]]></message><stack-trace><![CDATA[at N.T.m () in /proj/Assets/Tests/T.cs:line 42]]></stack-trace></failure>';
+  assert.deepEqual(parse('nunit', nunit('Failed', failure)), [{ gateId: 'g', severity: 'error', message: 'N.T.m: expected 1', file: 'Assets/Tests/T.cs', line: 42 }]);
+  const outside = failure.replace('/proj/Assets', '/elsewhere/Assets');
+  assert.equal(parse('nunit', nunit('Failed', outside))[0]?.file, '/elsewhere/Assets/Tests/T.cs');
+  for (const result of ['Passed', 'Skipped', 'Inconclusive']) assert.deepEqual(parse('nunit', nunit(result)), []);
+  assert.deepEqual(parse('nunit', nunit('Failed', '<failure><message>no trace</message></failure>')), [{ gateId: 'g', severity: 'error', message: 'N.T.m: no trace' }]);
+  assert.deepEqual(parse('nunit', nunit('Failed')), [{ gateId: 'g', severity: 'error', message: 'N.T.m: failed' }]);
+  assert.deepEqual(parse('nunit', nunit('Failed', '<failure><message>m</message><stack-trace>no location</stack-trace></failure>')), [{ gateId: 'g', severity: 'error', message: 'N.T.m: m' }]);
+  assert.deepEqual(parse('nunit', '<test-run/>'), []);
+});
+test('xml parsers reject malformed input', () => {
+  for (const format of ['junit', 'nunit']) {
+    assert.throws(() => parse(format, '<testsuite><oops></testsuite>'), /^Error: Invalid XML/);
+    assert.throws(() => parse(format, 'plain text'), /^Error: Invalid XML/);
+  }
+});
