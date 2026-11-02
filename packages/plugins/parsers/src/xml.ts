@@ -7,11 +7,14 @@ export function parseXml(raw: string): Record<string, unknown> {
   if (valid !== true) throw new Error(`Invalid XML: ${valid.err.msg}`);
   return parser.parse(raw) as Record<string, unknown>;
 }
+const asObjects = (value: unknown): Record<string, unknown>[] =>
+  (Array.isArray(value) ? value : [value]).map(item => (item && typeof item === 'object' ? item as Record<string, unknown> : {}));
 /** Collects nested nodes with the given element name at any depth. */
 export function collect(node: unknown, name: string, out: Record<string, unknown>[] = []): Record<string, unknown>[] {
-  if (Array.isArray(node)) for (const item of node) collect(item, name, out);
-  else if (node && typeof node === 'object') for (const [key, value] of Object.entries(node)) {
-    if (key === name) for (const item of Array.isArray(value) ? value : [value]) { if (item && typeof item === 'object') out.push(item as Record<string, unknown>); else out.push({}); }
+  if (Array.isArray(node)) { for (const item of node) collect(item, name, out); return out; }
+  if (!node || typeof node !== 'object') return out;
+  for (const [key, value] of Object.entries(node)) {
+    if (key === name) out.push(...asObjects(value));
     collect(value, name, out);
   }
   return out;

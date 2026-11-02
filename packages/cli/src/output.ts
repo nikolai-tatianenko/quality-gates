@@ -17,7 +17,7 @@ function printGate(item: GateResult) {
     if (item.decision === 'BLOCK') for (const line of item.outputTail.trimEnd().split('\n').slice(-15)) console.log(`  | ${line}`);
     for (const issue of item.errors) console.log(`  ${issue}`);
     if (item.evidencePath) console.log(`  Evidence: ${item.evidencePath}`);
-
+    for (const artifact of item.artifacts) console.log(`  Artifact: ${artifact}`);
 }
 
 function printFinding(finding: Finding) {

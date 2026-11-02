@@ -79,6 +79,32 @@ For an ESLint JSON report with file/line/rule findings, use `type: eslint` and a
 actual command such as `pnpm exec eslint . --format json`. A generic command gate
 uses its exit code and saves output; it does not infer source locations from text.
 
+### Test reports and artifacts
+
+A command gate can add `report` and `artifacts`:
+
+```yaml
+gates:
+  - id: e2e
+    run: pnpm exec playwright test --reporter=json > playwright-report.json
+    report: { format: playwright-json, path: playwright-report.json }
+    artifacts: [test-results/**/*.png, test-results/**/trace.zip]
+```
+
+- `report.format` is one of `junit`, `nunit`, `playwright-json`, `eslint-json`, `unity-log`.
+  Failures become findings with file, line and message where the format provides them.
+- The command's exit code decides PASS/BLOCK. Non-zero exit and no report: BLOCK, the log is
+  the evidence. Exit 0 and no report, an unreadable or unparsable report, or exit 0 with
+  error findings in the report: execution `error` (exit code 2).
+- `report.path` and artifact globs resolve inside the directory of `.qualitygate.yml`.
+  Absolute paths, `..` and symlinks are rejected or skipped. Reports are limited to 5 MB;
+  artifacts to 50 files and 50 MB, and a truncation note is appended to the gate output.
+- Artifacts (and the report file) are copied into `.qualitygate/<run-id>/` and listed in the
+  gate's `artifacts` array in `--json` output and MCP results; text output prints `Artifact:` lines.
+  A glob that matches nothing is not an error (a passing Playwright run writes no traces).
+- Artifacts can contain secrets or personal data (screenshots, logs); treat the evidence
+  folder like the logs it already holds.
+
 ## 3. Attach Husky hooks
 
 QualityGate supplies the gate runner. [Husky](https://typicode.github.io/husky/get-started.html)

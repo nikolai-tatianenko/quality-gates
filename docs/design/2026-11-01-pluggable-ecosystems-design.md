@@ -120,8 +120,8 @@ opt-in per project; documentation states plugins run with the user's permissions
 - **Merging proposals:** non-interactive. Each proposed gate id is prefixed with its
   ecosystem on collision (`node-tests`, `playwright-tests`). A more specific ecosystem may
   declare it replaces another's gate (Playwright replaces nothing in Node; it adds one).
-- **Artifacts in results:** an additive optional `artifacts: string[]` (project-relative
-  paths, default `[]`) on the gate result and in JSON output. Existing consumers ignore
+- **Artifacts in results:** an additive optional `artifacts: string[]` (absolute paths of
+  the stored copies in the run's evidence folder, like `evidencePath`; default `[]`) on the gate result and in JSON output. Existing consumers ignore
   it, MCP tools return it. Artifact globs and `report.path` must resolve inside the
   project root; symlinks are not followed.
 - **Public kinds:** `parser` and `ecosystem` join the SDK as public kinds. Built-ins are
