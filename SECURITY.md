@@ -34,6 +34,15 @@ checks. Lighthouse opens configured URLs in Chrome; only audit authorized target
 Raw reports and command logs may contain sensitive project data. Review artifacts
 before sharing them or uploading them to public CI storage.
 
+## Reports and artifacts
+
+Command gates may read a report file and copy artifact files into the run evidence. Both
+paths must resolve inside the project (the directory of `.qualitygate.yml`); absolute paths,
+`..` and symlinks are rejected or skipped, reports are limited to 5 MB and artifacts to 50
+files and 50 MB. The gate command itself is still trusted, unsandboxed code. Copied artifacts
+(screenshots, traces, logs) may contain secrets or personal data: keep `.qualitygate/` out of
+version control and review it before sharing a run (export, tunnel or CI upload).
+
 ## Local dashboard and analysis
 
 The React dashboard binds only to 127.0.0.1 and validates Host, Origin and a custom

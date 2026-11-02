@@ -2,6 +2,14 @@
 
 ## Unreleased — local workspace and analysis
 
+- Command gates accept `report: { format, path }` (built-in parsers `junit`, `nunit`,
+  `playwright-json`, `eslint-json`, `unity-log`) and `artifacts: [globs]`. Reports become
+  findings with file and line; artifacts are copied into the run evidence and listed in an
+  additive `artifacts` array on gate results (JSON output and MCP tools). The exit code still
+  decides PASS/BLOCK; report paths and globs stay inside the project, symlinks are skipped,
+  and size/count limits apply. Adds `fast-xml-parser` 5.11.2; SDK `apiVersion` stays 1
+  (new `parser` plugin kind and optional `StoragePlugin.copy` are additive).
+
 - Rename the package to `qualitygate-toolbox` (the `qualitygate` command is unchanged);
   tarballs are now `qualitygate-toolbox-0.1.0.tgz`.
 

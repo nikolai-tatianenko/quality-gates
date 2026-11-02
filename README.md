@@ -145,6 +145,28 @@ gates:
 outputDir: .qualitygate
 ```
 
+A command gate can also read a test report into findings (file, line, message) and keep files
+such as screenshots and traces as run evidence. The exit code still decides PASS/BLOCK; a report
+never turns a non-zero exit into PASS. Formats: `junit`, `nunit`, `playwright-json`, `eslint-json`,
+`unity-log`:
+
+```yaml
+gates:
+  - id: e2e                      # Playwright
+    run: pnpm exec playwright test --reporter=json > playwright-report.json
+    report: { format: playwright-json, path: playwright-report.json }
+    artifacts: [test-results/**/*.png, test-results/**/trace.zip]
+  - id: pytest                   # pytest
+    run: pytest --junitxml=pytest.xml
+    report: { format: junit, path: pytest.xml }
+  - id: maestro                  # Maestro
+    run: maestro test --format junit --output maestro.xml flows/
+    report: { format: junit, path: maestro.xml }
+  - id: unity-editmode           # Unity EditMode tests
+    run: "$UNITY -batchmode -runTests -testPlatform EditMode -testResults results.xml -logFile unity.log"
+    report: { format: nunit, path: results.xml }
+```
+
 Or let QualityGate write that file from your `package.json` scripts (`lint`, `typecheck`
 / `type-check`, `test:ci` / `test`), pick pnpm/yarn/npm from `packageManager` or the lockfile,
 and add its output folders to `.gitignore`. It never overwrites an existing config:

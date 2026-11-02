@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { auditDataSchema, gateDataSchema, message, runResultSchema,
   type AuditResult, type GateResult, type GateSpec, type RunResult } from '../../protocol/src/index.js';
 import type { AuditPlugin, Context, GatePlugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
@@ -36,6 +36,10 @@ export async function executeGate(spec: GateSpec, index: number, env: Environmen
     }
     if (env.directory) {
       item.evidencePath = await env.storage.write(env.directory, `gate-${index + 1}-${spec.id}.log`, data.output);
+      for (const [k, source] of data.artifacts.entries()) {
+        if (!env.storage.copy) break;
+        item.artifacts.push(await env.storage.copy(env.directory, `gate-${index + 1}-${spec.id}-artifact-${k + 1}-${basename(source)}`, source));
+      }
       if (data.rawReport !== undefined) item.reportPath = await env.storage.write(env.directory, `gate-${index + 1}-${spec.id}.json`, data.rawReport);
     }
     item.findings = item.findings.map(finding => ({ ...finding, evidencePath: item.reportPath ?? item.evidencePath }));
