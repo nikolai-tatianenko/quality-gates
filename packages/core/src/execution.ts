@@ -23,7 +23,7 @@ async function lifecycle(item: Item, signal: AbortSignal, execute: (context: Con
 }
 export async function executeGate(spec: GateSpec, index: number, env: Environment, plugin: GatePlugin): Promise<GateResult> {
   const item: GateResult = { id: spec.id, command: spec.run, execution: 'completed', decision: 'BLOCK',
-    exitCode: null, durationMs: 0, outputTail: '', errors: [], findings: [] };
+    exitCode: null, durationMs: 0, outputTail: '', errors: [], findings: [], artifacts: [] };
   const started = Date.now();
   await lifecycle(item, env.signal, async context => {
     const data = gateDataSchema.parse(await plugin.run(spec, context));

@@ -25,7 +25,10 @@ export const gateSchema = z.object({
     taskFile: z.string().min(1).default('.scannerwork/report-task.txt'),
   }).strict().optional(),
   review: z.object({ sourceId: z.string().min(1) }).strict().optional(),
+  report: z.object({ format: z.string().regex(/^[a-z0-9-]+$/), path: z.string().min(1) }).strict().optional(),
+  artifacts: z.array(z.string().min(1)).max(50).optional(),
 }).strict().superRefine((gate, ctx) => {
+  if (gate.type !== 'command' && (gate.report || gate.artifacts)) ctx.addIssue({ code: 'custom', message: 'report and artifacts are only for command gates' });
   if ((gate.type === 'sonarqube') !== !!gate.sonar) ctx.addIssue({ code: 'custom', message: 'sonar settings are required only for sonarqube gates' });
   if ((gate.type === 'review') !== !!gate.review) ctx.addIssue({ code: 'custom', message: 'review settings are required only for review gates' });
 });
@@ -66,12 +69,14 @@ export const findingSchema = z.object({
 export const gateDataSchema = z.object({
   exitCode: z.number().int().nullable(), output: z.string(),
   findings: z.array(findingSchema).default([]), rawReport: z.string().optional(), error: z.string().optional(),
+  artifacts: z.array(z.string()).default([]),
 }).strict();
 export const gateResultSchema = z.object({
   id: z.string(), command: z.string(), execution: z.enum(['completed', 'error', 'interrupted', 'skipped']),
   decision: z.enum(['PASS', 'BLOCK']), exitCode: z.number().int().nullable(), durationMs: z.number().min(0),
   outputTail: z.string(), errors: z.array(z.string()), evidencePath: z.string().optional(),
   reportPath: z.string().optional(), findings: z.array(findingSchema).default([]),
+  artifacts: z.array(z.string()).default([]),
 }).strict();
 export const runResultSchema = z.object({
   schemaVersion: z.literal(1), runId: z.string().min(1), startedAt: z.string().datetime(),
