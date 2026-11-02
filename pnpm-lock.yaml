@@ -327,6 +327,8 @@ importers:
 
   packages/plugins/lighthouse: {}
 
+  packages/plugins/parsers: {}
+
   packages/plugins/reporter-json: {}
 
   packages/plugins/review: {}
