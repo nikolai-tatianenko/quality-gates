@@ -84,3 +84,35 @@ Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitb
 ## Optional
 - [ ] T-043: Bump pnpm to 11.11 or later (touches 12 files; re-run `pnpm verify:release`)
 - [ ] T-044: Delete `legacy/lighthouse-v1` (nothing worth keeping was found; owner confirms)
+
+## Roadmap beyond v0.1 (remaining items from `docs/QUALITYGATE_DETAILED_ROADMAP.md`)
+Suggested order: adoption and distribution first, then gate depth, then trust/scale, then extra clients.
+Publishing, renaming and merging to `main` are the owner's decisions and are not done unasked.
+
+### Adoption and portfolio
+- [ ] T-034: Adoption case study: install on 1–2 real work/personal projects (iOS, Unity, Python, web), record the pain, gates chosen, findings and before/after numbers, write a one-page case for each (customer-facing story, not a feature list)
+- [ ] T-035: Make the quality-gate manifest for this repo so `gates.mjs check --completion` can run, and commit a test-review report (measured suite time, coverage gaps, isolation/duplication findings)
+
+### Distribution (QG-405, QG-704, QG-706–708)
+- [ ] T-036: Publish `qualitygate-toolbox` to npm with provenance and a release workflow; verify `npx` / `pnpm dlx` clean install on macOS and Linux (owner approves the first publish)
+- [ ] T-037: Rename the GitHub repository from `qualitygate` to match the product (GitHub redirects the old URL); update README links, remote, badges and package metadata
+- [ ] T-038: Public example repository and README badges (CI, license, npm version)
+- [ ] T-039: Plugin authoring tutorial, generator (`create-qualitygate-plugin`) and compatibility matrix (QG-705, QG-1007)
+
+### CLI (QG-401, QG-402)
+- [ ] T-040: Add `qualitygate list` (gates and last result) and `qualitygate doctor` (Node, Chrome, tools on PATH, config validity); `inspect` already exists
+- [ ] T-041 (backlog): React Ink progress view with streaming logs and a final summary; non-TTY and `--json` output must stay unchanged
+
+### Gate depth (QG-1003–1006)
+- [ ] T-042: Accessibility gate (axe-core) with findings normalised to the shared `Finding` schema, and SARIF export for GitHub code scanning
+- [ ] T-043: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
+- [ ] T-044: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
+
+### Trust and scale (QG-1008–1010)
+- [ ] T-045: Stronger plugin isolation, signed manifests and permission prompts; required before recommending third-party plugins to others (see T-023)
+- [ ] T-046 (backlog): Optional remote execution runner, reusing the GitHub/GitLab integrations
+- [ ] T-047: Stable v1.0 SDK: freeze plugin contracts, semver policy, migration guide
+
+### Extra clients (QG-801–906) — only if there is demand after adoption
+- [ ] T-048 (backlog): Tauri desktop wrapper around the existing dashboard (workspace picker, recent projects, notifications, signing plan)
+- [ ] T-049 (backlog): Manifest V3 Chrome extension that scans the current tab through an authenticated local bridge with explicit consent
