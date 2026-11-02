@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
-import type { Context, GatePlugin } from '../../../plugin-sdk/src/index.js';
+import type { Context, GatePlugin, ParserPlugin } from '../../../plugin-sdk/src/index.js';
 import { message, type GateSpec } from '../../../protocol/src/index.js';
+import { readReport } from './report.js';
 const MAX_OUTPUT_BYTES = 1_000_000;
 const DEFAULT_TIMEOUT_MS = 300_000;
 export interface CommandOutput {
@@ -43,9 +44,25 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   for (const stream of ['stdout', 'stderr', 'output'] as const) result[stream] = Buffer.concat(chunks[stream]).toString('utf8');
   return result;
 }
-export function commandPlugin(cwd: string): GatePlugin {
+/** Runs a command gate; an optional `report` is parsed into findings (exit code still decides PASS/BLOCK). */
+export function commandPlugin(cwd: string, parsers: Record<string, ParserPlugin> = {}): GatePlugin {
   return { id: 'command', apiVersion: 1, kind: 'gate', async run(spec, context) {
     const { exitCode, output, error } = await captureCommand(cwd, spec, context);
-    return { exitCode, output, error };
+    if (!spec.report || error) return { exitCode, output, error };
+    const { format, path } = spec.report;
+    const parser = parsers[format];
+    if (!parser) return { exitCode, output, error: `Unknown report format: ${format}` };
+    const read = await readReport(cwd, path);
+    if (read.status === 'missing') {
+      const note = `Report not found: ${path}`;
+      return exitCode === 0 ? { exitCode, output, error: note } : { exitCode, output: `${output}\n${note}\n` };
+    }
+    if (read.status === 'error') return { exitCode, output, error: read.error };
+    try {
+      const findings = parser.parse(read.raw, { gateId: spec.id, cwd });
+      const failing = exitCode === 0 && findings.some(finding => finding.severity === 'error');
+      return { exitCode, output, findings, artifacts: [read.absolutePath],
+        error: failing ? `Gate ${spec.id} exited 0 but report contains failures` : undefined };
+    } catch (cause) { return { exitCode, output, error: `Invalid ${format} report: ${message(cause)}` }; }
   } };
 }
