@@ -88,11 +88,13 @@ come from a named environment variable; never store them in URLs or project file
 
 ## CI publication
 
-CI publication is an explicit `qualitygate pr --write` action, outside MCP and the
+CI publication (`qualitygate pr|status|comment|notify --write`) is an explicit action, outside MCP and the
 gate runner. Keep PR-write tokens in a trusted serialized publisher, never in
 target-code check jobs. Read the [CI trust boundary and concurrency limits](docs/CI.md)
 before enabling description updates. Provider API roots are HTTPS (loopback HTTP
-only for tests), redirects are rejected, and generated tool text is escaped.
+only for tests), redirects are rejected, and generated tool text is escaped. Fork PRs are refused
+(`--head-repository`). The Slack webhook URL is a secret read from an environment variable, must be
+HTTPS and is never printed; messages carry gate ids and a report link only.
 
 ## Report a vulnerability
 

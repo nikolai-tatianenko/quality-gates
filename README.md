@@ -231,7 +231,8 @@ it checks the current source SHA and skips older runs for that head.
 
 API writes require an explicit `--write` command in a trusted publisher. Keep its
 credentials out of target-code jobs. Live provider setup and concurrency limits are
-explained in [CI and PR/MR reporting](docs/CI.md). Browser smoke tests can run in CI;
+explained in [CI and PR/MR reporting](docs/CI.md). Commit status, a sticky PR comment and Slack
+notifications (BLOCK/error only) are covered there too. Browser smoke tests can run in CI;
 that is different from deploying the local dashboard as a public service.
 
 **Share a run.** `qualitygate export --out report/` writes the last run (or `--input run.json`)
