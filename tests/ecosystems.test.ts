@@ -1,0 +1,93 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises';
+import { join, dirname } from 'node:path';
+import { tmpdir } from 'node:os';
+import { detectedGateSchema } from '../packages/protocol/src/index.js';
+import type { DetectedGate } from '../packages/protocol/src/index.js';
+import { builtinEcosystems } from '../packages/plugins/ecosystems/src/index.js';
+import { node } from '../packages/plugins/ecosystems/src/node.js';
+import { python } from '../packages/plugins/ecosystems/src/python.js';
+import { playwright } from '../packages/plugins/ecosystems/src/playwright.js';
+import { maestro } from '../packages/plugins/ecosystems/src/maestro.js';
+import { execPrefix } from '../packages/plugins/ecosystems/src/shared.js';
+
+async function project(files: Record<string, string>) {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-eco-'));
+  for (const [name, content] of Object.entries(files)) { await mkdir(dirname(join(dir, name)), { recursive: true }); await writeFile(join(dir, name), content); }
+  return dir;
+}
+async function detect(plugin: { detect(dir: string): Promise<DetectedGate[] | null> }, files: Record<string, string>) {
+  const dir = await project(files);
+  try {
+    const gates = await plugin.detect(dir);
+    for (const gate of gates ?? []) detectedGateSchema.parse(gate);
+    return gates;
+  } finally { await rm(dir, { recursive: true, force: true }); }
+}
+
+test('built-in ecosystems are registered in setup order', () => {
+  assert.deepEqual(builtinEcosystems.map(plugin => plugin.id), ['node', 'python', 'unity', 'playwright', 'maestro']);
+  assert.ok(builtinEcosystems.every(plugin => plugin.kind === 'ecosystem' && plugin.apiVersion === 1));
+});
+
+test('node maps scripts to gates with the detected package manager', async () => {
+  const cases: [Record<string, string>, string][] = [
+    [{ 'package.json': JSON.stringify({ packageManager: 'yarn@4.0.0', scripts: { lint: 'x' } }) }, 'yarn run lint'],
+    [{ 'package.json': JSON.stringify({ scripts: { lint: 'x' } }), 'pnpm-lock.yaml': '' }, 'pnpm run lint'],
+    [{ 'package.json': JSON.stringify({ scripts: { lint: 'x' } }), 'package-lock.json': '' }, 'npm run lint'],
+    [{ 'package.json': JSON.stringify({ scripts: { lint: 'x' } }) }, 'npm run lint'],
+  ];
+  for (const [files, run] of cases) assert.deepEqual(await detect(node, files), [{ id: 'lint', run }]);
+  assert.deepEqual(await detect(node, { 'package.json': JSON.stringify({ scripts: { test: 'a', 'test:ci': 'b', 'check-types': 'c' } }) }),
+    [{ id: 'typecheck', run: 'npm run check-types' }, { id: 'tests', run: 'npm run test:ci', timeoutMs: 300000 }]);
+});
+
+test('node is absent without package.json or matching scripts and rejects invalid JSON', async () => {
+  assert.equal(await detect(node, {}), null);
+  assert.equal(await detect(node, { 'package.json': '{}' }), null);
+  await assert.rejects(detect(node, { 'package.json': '{' }), SyntaxError);
+});
+
+test('python proposes ruff, pytest with a junit report and mypy only when it is mentioned', async () => {
+  const base = [{ id: 'lint', run: 'ruff check .' }, { id: 'tests', run: 'pytest --junitxml=.qualitygate/python/pytest.xml',
+    timeoutMs: 300000, report: { format: 'junit', path: '.qualitygate/python/pytest.xml' } }];
+  assert.deepEqual(await detect(python, { 'pyproject.toml': '[project]\nname = "x"\n' }), base);
+  assert.deepEqual(await detect(python, { 'requirements-dev.txt': 'pytest\n' }), base);
+  const withMypy = [...base, { id: 'typecheck', run: 'mypy .' }];
+  assert.deepEqual(await detect(python, { 'pyproject.toml': '[tool.mypy]\nstrict = true\n' }), withMypy);
+  assert.deepEqual(await detect(python, { 'requirements.txt': 'mypy==1.0\n' }), withMypy);
+  assert.deepEqual(await detect(python, { 'requirements.txt': 'flask\n', 'mypy.ini': '[mypy]\n' }), withMypy);
+  assert.equal(await detect(python, {}), null);
+  assert.equal(await detect(python, { 'requirements.md': 'x' }), null);
+});
+
+test('playwright proposes a json report and evidence artifacts for each config extension', async () => {
+  for (const extension of ['ts', 'js', 'mjs', 'cjs', 'mts', 'cts']) {
+    const [gate] = (await detect(playwright, { [`playwright.config.${extension}`]: '' }))!;
+    assert.equal(gate!.id, 'tests');
+    assert.equal(gate!.run, 'PLAYWRIGHT_JSON_OUTPUT_NAME=.qualitygate/playwright/report.json npx playwright test --reporter=list,json');
+    assert.deepEqual(gate!.report, { format: 'playwright-json', path: '.qualitygate/playwright/report.json' });
+    assert.deepEqual(gate!.artifacts, ['test-results/**/*.png', 'test-results/**/*.webm', 'test-results/**/*.zip']);
+  }
+  const [pnpm] = (await detect(playwright, { 'playwright.config.ts': '', 'package.json': JSON.stringify({ packageManager: 'pnpm@11.5.1' }) }))!;
+  assert.match(pnpm!.run, /pnpm exec playwright test/);
+  const [yarn] = (await detect(playwright, { 'playwright.config.ts': '', 'yarn.lock': '' }))!;
+  assert.match(yarn!.run, /yarn playwright test/);
+  assert.equal(await detect(playwright, {}), null);
+  assert.equal(execPrefix('yarn'), 'yarn');
+});
+
+test('maestro needs a flows folder with an appId and prefers .maestro', async () => {
+  const flow = 'appId: com.example.app\n---\n- launchApp\n';
+  const [hidden] = (await detect(maestro, { '.maestro/login.yaml': flow, 'flows/other.yaml': flow }))!;
+  assert.equal(hidden!.id, 'e2e-mobile');
+  assert.equal(hidden!.run, 'mkdir -p .qualitygate/maestro && maestro test --format junit --output .qualitygate/maestro/report.xml .maestro');
+  assert.deepEqual(hidden!.report, { format: 'junit', path: '.qualitygate/maestro/report.xml' });
+  assert.equal(hidden!.timeoutMs, 900000);
+  const [plain] = (await detect(maestro, { 'flows/a.yml': flow }))!;
+  assert.match(plain!.run, / flows$/);
+  assert.equal(await detect(maestro, { 'flows/a.yaml': 'name: not maestro\n' }), null);
+  assert.equal(await detect(maestro, { '.maestro/readme.md': 'appId: x' }), null);
+  assert.equal(await detect(maestro, {}), null);
+});
