@@ -63,6 +63,21 @@ It supports one active run and explicit cancellation. SIGINT/SIGTERM drains acti
 execution and evidence writes before shutdown.
 
 Configuration and commands are trusted local code, **not sandboxed**. This is not
-an authenticated multi-user service: do not expose it through a public proxy,
-network tunnel or public interface. Configured gates keep their existing machine
+an authenticated multi-user service: do not expose it through a public proxy
+or public interface. The only supported way to share it is the read-only tunnel below. Configured gates keep their existing machine
 permissions. Project changes are made in your editor, then checked again here.
+
+## Share through a tunnel (read-only)
+
+```sh
+pnpm dashboard --tunnel cloudflare   # runs your installed `cloudflared tunnel --url`
+pnpm dashboard --tunnel ngrok        # runs your installed `ngrok http`
+```
+
+QualityGate never downloads these tools; if the binary is missing the command exits 2.
+It prints `Share: https://.../?token=<random token>`. Tunnel mode is always **read-only**:
+`POST /api/run` and `/api/cancel` answer 405 and the run button is hidden. Every request
+needs the random per-start token (it becomes an HttpOnly cookie and is stripped from the
+address bar). **Anyone with the link can read logs, findings, file paths and evidence**
+of the project; send it only to people you trust. Ctrl+C (or the tunnel dying) closes the
+tunnel and the dashboard. For a static copy with no live server use `qualitygate export`.

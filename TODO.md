@@ -59,15 +59,15 @@ Order: parsers → ecosystems → external loading; each part ships on its own. 
 
 ## Team visibility and process integration
 Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitbucket) and the GitHub template writes the job summary. These tasks add what is missing. Each needs a short design note first; secrets come from env vars only, URLs HTTPS only, nothing changes exit codes.
-- [ ] T-028: Share a run, safest first: `qualitygate export --out <dir>` writes the last run as a self-contained static HTML report (no server, no scripts from the network) that can be uploaded to Pages, S3 or a CI artifact
-- [ ] T-029: Live share through a tunnel: `qualitygate dashboard --tunnel cloudflare|ngrok` starts the user's installed `cloudflared tunnel --url` or `ngrok http`, prints the public URL. Read-only mode only (no run-triggering endpoints), random access token in the URL, warning that logs and evidence become visible, tunnel closed on exit
+- [x] T-028: Share a run, safest first: `qualitygate export --out <dir>` writes the last run as a self-contained static HTML report (no server, no scripts from the network) that can be uploaded to Pages, S3 or a CI artifact
+- [x] T-029: Live share through a tunnel (shipped as `pnpm dashboard --tunnel`, the dashboard is not in the CLI tarball): `--tunnel cloudflare|ngrok` starts the user's installed `cloudflared tunnel --url` or `ngrok http`, prints the public URL. Read-only mode only (no run-triggering endpoints), random access token in the URL, warning that logs and evidence become visible, tunnel closed on exit
 - [ ] T-030: GitHub commit status / check run (`PASS`/`BLOCK`/`error`) with a link to the report, via `packages/ci`; needs `statuses: write`, same trusted-job rules as the description publisher (no fork PRs)
 - [ ] T-031: Sticky PR comment as an alternative to editing the description (marker-based update, one comment per PR)
 - [ ] T-032: Slack incoming-webhook notification on BLOCK or error (webhook URL from an env var, HTTPS only, message = gate summary + report link)
 - [ ] T-033 (backlog): run history and trend page (blocks per week, most frequent failing gates, flaky gates) once exports from several runs exist
 
 ## Plans and design notes still to write
-- [ ] T-036: Short design note for T-028..T-032 (export format, tunnel read-only mode and token, status/comment permissions, Slack payload), then one plan; start with T-028 and T-030
+- [x] T-036: Short design note for T-028..T-032 (export format, tunnel read-only mode and token, status/comment permissions, Slack payload), then one plan; start with T-028 and T-030
 
 ## Connect real projects
 - [ ] T-037: Owner picks the math app to connect (`math-app`, `example/math-web-app` or `example/react-native-math-app`); run `npx qualitygate-toolbox setup` there and keep the gates it proposes

@@ -2,6 +2,13 @@
 
 ## Unreleased — local workspace and analysis
 
+- Sharing: `qualitygate export --out <dir>` writes a self-contained static HTML report
+  (`index.html`, no scripts, no network resources) plus `report.json` for the last run or `--input`.
+  `pnpm dashboard --tunnel cloudflare|ngrok` starts your installed `cloudflared`/`ngrok`, prints a
+  tokenized public URL and serves a read-only dashboard (no run or cancel endpoints, random access
+  token, tunnel closed on exit; missing binary exits 2). Logs and evidence become visible to anyone
+  with the link. Design: `docs/design/2026-11-02-sharing-and-integrations-design.md`.
+
 - External plugins: `plugins: [package]` in `.qualitygate.yml` loads `parser`, `ecosystem` and
   `gate` plugins from the project's `node_modules` (manifest `apiVersion: 1`, validated, duplicate
   ids rejected, load failures exit 2), a gate `type` may name a third-party gate, and
