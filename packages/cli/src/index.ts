@@ -14,7 +14,7 @@ import { execute, loadConfig } from './runner.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
 import { setupProject } from './setup.js';
-import { readReport, renderMarkdown, publishDescription } from '../../ci/src/index.js';
+import { readReport, renderMarkdown, publishDescription, exportReport } from '../../ci/src/index.js';
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const write = args.includes('--write');
@@ -26,7 +26,7 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
@@ -45,7 +45,7 @@ try {
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
     init: ['--config'], setup: ['--config'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
-    report: ['--input', '--output'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--api-url', '--token-env'],
+    report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--api-url', '--token-env'],
     connect: ['--config', '--client'], ask: ['--config', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms'],
   };
   if (command && validFlags[command]) {
@@ -61,6 +61,7 @@ try {
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
       + '       qualitygate report --input <run.json> [--output <report.md>] [--json]\n'
+      + '       qualitygate export --out <dir> [--input <run.json>] [--config <path>] [--json]\n'
       + '       qualitygate pr --provider <github|gitlab|bitbucket> --repository <owner/repo> --number <id> --head <sha> --input <run.json> [--write] [--json]\n'
       + '       qualitygate sources <sync|restore|check|list|read> [sourceId] [filename] [--config <path>] [--json]\n'
       + '       qualitygate connect --client <claude|cursor|codex|vscode|generic> [--config <path>] [--json]\n'
@@ -102,6 +103,12 @@ try {
         number: values.get('--number'), head: values.get('--head'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
       console.log(json ? JSON.stringify(result) : 'body' in result ? result.body : `PR: ${result.reason}`);
     }
+  } else if (command === 'export') {
+    if (positional.length) throw new Error('export does not accept positional arguments');
+    const out = z.string().min(1).parse(values.get('--out'));
+    const input = values.get('--input');
+    const result = await exportReport(input ? await readReport(input) : await getRun(configPath), resolve(out));
+    console.log(json ? JSON.stringify({ schemaVersion: 1, ...result }) : `Exported ${result.index}`);
   } else if (command === 'sources') {
     const [action, id, file] = positional;
     if (!['sync', 'restore', 'check', 'list', 'read'].includes(action ?? '') || positional.length > (action === 'read' ? 3 : 1) || (action === 'read' && !id)) throw new Error('sources: expected sync, restore, check, list, or read <sourceId> [filename]');
