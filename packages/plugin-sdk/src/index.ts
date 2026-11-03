@@ -24,3 +24,7 @@ export interface ReporterPlugin extends Manifest {
   kind: 'reporter'; render(result: RunResult): string;
 }
 export type Plugin = AuditPlugin | GatePlugin | StoragePlugin | ReporterPlugin | ParserPlugin | EcosystemPlugin;
+/** Kinds a third-party package may provide. */
+export type ExternalPlugin = ParserPlugin | EcosystemPlugin | GatePlugin;
+/** What a plugin package exports as `manifest` (or default) from its entry module. */
+export interface PluginPackage { apiVersion: 1; plugins: ExternalPlugin[] }
