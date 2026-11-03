@@ -43,7 +43,7 @@ export const gateSchema = z.object({
   if ((gate.type === 'sonarqube') !== !!gate.sonar) ctx.addIssue({ code: 'custom', message: 'sonar settings are required only for sonarqube gates' });
   if ((gate.type === 'review') !== !!gate.review) ctx.addIssue({ code: 'custom', message: 'review settings are required only for review gates' });
 });
-const packageName = z.string().regex(/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/, 'Expected an npm package name');
+export const packageName = z.string().regex(/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/, 'Expected an npm package name');
 export const configSchema = z.object({
   schemaVersion: z.literal(1),
   /** npm packages resolved from the project's node_modules; they run unsandboxed with your permissions. */
