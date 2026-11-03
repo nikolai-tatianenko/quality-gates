@@ -133,3 +133,56 @@ test('projects without plugins still run with built-ins only', async () => withP
   const path = await project(dir, { gates: [{ id: 'ok', run: 'true' }] });
   assert.equal((await execute(path, new AbortController().signal)).decision, 'PASS');
 }));
+
+import { spawn } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { parse } from 'yaml';
+import { setupProject } from '../packages/cli/src/setup.js';
+function cli(args: string[], cwd: string) {
+  const child = spawn(process.execPath, ['--import', resolve('node_modules/tsx/dist/loader.mjs'), resolve('packages/cli/src/index.ts'), ...args], { cwd });
+  let stdout = ''; let stderr = '';
+  child.stdout.on('data', b => { stdout += b; }); child.stderr.on('data', b => { stderr += b; });
+  return new Promise<{ code: number | null; stdout: string; stderr: string }>((done, reject) => {
+    child.once('error', reject); child.once('close', code => done({ code, stdout, stderr }));
+  });
+}
+async function setupDir(dir: string) {
+  await cp(fixture, join(dir, 'node_modules', 'qg-plugin-fixture'), { recursive: true });
+  await writeFile(join(dir, 'fixture.marker'), '');
+  return join(dir, '.qualitygate.yml');
+}
+test('setup --plugin adds the package ecosystems and writes plugins: into the config', async () => withProject(async dir => {
+  const path = await setupDir(dir);
+  const result = await setupProject(path, [], ['qg-plugin-fixture']);
+  assert.deepEqual(result.plugins, ['qg-plugin-fixture']);
+  assert.deepEqual(result.ecosystems, ['fixture-eco']);
+  const config = configSchema.parse(parse(await readFile(path, 'utf8')));
+  assert.deepEqual(config.plugins, ['qg-plugin-fixture']);
+  assert.deepEqual(config.gates.map(g => g.id), ['fixture-check']);
+  await assert.rejects(setupProject(path, [], ['qg-plugin-fixture']), /EEXIST/);
+}));
+test('setup without --plugin writes no plugins key; a missing package writes nothing', async () => withProject(async dir => {
+  const path = await setupDir(dir);
+  await assert.rejects(setupProject(path, [], ['absent']), /Plugin package not found: absent/);
+  await assert.rejects(access(path));
+  const eco = { id: 'e', apiVersion: 1 as const, kind: 'ecosystem' as const, detect: async () => [{ id: 'x', run: 'true' }] };
+  const result = await setupProject(path, [eco]);
+  assert.deepEqual(result.plugins, []);
+  assert.ok(!('plugins' in parse(await readFile(path, 'utf8'))));
+}));
+test('CLI setup --plugin is repeatable, reported in text and JSON, and only valid for setup', async () => withProject(async dir => {
+  await setupDir(dir);
+  const json = await cli(['setup', '--plugin', 'qg-plugin-fixture', '--json'], dir);
+  assert.equal(json.code, 0, json.stderr);
+  assert.deepEqual(JSON.parse(json.stdout).plugins, ['qg-plugin-fixture']);
+  await rm(join(dir, '.qualitygate.yml'));
+  const text = await cli(['setup', '--plugin', 'qg-plugin-fixture'], dir);
+  assert.match(text.stdout, /Plugins \(run unsandboxed with your permissions\): qg-plugin-fixture/);
+  await rm(join(dir, '.qualitygate.yml'));
+  const twice = await cli(['setup', '--plugin', 'qg-plugin-fixture', '--plugin', 'qg-plugin-fixture', '--json'], dir);
+  assert.equal(twice.code, 2);
+  const run = await cli(['run', '--plugin', 'x', '--json'], dir);
+  assert.equal(run.code, 2);
+  assert.match(run.stdout, /run does not accept --plugin/);
+}));
