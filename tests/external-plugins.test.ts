@@ -53,10 +53,28 @@ test('loads parser, ecosystem and gate from the fixture package', async () => wi
   assert.deepEqual(await loadExternalPlugins(dir, []), { parsers: {}, ecosystems: [], gates: {} });
 }));
 test('follows pnpm-style symlinks and scoped names', async () => withProject(async dir => {
-  await cp(fixture, join(dir, 'store', 'fixture'), { recursive: true });
+  await cp(fixture, join(dir, 'node_modules', '.pnpm', 'fixture@1', 'node_modules', 'fixture'), { recursive: true });
   await mkdir(join(dir, 'node_modules', '@scope'), { recursive: true });
-  await symlink(join(dir, 'store', 'fixture'), join(dir, 'node_modules', '@scope', 'plugin'));
+  await symlink(join(dir, 'node_modules', '.pnpm', 'fixture@1', 'node_modules', 'fixture'), join(dir, 'node_modules', '@scope', 'plugin'));
   assert.deepEqual(Object.keys((await loadExternalPlugins(dir, ['@scope/plugin'])).parsers), ['fixture-json']);
+}));
+test('rejects package names that are paths before importing anything', async () => withProject(async dir => {
+  const marker = join(dir, 'pwned');
+  await mkdir(join(dir, 'evil'), { recursive: true });
+  await writeFile(join(dir, 'evil', 'package.json'), JSON.stringify({ type: 'module' }));
+  await writeFile(join(dir, 'evil', 'index.js'), `import { writeFileSync } from 'node:fs'; writeFileSync(${JSON.stringify(marker)}, 'x'); export const manifest = {};`);
+  await mkdir(join(dir, 'node_modules'), { recursive: true });
+  for (const name of ['../evil', '../../evil', '/abs', 'a/b', '..', '@scope', 'UPPER']) await assert.rejects(loadExternalPlugins(dir, [name]), /Invalid plugin package name/, name);
+  await assert.rejects(access(marker));
+}));
+test('rejects a package symlinked outside node_modules', async () => withProject(async dir => {
+  const marker = join(dir, 'pwned');
+  await cp(fixture, join(dir, 'outside'), { recursive: true });
+  await writeFile(join(dir, 'outside', 'index.js'), `import { writeFileSync } from 'node:fs'; writeFileSync(${JSON.stringify(marker)}, 'x'); export const manifest = {};`);
+  await mkdir(join(dir, 'node_modules'), { recursive: true });
+  await symlink(join(dir, 'outside'), join(dir, 'node_modules', 'linked'));
+  await assert.rejects(loadExternalPlugins(dir, ['linked']), /Plugin linked: package resolves outside node_modules/);
+  await assert.rejects(access(marker));
 }));
 test('resolves the entry from exports string, exports default, main and index.js, and default manifest export', async () => withProject(async dir => {
   await install(dir, 'a', { exports: './a.js' }, { 'a.js': manifestOf('pa') });

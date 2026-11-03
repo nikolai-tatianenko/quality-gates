@@ -1,7 +1,7 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { join, relative, isAbsolute } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { message, pluginPackageSchema } from '../../protocol/src/index.js';
+import { message, packageName, pluginPackageSchema } from '../../protocol/src/index.js';
 import type { EcosystemPlugin, GatePlugin, ParserPlugin } from '../../plugin-sdk/src/index.js';
 /** Third-party plugins grouped by what they extend. */
 export interface LoadedPlugins { parsers: Record<string, ParserPlugin>; ecosystems: EcosystemPlugin[]; gates: Record<string, GatePlugin> }
@@ -22,9 +22,12 @@ type Candidate = ParserPlugin | EcosystemPlugin | GatePlugin;
 async function importPackage(directory: string, name: string): Promise<Candidate[]> {
   let pkg: unknown;
   try {
+    const modules = await realpath(join(directory, 'node_modules')).catch(() => join(directory, 'node_modules'));
     const root = await realpath(join(directory, 'node_modules', name)).catch(() => {
       throw new Error(`Plugin package not found: ${name} (install it in the project's node_modules)`);
     });
+    const inside = relative(modules, root);
+    if (!inside || inside.startsWith('..') || isAbsolute(inside)) throw new Error(`Plugin ${name}: package resolves outside node_modules`);
     const module = await import(pathToFileURL(await resolveEntry(name, root)).href) as { manifest?: unknown; default?: unknown };
     pkg = module.manifest ?? module.default;
   } catch (error) {
@@ -44,6 +47,7 @@ export async function loadExternalPlugins(directory: string, packages: string[],
   const loaded: LoadedPlugins = { parsers: {}, ecosystems: [], gates: {} };
   const ids = new Set(reserved);
   for (const name of packages) {
+    if (!packageName.safeParse(name).success) throw new Error(`Invalid plugin package name: ${name}`);
     for (const plugin of await importPackage(directory, name)) {
       if (ids.has(plugin.id)) throw new Error(`Duplicate plugin id: ${plugin.id} (${name})`);
       ids.add(plugin.id);
