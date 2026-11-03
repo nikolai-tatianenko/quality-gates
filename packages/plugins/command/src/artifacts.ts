@@ -42,8 +42,8 @@ async function walk(cwd: string, start: string, matcher: RegExp): Promise<string
   }
   return matches;
 }
-/** Expands project-relative globs to absolute regular files; symlinks are never followed, limits are enforced. */
-export async function expandArtifacts(cwd: string, patterns: string[], limits: ArtifactLimits = DEFAULT_LIMITS): Promise<{ files: string[]; truncated: boolean }> {
+/** Expands project-relative globs to absolute regular files; symlinks are never followed, limits are enforced, and files last modified before `notBefore` (leftovers from earlier runs) are skipped. */
+export async function expandArtifacts(cwd: string, patterns: string[], limits: ArtifactLimits = DEFAULT_LIMITS, notBefore?: number): Promise<{ files: string[]; truncated: boolean }> {
   const found = new Set<string>();
   for (const pattern of patterns.filter(item => !escapes(item))) {
     const segments = pattern.replaceAll('\\', '/').split('/');
@@ -54,7 +54,8 @@ export async function expandArtifacts(cwd: string, patterns: string[], limits: A
   }
   const files: string[] = []; let bytes = 0;
   for (const path of [...found].sort()) {
-    const size = (await lstat(join(cwd, path))).size;
+    const info = await lstat(join(cwd, path)); const size = info.size;
+    if (notBefore !== undefined && info.mtimeMs < notBefore) continue;
     if (files.length >= limits.maxFiles || bytes + size > limits.maxBytes) return { files, truncated: true };
     files.push(join(cwd, path)); bytes += size;
   }

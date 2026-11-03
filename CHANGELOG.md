@@ -4,6 +4,8 @@
 
 - Removed the archived `legacy/lighthouse-v1/` service (history keeps it).
 
+- Hardening (review minors): the Unity editor version from `ProjectVersion.txt` must be letters, digits and dots (a crafted version can no longer inject shell syntax into the generated gate); `dashboard --tunnel` now stops the tunnel process when interrupted before the URL appears, never takes `api.trycloudflare.com` as the share URL, and its warning names the gate command lines and config path that become visible; report URLs for the PR comment, commit status and Slack are normalized and refused when they contain spaces or `( ) < > | [ ]`; a report or artifact file older than the run is treated as a leftover (missing report, skipped artifact) instead of being attached; artifacts that cannot be stored because the storage plugin has no `copy` are now reported as a gate error note.
+
 - Dependencies: zod 4.6.7 (fixes the zod advisory; `z.record` now takes explicit key and value
   schemas) and pnpm 11.28.9 for checkouts. Remaining advisories are documented in `SECURITY.md`.
 

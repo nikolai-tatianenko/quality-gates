@@ -88,30 +88,34 @@ Suggested order: adoption and distribution first, then gate depth, then trust/sc
 Publishing, renaming and merging to `main` are the owner's decisions and are not done unasked.
 
 ### Adoption and portfolio
-- [ ] T-034: Adoption case study: install on 1–2 real work/personal projects (iOS, Unity, Python, web), record the pain, gates chosen, findings and before/after numbers, write a one-page case for each (customer-facing story, not a feature list)
-- [ ] T-035: Make the quality-gate manifest for this repo so `gates.mjs check --completion` can run, and commit a test-review report (measured suite time, coverage gaps, isolation/duplication findings)
+- [ ] T-051: Adoption case study: install on 1–2 real work/personal projects (iOS, Unity, Python, web), record the pain, gates chosen, findings and before/after numbers, write a one-page case for each (customer-facing story, not a feature list)
+- [ ] T-052: Make the quality-gate manifest for this repo so `gates.mjs check --completion` can run, and commit a test-review report (measured suite time, coverage gaps, isolation/duplication findings)
 
 ### Distribution (QG-405, QG-704, QG-706–708)
-- [ ] T-036: Publish `qualitygate-toolbox` to npm with provenance and a release workflow; verify `npx` / `pnpm dlx` clean install on macOS and Linux (owner approves the first publish)
-- [ ] T-037: Rename the GitHub repository from `qualitygate` to match the product (GitHub redirects the old URL); update README links, remote, badges and package metadata
-- [ ] T-038: Public example repository and README badges (CI, license, npm version)
-- [ ] T-039: Plugin authoring tutorial, generator (`create-qualitygate-plugin`) and compatibility matrix (QG-705, QG-1007)
+- [ ] T-053: Publish `qualitygate-toolbox` to npm with provenance and a release workflow; verify `npx` / `pnpm dlx` clean install on macOS and Linux (owner approves the first publish)
+- [ ] T-054: Rename the GitHub repository from `qualitygate` to match the product (GitHub redirects the old URL); update README links, remote, badges and package metadata
+- [ ] T-055: Public example repository and README badges (CI, license, npm version)
+- [ ] T-056: Plugin authoring tutorial, generator (`create-qualitygate-plugin`) and compatibility matrix (QG-705, QG-1007)
 
 ### CLI (QG-401, QG-402)
-- [ ] T-040: Add `qualitygate list` (gates and last result) and `qualitygate doctor` (Node, Chrome, tools on PATH, config validity); `inspect` already exists
-- [ ] T-041 (backlog): React Ink progress view with streaming logs and a final summary; non-TTY and `--json` output must stay unchanged
+- [ ] T-057: Add `qualitygate list` (gates and last result) and `qualitygate doctor` (Node, Chrome, tools on PATH, config validity); `inspect` already exists
+- [ ] T-058 (backlog): React Ink progress view with streaming logs and a final summary; non-TTY and `--json` output must stay unchanged
 
 ### Gate depth (QG-1003–1006)
-- [ ] T-042: Accessibility gate (axe-core) with findings normalised to the shared `Finding` schema, and SARIF export for GitHub code scanning
-- [ ] T-043: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
-- [ ] T-044: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
+- [ ] T-059: Accessibility gate (axe-core) with findings normalised to the shared `Finding` schema, and SARIF export for GitHub code scanning
+- [ ] T-060: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
+- [ ] T-061: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
 
 ### Trust and scale (QG-1008–1010)
 - [x] T-050: Review fixes: sticky comment trusts only bot-authored marker comments and tolerates unreadable metadata; `--write` requires `--head-repository` for `pr`, `status`, `comment` (template verifier covers all three); plugin names validated and real path kept inside `node_modules` before import
-- [ ] T-045: Stronger plugin isolation, signed manifests and permission prompts; required before recommending third-party plugins to others (see T-023)
-- [ ] T-046 (backlog): Optional remote execution runner, reusing the GitHub/GitLab integrations
-- [ ] T-047: Stable v1.0 SDK: freeze plugin contracts, semver policy, migration guide
+- [ ] T-062: Stronger plugin isolation, signed manifests and permission prompts; required before recommending third-party plugins to others (see T-023)
+- [ ] T-063 (backlog): Optional remote execution runner, reusing the GitHub/GitLab integrations
+- [ ] T-064: Stable v1.0 SDK: freeze plugin contracts, semver policy, migration guide
 
 ### Extra clients (QG-801–906) — only if there is demand after adoption
-- [ ] T-048 (backlog): Tauri desktop wrapper around the existing dashboard (workspace picker, recent projects, notifications, signing plan)
-- [ ] T-049 (backlog): Manifest V3 Chrome extension that scans the current tab through an authenticated local bridge with explicit consent
+- [ ] T-065 (backlog): Tauri desktop wrapper around the existing dashboard (workspace picker, recent projects, notifications, signing plan)
+- [ ] T-066 (backlog): Manifest V3 Chrome extension that scans the current tab through an authenticated local bridge with explicit consent
+
+## Deferred review minors (from the whole-branch review)
+- [x] T-067: Validate the Unity version from `ProjectVersion.txt` (`^[0-9A-Za-z.]+$`) before it is put into the generated gate command; stop the tunnel when Ctrl+C arrives before it is ready and reject `api.trycloudflare.com` as a share URL; add the gate `run` strings and config path to the shared-dashboard warning
+- [x] T-068: Normalize and validate report URLs (`new URL(v).href`, reject `)`, `>`, `|`, whitespace) in the PR comment and Slack message; clear or freshness-check stale reports and artifacts between runs; do not silently drop artifacts when storage has no `copy`

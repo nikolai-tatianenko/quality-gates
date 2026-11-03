@@ -13,7 +13,7 @@ export const unityPrepare = '{ if [ -f Temp/UnityLockfile ]; then if pgrep -x Un
 export const unity: EcosystemPlugin = { id: 'unity', apiVersion: 1, kind: 'ecosystem', async detect(directory) {
   const raw = await readFile(join(directory, 'ProjectSettings', 'ProjectVersion.txt'), 'utf8').catch(() => undefined);
   if (raw === undefined) return null;
-  const version = /^m_EditorVersion:\s*(\S+)/m.exec(raw)?.[1];
+  const version = /^m_EditorVersion:[ \t]*([0-9A-Za-z.]+)[ \t]*\r?$/m.exec(raw)?.[1];
   if (!version) throw new Error('Unreadable Unity version in ProjectVersion.txt');
   const editor = `"\${UNITY:-/Applications/Unity/Hub/Editor/${version}/Unity.app/Contents/MacOS/Unity}"`;
   const batch = `${unityPrepare} && ${editor} -batchmode -nographics`;

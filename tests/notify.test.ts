@@ -187,3 +187,9 @@ test('CLI status, comment and notify run against fixture servers and keep dry-ru
     for (const invalid of [['status', '--input', input], ['comment', '--input', input], ['notify'], ['notify', '--input', input, '--head', head], ['status', 'extra', '--input', input]]) await assert.rejects(cli([...invalid, '--json']));
   } finally { server.closeAllConnections(); await new Promise<void>(done => server.close(() => done())); await rm(dir, { recursive: true, force: true }); }
 });
+
+test('report URLs that could break out of a Markdown or Slack link are refused', () => {
+  for (const bad of ['https://a.example/x) [Click](https://evil.example', 'https://a.example/x>|<https://evil.example|Go', 'https://a.example/a b', 'https://a.example/<x>', 'https://a.example/(x)', 'https://a.example/x|y'])
+    assert.equal(reportUrlSchema.safeParse(bad).success, false, bad);
+  assert.equal(reportUrlSchema.parse('https://A.example/run/1?x=1%29'), 'https://a.example/run/1?x=1%29');
+});

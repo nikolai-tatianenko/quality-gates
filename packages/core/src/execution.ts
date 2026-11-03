@@ -36,6 +36,7 @@ export async function executeGate(spec: GateSpec, index: number, env: Environmen
     }
     if (env.directory) {
       item.evidencePath = await env.storage.write(env.directory, `gate-${index + 1}-${spec.id}.log`, data.output);
+      if (data.artifacts.length && !env.storage.copy) item.errors.push(`${data.artifacts.length} artifact(s) not stored: the storage plugin cannot copy files`);
       for (const [k, source] of data.artifacts.entries()) {
         if (!env.storage.copy) break;
         item.artifacts.push(await env.storage.copy(env.directory, `gate-${index + 1}-${spec.id}-artifact-${k + 1}-${basename(source)}`, source));

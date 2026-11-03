@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, symlink, utimes, writeFile } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -77,4 +77,18 @@ test('readReport rejects directories and other read failures', async () => withD
 test('gates without a report keep the original result shape', async () => withDir(async dir => {
   const data = await commandPlugin(dir).run(gateSchema.parse({ id: 'g', run: 'node -e "0"' }), context);
   assert.deepEqual(Object.keys(data).sort(), ['error', 'exitCode', 'output']);
+}));
+
+const age = async (path: string) => { const old = new Date(Date.now() - 3600_000); await utimes(path, old, old); };
+test('a report left by an earlier run is treated as missing, never parsed', async () => withDir(async dir => {
+  await writeFile(join(dir, 'r.xml'), FAIL); await age(join(dir, 'r.xml'));
+  const failed = await commandPlugin(dir, throwing).run(gate('node -e "process.exit(1)"', { format: 'junit', path: 'r.xml' }), context);
+  assert.equal(failed.exitCode, 1); assert.ok(!failed.findings?.length); assert.match(failed.output, /Report was not written by this run: r\.xml/); assert.equal(failed.error, undefined);
+  const passed = await commandPlugin(dir, throwing).run(gate('node -e "process.exit(0)"', { format: 'junit', path: 'r.xml' }), context);
+  assert.match(passed.error!, /Report was not written by this run: r\.xml/);
+}));
+test('artifacts older than the run are not attached', async () => withDir(async dir => {
+  await writeFile(join(dir, 'old.png'), 'x'); await age(join(dir, 'old.png'));
+  const data = await commandPlugin(dir).run(gateSchema.parse({ id: 'g', run: `node -e "require('fs').writeFileSync('new.png','y')"`, artifacts: ['*.png'] }), context);
+  assert.deepEqual(data.artifacts, [join(dir, 'new.png')]);
 }));

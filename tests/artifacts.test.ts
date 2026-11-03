@@ -67,4 +67,5 @@ test('artifacts are skipped when storage cannot copy', () => withDir(async dir =
   const base = filesystemPlugin(join(dir, 'out'));
   const result = await exec(dir, [{ id: 'shots', run: makePng, artifacts: ['out-art/*.png'] }], { ...base, copy: undefined });
   assert.deepEqual(result.gates[0]!.artifacts, []);
+  assert.match(result.gates[0]!.errors.join('\n'), /1 artifact\(s\) not stored: the storage plugin cannot copy files/);
 }));

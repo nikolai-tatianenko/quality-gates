@@ -67,3 +67,9 @@ test('gates run the editor named by UNITY and yield findings with file and line'
     assert.equal(tested.exitCode, 1); assert.equal(tested.findings?.[0]?.line, 9);
   } finally { if (previous === undefined) delete process.env.UNITY; else process.env.UNITY = previous; }
 }));
+
+test('unity refuses a version that could carry shell syntax into the generated gate', async () => {
+  for (const version of ['1$(touch pwned)', '2022.3.10f1;rm', '2022 3', '`id`']) {
+    await withProject(async project => { await assert.rejects(unity.detect(project), /Unreadable Unity version/); }, `m_EditorVersion: ${version}\n`);
+  }
+});
