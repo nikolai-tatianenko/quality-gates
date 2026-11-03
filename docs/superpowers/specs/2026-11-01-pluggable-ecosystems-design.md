@@ -39,7 +39,7 @@ should configure a new project of any language in one command.
 
 ## Constraints
 
-- Node >=22.23.4, pnpm 11.5.1, the 7-day `minimumReleaseAge` dependency policy (no
+- Node >=22.23.4, pnpm 11.28.9, the 7-day `minimumReleaseAge` dependency policy (no
   overrides), 100% line and 95% branch test coverage (`pnpm check`).
 - Plugin API stays versioned (`apiVersion`). Existing v1 plugins keep working.
 - No new runtime dependency unless an eligible, audited one is clearly needed.

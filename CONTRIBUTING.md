@@ -5,10 +5,10 @@ the same verdict and evidence. See [VISION.md](VISION.md) for scope and directio
 
 ## Set up
 
-Use Node 22.23.4+ and pnpm 11.5.1 (the version in `packageManager`).
+Use Node 22.23.4+ and pnpm 11.28.9 (the version in `packageManager`).
 The development baseline is pinned in `.nvmrc`. npm uses `.npmrc`; pnpm 11 uses
 the matching engine/version settings in `pnpm-workspace.yaml`.
-Use pnpm 11.5.1 for checkout installs and scripts. Native developer-engine checks
+Use pnpm 11.28.9 for checkout installs and scripts. Native developer-engine checks
 and a local preinstall guard enforce it; the checks are repository-scoped.
 New registry dependency versions must be at least seven days old, including
 transitives. Do not bypass the cutoff with overrides/exclusions to make an install

@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Run everything with Node 22.23.4 first on PATH: `export PATH=$HOME/.nvm/versions/node/v22.23.4/bin:$PATH` (the default Node 22.19.0 makes every `pnpm` command fail).
-- pnpm 11.5.1 only. New dependencies: exact version, at least 7 days old (`minimumReleaseAge`), no overrides; `pnpm audit --prod` must not gain an advisory.
+- pnpm 11.28.9 only. New dependencies: exact version, at least 7 days old (`minimumReleaseAge`), no overrides; `pnpm audit --prod` must not gain an advisory.
 - `pnpm check` must pass: 100% line coverage, 95% branch coverage, lint, typecheck.
 - Plugin API stays `apiVersion: 1`; changes are additive. Existing configs and old run reports must still parse.
 - Exit codes unchanged: 0 PASS, 1 BLOCK, 2 error, 130 interrupted.

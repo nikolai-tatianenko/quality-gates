@@ -14,7 +14,7 @@ async function project(pkg: object, files: Record<string, string> = {}) {
 }
 
 test('setup maps scripts to gates with the declared package manager and ignores output folders', async () => {
-  const dir = await project({ packageManager: 'pnpm@11.5.1', scripts: { lint: 'eslint .', 'type-check': 'tsc', test: 'vitest run', 'test:ci': 'vitest run' } });
+  const dir = await project({ packageManager: 'pnpm@11.28.9', scripts: { lint: 'eslint .', 'type-check': 'tsc', test: 'vitest run', 'test:ci': 'vitest run' } });
   try {
     const result = await setupProject(join(dir, '.qualitygate.yml'));
     assert.deepEqual(result.gates, [

@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Run everything with Node 22.23.4 first on PATH: `export PATH=$HOME/.nvm/versions/node/v22.23.4/bin:$PATH`.
-- pnpm 11.5.1 only; 7-day `minimumReleaseAge`, no overrides. No new runtime dependency.
+- pnpm 11.28.9 only; 7-day `minimumReleaseAge`, no overrides. No new runtime dependency.
 - `pnpm check` must pass (100% line, 95% branch coverage), then `pnpm verify:release`.
 - SDK stays `apiVersion: 1`; changes are additive. Existing configs keep working. Exit codes 0/1/2/130 unchanged; a plugin load failure is an execution error (exit 2).
 - Plugins are trusted local code and run unsandboxed with the user's permissions. README, `docs/PROJECT_SETUP.md`, `SECURITY.md` and the CLI `setup` output say so.

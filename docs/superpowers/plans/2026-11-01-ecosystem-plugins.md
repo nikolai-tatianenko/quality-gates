@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Run everything with Node 22.23.4 first on PATH: `export PATH=$HOME/.nvm/versions/node/v22.23.4/bin:$PATH` (the default Node 22.19.0 makes every `pnpm` command fail).
-- pnpm 11.5.1 only. No new third-party dependency; the 7-day `minimumReleaseAge` stays without overrides.
+- pnpm 11.28.9 only. No new third-party dependency; the 7-day `minimumReleaseAge` stays without overrides.
 - `pnpm check` must pass: 100% line coverage, 95% branch coverage, lint, typecheck. Then `pnpm verify:release` (`verify:package` can flake once after sleep: re-run it alone).
 - Plugin API stays `apiVersion: 1`; changes are additive. Exit codes unchanged: 0 PASS, 1 BLOCK, 2 error, 130 interrupted.
 - Existing `setup` behaviour and `tests/setup.test.ts` keep passing unchanged: same Node gates and ids, same `timeoutMs`, `EEXIST` when the config exists, `ENOENT` for a missing directory, error message still starting `No lint, typecheck or test script`.
