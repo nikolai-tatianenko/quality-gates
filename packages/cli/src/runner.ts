@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { parse } from 'yaml';
 import { configSchema, type Config, type RunResult } from '../../protocol/src/index.js';
 import { run } from '../../core/src/index.js';
+import type { GatePlugin } from '../../plugin-sdk/src/index.js';
 import { lighthousePlugin } from '../../plugins/lighthouse/src/index.js';
 import { eslintPlugin } from '../../plugins/eslint/src/index.js';
 import { sonarQubePlugin } from '../../plugins/sonarqube/src/index.js';
@@ -26,9 +27,9 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
   const eslint = eslintPlugin(directory);
   const sonar = sonarQubePlugin(directory);
   const review = reviewPlugin(directory, config.reviewSources ?? []);
-  const gates = { command, eslint, sonarqube: sonar, review };
+  const gates: Record<string, GatePlugin> = { command, eslint, sonarqube: sonar, review };
   return run(config, {
-    audit: lighthousePlugin(config.timeoutMs, config.chrome), gate: { ...command, run: (spec, context) => gates[spec.type].run(spec, context) },
+    audit: lighthousePlugin(config.timeoutMs, config.chrome), gate: { ...command, run: (spec, context) => gates[spec.type]!.run(spec, context) },
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
   }, signal, only);
 }
