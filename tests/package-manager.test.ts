@@ -10,14 +10,14 @@ test('checkout install guard accepts the pinned pnpm and rejects other managers 
   try {
     await mkdir(join(dir, 'scripts'));
     await cp(resolve('scripts/require-pnpm.mjs'), join(dir, 'scripts/require-pnpm.mjs'));
-    await writeFile(join(dir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.5.1' }));
+    await writeFile(join(dir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.28.9' }));
     const workspace = join(dir, 'pnpm-workspace.yaml'); await writeFile(workspace, 'packages: []\n');
     const invoke = (userAgent: string) => spawnSync(process.execPath, [join(dir, 'scripts/require-pnpm.mjs')], {
       encoding: 'utf8', env: { ...process.env, npm_config_user_agent: userAgent },
     });
-    assert.equal(invoke('pnpm/11.5.1 npm/? node/v22.23.4').status, 0);
-    for (const agent of ['', 'npm/11.0.0', 'yarn/1.22.0', 'bun/1.2.0', 'pnpm/11.5.2']) {
-      const result = invoke(agent); assert.equal(result.status, 1); assert.match(result.stderr, /requires pnpm@11.5.1/);
+    assert.equal(invoke('pnpm/11.28.9 npm/? node/v22.23.4').status, 0);
+    for (const agent of ['', 'npm/11.0.0', 'yarn/1.22.0', 'bun/1.2.0', 'pnpm/11.28.10']) {
+      const result = invoke(agent); assert.equal(result.status, 1); assert.match(result.stderr, /requires pnpm@11.28.9/);
     }
     await rm(workspace);
     assert.equal(invoke('npm/11.0.0').status, 0, 'The installed CLI does not impose our source-checkout manager on consumers');
@@ -27,7 +27,7 @@ test('npm refuses a checkout install before writing a second lockfile, even with
   const dir = await mkdtemp(join(tmpdir(), 'qg-pm-native-'));
   try {
     await writeFile(join(dir, 'package.json'), JSON.stringify({ name: 'qualitygate-manager-policy-test', version: '0.0.0',
-      devEngines: { packageManager: { name: 'pnpm', version: '11.5.1', onFail: 'error' } } }));
+      devEngines: { packageManager: { name: 'pnpm', version: '11.28.9', onFail: 'error' } } }));
     const result = spawnSync('npm', ['install', '--ignore-scripts', '--package-lock-only', '--offline', '--no-audit', '--no-fund'], {
       cwd: dir, encoding: 'utf8', env: { ...process.env, npm_config_cache: join(dir, 'cache') },
     });

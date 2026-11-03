@@ -40,7 +40,7 @@ test('setup fails clearly when nothing is detected, a plugin proposes an invalid
   await assert.rejects(setupProject(join(dir, 'missing', 'q.yml'), []), /ENOENT/);
 }));
 test('a project with Node, Playwright, Python and Maestro gets one valid config', async () => withDir(async dir => {
-  await writeFile(join(dir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.5.1', scripts: { lint: 'x', test: 'y' } }));
+  await writeFile(join(dir, 'package.json'), JSON.stringify({ packageManager: 'pnpm@11.28.9', scripts: { lint: 'x', test: 'y' } }));
   await writeFile(join(dir, 'playwright.config.ts'), '');
   await writeFile(join(dir, 'pyproject.toml'), '');
   await mkdir(join(dir, '.maestro')); await writeFile(join(dir, '.maestro', 'a.yaml'), 'appId: x\n');

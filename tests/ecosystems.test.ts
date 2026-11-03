@@ -70,7 +70,7 @@ test('playwright proposes a json report and evidence artifacts for each config e
     assert.deepEqual(gate!.report, { format: 'playwright-json', path: '.qualitygate/playwright/report.json' });
     assert.deepEqual(gate!.artifacts, ['test-results/**/*.png', 'test-results/**/*.webm', 'test-results/**/*.zip']);
   }
-  const [pnpm] = (await detect(playwright, { 'playwright.config.ts': '', 'package.json': JSON.stringify({ packageManager: 'pnpm@11.5.1' }) }))!;
+  const [pnpm] = (await detect(playwright, { 'playwright.config.ts': '', 'package.json': JSON.stringify({ packageManager: 'pnpm@11.28.9' }) }))!;
   assert.match(pnpm!.run, /pnpm exec playwright test/);
   const [yarn] = (await detect(playwright, { 'playwright.config.ts': '', 'yarn.lock': '' }))!;
   assert.match(yarn!.run, /yarn playwright test/);

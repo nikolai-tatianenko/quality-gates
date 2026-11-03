@@ -7,7 +7,7 @@ Describe unverified editor/model integrations as experimental.
 
 ## Local acceptance check
 
-With Node 22.23.4+, pnpm 11.5.1, Ruff 0.9.2 and Chrome installed:
+With Node 22.23.4+, pnpm 11.28.9, Ruff 0.9.2 and Chrome installed:
 
 ```sh
 pnpm install --frozen-lockfile

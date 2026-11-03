@@ -10,7 +10,7 @@ qualitygate:
     - if: '$CI_COMMIT_BRANCH'
   before_script:
     - corepack enable
-    - corepack prepare pnpm@11.5.1 --activate
+    - corepack prepare pnpm@11.28.9 --activate
     - pnpm install --frozen-lockfile
   script:
     - |

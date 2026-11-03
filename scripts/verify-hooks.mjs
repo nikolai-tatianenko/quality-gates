@@ -12,7 +12,7 @@ const command = (file, args) => exec(file, args, { cwd: directory, env, timeout:
 const originalHooks = await exec('git', ['config', '--local', '--get', 'core.hooksPath'], { cwd: root }).then(result => result.stdout).catch(() => '');
 try {
   await exec('pnpm', ['build'], { cwd: root, env: process.env });
-  await writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'qualitygate-hook-fixture', private: true, packageManager: 'pnpm@11.5.1',
+  await writeFile(join(directory, 'package.json'), JSON.stringify({ name: 'qualitygate-hook-fixture', private: true, packageManager: 'pnpm@11.28.9',
     devDependencies: { husky: '9.1.7' }, scripts: { lint: 'node gate.cjs lint', typecheck: 'node gate.cjs typecheck', 'test:ci': 'node gate.cjs tests' } }));
   await writeFile(join(directory, 'pnpm-workspace.yaml'), 'packages: []\nminimumReleaseAge: 10080\nminimumReleaseAgeStrict: true\n');
   await command('pnpm', ['install', '--ignore-scripts']);
