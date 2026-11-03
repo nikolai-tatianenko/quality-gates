@@ -14,7 +14,7 @@ import { execute, loadConfig } from './runner.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
 import { setupProject } from './setup.js';
-import { readReport, renderMarkdown, publishDescription, exportReport } from '../../ci/src/index.js';
+import { readReport, renderMarkdown, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const write = args.includes('--write');
@@ -26,7 +26,7 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--webhook-env'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
@@ -46,13 +46,16 @@ try {
   const validFlags: Record<string, string[]> = {
     init: ['--config'], setup: ['--config'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
     report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--api-url', '--token-env'],
+    status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
+    comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
+    notify: ['--input', '--webhook-env', '--report-url'],
     connect: ['--config', '--client'], ask: ['--config', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms'],
   };
   if (command && validFlags[command]) {
     for (const key of values.keys()) if (!validFlags[command]!.includes(key)) throw new Error(`${command} does not accept ${key}`);
     if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate`);
     if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
-    if (write && command !== 'pr') throw new Error(`${command} does not accept --write`);
+    if (write && !['pr', 'status', 'comment', 'notify'].includes(command)) throw new Error(`${command} does not accept --write`);
   }
   if (help || args.length === 0) {
     const help = 'Usage: qualitygate init [URL...] [--config <path>] [--json]\n'
@@ -63,6 +66,9 @@ try {
       + '       qualitygate report --input <run.json> [--output <report.md>] [--json]\n'
       + '       qualitygate export --out <dir> [--input <run.json>] [--config <path>] [--json]\n'
       + '       qualitygate pr --provider <github|gitlab|bitbucket> --repository <owner/repo> --number <id> --head <sha> --input <run.json> [--write] [--json]\n'
+      + '       qualitygate status --repository <owner/repo> --head <sha> --input <run.json> [--report-url <https-url>] [--write] [--json]\n'
+      + '       qualitygate comment --repository <owner/repo> --number <id> --head <sha> --input <run.json> [--report-url <https-url>] [--write] [--json]\n'
+      + '       qualitygate notify --input <run.json> [--webhook-env <NAME>] [--report-url <https-url>] [--write] [--json]\n'
       + '       qualitygate sources <sync|restore|check|list|read> [sourceId] [filename] [--config <path>] [--json]\n'
       + '       qualitygate connect --client <claude|cursor|codex|vscode|generic> [--config <path>] [--json]\n'
       + '       qualitygate ask --provider <ollama|vllm|openai-compatible> --model <name> --prompt <text> [--base-url <url>] [--config <path>] [--json]';
@@ -89,7 +95,7 @@ try {
       printRun(result);
     }
     process.exitCode = exitCode(result);
-  } else if (command === 'report' || command === 'pr') {
+  } else if (['report', 'pr', 'status', 'comment', 'notify'].includes(command ?? '')) {
     if (positional.length) throw new Error(`${command} does not accept positional arguments`);
     const input = z.string().min(1).parse(values.get('--input'));
     if (command === 'report') {
@@ -98,6 +104,17 @@ try {
       if (output) await writeFile(output, markdown);
       if (json) console.log(JSON.stringify({ schemaVersion: 1, ...(output ? { output: resolve(output) } : { markdown }) }));
       else if (!output) process.stdout.write(markdown);
+    } else if (command === 'status') {
+      const result = await publishStatus({ repository: values.get('--repository'), head: values.get('--head'), reportUrl: values.get('--report-url'), headRepository: values.get('--head-repository'),
+        apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
+      console.log(json ? JSON.stringify(result) : `${result.payload.description}${result.write ? ' (posted)' : ' (dry run)'}`);
+    } else if (command === 'comment') {
+      const result = await publishComment({ provider: values.get('--provider') ?? 'github', repository: values.get('--repository'), number: values.get('--number'), head: values.get('--head'), reportUrl: values.get('--report-url'),
+        headRepository: values.get('--head-repository'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
+      console.log(json ? JSON.stringify(result) : 'body' in result ? result.body : `Comment: ${result.reason}`);
+    } else if (command === 'notify') {
+      const result = await notifySlack({ webhookEnv: values.get('--webhook-env'), reportUrl: values.get('--report-url'), write }, input, controller.signal);
+      console.log(json ? JSON.stringify(result) : result.message ? `${result.message.text}${result.sent ? ' (sent)' : ' (dry run)'}` : `Slack: ${result.reason}`);
     } else {
       const result = await publishDescription({ provider: values.get('--provider'), repository: values.get('--repository'),
         number: values.get('--number'), head: values.get('--head'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);

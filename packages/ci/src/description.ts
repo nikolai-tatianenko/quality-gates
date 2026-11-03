@@ -31,7 +31,7 @@ function validateBoundaries(found: Map<string, { start: number; end: number }>) 
   if (ordered.length === 4 && !([markers.manualStart, markers.manualEnd, markers.autoStart, markers.autoEnd].every((value, index) => value === ordered[index]))) throw new Error('Overlapping or misplaced QualityGate sections');
   return found;
 }
-function older(section: string, metadata: ReportMetadata) {
+export function older(section: string, metadata: ReportMetadata) {
   const matches = [...section.matchAll(/<!-- qualitygate:metadata (.+) -->/g)];
   if (matches.length > 1) throw new Error('Duplicate QualityGate metadata');
   if (!matches.length) return false;

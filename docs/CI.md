@@ -128,6 +128,49 @@ The GitHub example checks out the trusted base revision for this reason; that ba
 must already contain the installed CLI and lockfile. Preserve that boundary when
 adapting it. Keep write tokens out of check jobs and untrusted fork pipelines.
 
+## Commit status, sticky comment and Slack
+
+Three more publishers share the same flags, token variables, endpoint rules and trusted-job
+boundary as `pr`. Each is a dry run (prints what it would send) until `--write` is added, none
+is exposed through MCP, and none changes the gate exit code: run them in the trusted
+publisher job, never in the job that executes target code. Pass `--report-url` (HTTPS, no
+credentials) to link the CI run or an exported report. Status and Slack summaries omit tool
+output and error text. PR comments include the detailed report, including bounded tool output,
+errors and evidence paths; review that data before publication. Webhook URLs are never printed.
+
+```sh
+# GitHub commit status on the exact reviewed SHA (needs statuses: write). PASS -> success,
+# BLOCK -> failure, error/interrupted -> error. Context: "qualitygate".
+pnpm exec qualitygate status --repository owner/repo --head "$PR_HEAD" \
+  --head-repository "$PR_HEAD_REPOSITORY" --report-url "$REPORT_URL" --input result.json --write
+
+# Sticky PR comment (GitHub; needs pull-requests: write): one comment per PR, found by its
+# `<!-- qualitygate:comment -->` marker, updated in place; duplicates are deleted.
+pnpm exec qualitygate comment --repository owner/repo --number 42 --head "$PR_HEAD" \
+  --head-repository "$PR_HEAD_REPOSITORY" --report-url "$REPORT_URL" --input result.json --write
+
+# Slack incoming webhook, only for BLOCK or error. URL comes from an environment variable.
+SLACK_WEBHOOK_URL=... pnpm exec qualitygate notify --input result.json --report-url "$REPORT_URL" --write
+```
+
+- **Fork PRs are refused.** With `--head-repository` set to the PR's head repository, a value
+  different from `--repository` aborts before any token is read. The GitHub template also
+  skips the whole publish job for forks; keep both guards.
+- **Status** targets the SHA given by `--head`; it does not read the PR. A newer commit gets its
+  own status, so an old run cannot mark a new head.
+- **Comment** is an alternative to the description block (the template picks one with the
+  repository variable `QUALITYGATE_PR_MODE=comment`). It skips closed PRs, stale heads and older
+  runs, including newer duplicate comments, like `pr`. Scans exceeding 1,000 comments fail
+  without writing. Only comments starting with the marker are managed; a foreign comment that
+  copies the marker causes a permission error (exit 2) rather than silent edits. Serialize
+  publishers per PR as for descriptions. GitLab and Bitbucket comments are not implemented.
+- **Slack** accepts only an HTTPS webhook URL without credentials (no loopback exception), read
+  from `--webhook-env` (default `SLACK_WEBHOOK_URL`). The message holds the verdict, blocked
+  gate ids, a count of blocked URL audits and the report link. Treat the webhook URL as a
+  secret and keep it out of target-code jobs. Request failures report only the HTTP status.
+- GitLab/Bitbucket: `notify` works anywhere (it needs only the webhook variable); run it from the
+  same trusted publisher you use for `pr`.
+
 ## Manual and automatic sections
 
 On the first publication, a description without QualityGate tags is treated as
