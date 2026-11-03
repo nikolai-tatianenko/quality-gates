@@ -326,6 +326,8 @@ importers:
 
   packages/plugins/command: {}
 
+  packages/plugins/ecosystems: {}
+
   packages/plugins/eslint: {}
 
   packages/plugins/lighthouse: {}

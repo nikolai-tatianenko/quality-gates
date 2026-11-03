@@ -1,4 +1,4 @@
-import type { AuditData, Finding, GateData, GateSpec, RunResult } from '../../protocol/src/index.js';
+import type { AuditData, DetectedGate, Finding, GateData, GateSpec, RunResult } from '../../protocol/src/index.js';
 export interface Manifest { id: string; apiVersion: 1 }
 export interface Context { signal: AbortSignal; defer(cleanup: () => void | Promise<void>): void }
 export interface AuditPlugin extends Manifest {
@@ -16,7 +16,11 @@ export interface StoragePlugin extends Manifest {
 export interface ParserPlugin extends Manifest {
   kind: 'parser'; parse(raw: string, context: { gateId: string; cwd: string }): Finding[];
 }
+/** Proposes gates for `qualitygate setup`; `null` or `[]` means the ecosystem is not present in `directory`. */
+export interface EcosystemPlugin extends Manifest {
+  kind: 'ecosystem'; detect(directory: string): Promise<DetectedGate[] | null>;
+}
 export interface ReporterPlugin extends Manifest {
   kind: 'reporter'; render(result: RunResult): string;
 }
-export type Plugin = AuditPlugin | GatePlugin | StoragePlugin | ReporterPlugin | ParserPlugin;
+export type Plugin = AuditPlugin | GatePlugin | StoragePlugin | ReporterPlugin | ParserPlugin | EcosystemPlugin;

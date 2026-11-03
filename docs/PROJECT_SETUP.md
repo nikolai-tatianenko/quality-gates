@@ -52,9 +52,26 @@ exist in your `package.json`. Use a terminating test command, for example
 For Python-only projects, gates can invoke Python commands directly; Node is still
 needed for the QualityGate CLI. See the [Python example](../examples/python-project/).
 
-`qualitygate setup` generates this file from the matching `package.json` scripts and appends
-the `.gitignore` entries below; it fails instead of overwriting an existing config. Review the
-generated test command: it must exit, not run in watch mode.
+`qualitygate setup` generates this file from the built-in ecosystem plugins and appends the
+`.gitignore` entries below; it is non-interactive and fails instead of overwriting an existing
+config. Review the generated commands: the test command must exit, not run in watch mode.
+
+| Ecosystem | Detected by | Gates |
+|---|---|---|
+| node | `package.json` scripts | `lint`, `typecheck`, `tests` (`<manager> run <script>`) |
+| python | `pyproject.toml` or `requirements*.txt` | `lint` (`ruff check .`), `tests` (`pytest --junitxml`, `junit` report), `typecheck` (`mypy .`, only when mypy is mentioned) |
+| unity | `ProjectSettings/ProjectVersion.txt` | `unity-compile` (`unity-log` report) and `unity-tests` (EditMode, `nunit` report) |
+| playwright | `playwright.config.*` | `tests` (`playwright-json` report; screenshots, videos and traces as artifacts) |
+| maestro | `.maestro/` or `flows/` with `appId:` flows | `e2e-mobile` (`maestro test --format junit`) |
+
+If several ecosystems propose the same id (for example `tests`), each of those gates is renamed
+`<ecosystem>-<id>` (`node-tests`, `playwright-tests`); other ids stay as they are. Reports are
+written under `.qualitygate/<ecosystem>/`.
+
+Unity gates run `${UNITY:-/Applications/Unity/Hub/Editor/<version>/Unity.app/Contents/MacOS/Unity}`
+with the version from `ProjectVersion.txt`; on Windows or Linux set the `UNITY` environment
+variable to the editor binary. Before each run the gate removes a stale `Temp/UnityLockfile`, but
+fails with "Unity project is open in an editor" if a `Unity` process is running.
 
 Add these entries to the target project's `.gitignore`:
 

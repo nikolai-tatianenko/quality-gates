@@ -36,6 +36,11 @@ before sharing them or uploading them to public CI storage.
 
 ## Reports and artifacts
 
+`qualitygate setup` only reads file names and small manifests and writes a config for you to
+review; the commands it proposes (including the Unity editor and test runners) are ordinary
+unsandboxed gate commands that run with your permissions once you run them. Ecosystem plugins are
+trusted local code, like every plugin.
+
 Command gates may read a report file and copy artifact files into the run evidence. Both
 paths must resolve inside the project (the directory of `.qualitygate.yml`); absolute paths,
 `..` and symlinks are rejected or skipped, reports are limited to 5 MB and artifacts to 50

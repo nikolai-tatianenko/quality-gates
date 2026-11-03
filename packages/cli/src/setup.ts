@@ -1,37 +1,42 @@
-import { readFile, writeFile, appendFile, access } from 'node:fs/promises';
+import { readFile, writeFile, appendFile, stat } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { stringify } from 'yaml';
-import { configSchema } from '../../protocol/src/index.js';
+import { configSchema, detectedGateSchema } from '../../protocol/src/index.js';
+import type { DetectedGate } from '../../protocol/src/index.js';
+import type { EcosystemPlugin } from '../../plugin-sdk/src/index.js';
+import { builtinEcosystems } from '../../plugins/ecosystems/src/index.js';
 
-const wanted = [
-  { id: 'lint', scripts: ['lint'] },
-  { id: 'typecheck', scripts: ['typecheck', 'type-check', 'check-types'] },
-  { id: 'tests', scripts: ['test:ci', 'test'], timeoutMs: 300000 },
-];
 const ignored = ['.qualitygate/', '.qualitygate-ci/', '.qualitygate-review-sources/'];
-const lockfiles: [string, string][] = [['pnpm-lock.yaml', 'pnpm'], ['yarn.lock', 'yarn'], ['package-lock.json', 'npm']];
 
-const exists = (path: string) => access(path).then(() => true, () => false);
-
-async function packageManager(directory: string, declared: unknown): Promise<string> {
-  const name = typeof declared === 'string' ? declared.split('@')[0] : undefined;
-  if (name === 'pnpm' || name === 'yarn' || name === 'npm') return name;
-  for (const [file, manager] of lockfiles) if (await exists(join(directory, file))) return manager;
-  return 'npm';
+/**
+ * Merges ecosystem proposals into one gate list. Gates whose id several ecosystems propose are renamed
+ * `<ecosystem>-<id>`; ids that still clash are an error, so a config is never silently ambiguous.
+ */
+export function mergeProposals(proposals: { ecosystem: string; gates: DetectedGate[] }[]): DetectedGate[] {
+  const counts = new Map<string, number>();
+  for (const { gates } of proposals) for (const { id } of gates) counts.set(id, (counts.get(id) ?? 0) + 1);
+  const seen = new Set<string>();
+  return proposals.flatMap(({ ecosystem, gates }) => gates.map(gate => {
+    const id = counts.get(gate.id)! > 1 ? `${ecosystem}-${gate.id}` : gate.id;
+    if (seen.has(id)) throw new Error(`Duplicate gate id: ${id}`);
+    seen.add(id);
+    return { ...gate, id };
+  }));
 }
 
-/** Creates `.qualitygate.yml` from the lint/typecheck/test scripts in package.json and ignores its output folders. */
-export async function setupProject(configPath: string): Promise<{ configPath: string; gates: { id: string; run: string }[]; gitignore: string[] }> {
+/** Creates `.qualitygate.yml` from the gates proposed by ecosystem plugins and ignores its output folders. */
+export async function setupProject(configPath: string, ecosystems: EcosystemPlugin[] = builtinEcosystems):
+Promise<{ configPath: string; gates: { id: string; run: string }[]; gitignore: string[]; ecosystems: string[] }> {
   const path = resolve(configPath);
   const directory = dirname(path);
-  const pkg = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8')) as { scripts?: Record<string, string>; packageManager?: unknown };
-  const scripts = pkg.scripts ?? {};
-  const manager = await packageManager(directory, pkg.packageManager);
-  const gates = wanted.flatMap(({ id, scripts: names, timeoutMs }) => {
-    const script = names.find(name => name in scripts);
-    return script ? [{ id, run: `${manager} run ${script}`, ...(timeoutMs ? { timeoutMs } : {}) }] : [];
-  });
-  if (!gates.length) throw new Error('No lint, typecheck or test script found in package.json; write .qualitygate.yml by hand');
+  await stat(directory);
+  const proposals: { ecosystem: string; gates: DetectedGate[] }[] = [];
+  for (const plugin of ecosystems) {
+    const gates = detectedGateSchema.array().parse(await plugin.detect(directory) ?? []);
+    if (gates.length) proposals.push({ ecosystem: plugin.id, gates });
+  }
+  const gates = mergeProposals(proposals);
+  if (!gates.length) throw new Error('No lint, typecheck or test script found in package.json and no other ecosystem detected; write .qualitygate.yml by hand');
   const config = configSchema.parse({ schemaVersion: 1, gates });
   await writeFile(path, stringify(config), { flag: 'wx' });
   const gitignorePath = join(directory, '.gitignore');
@@ -39,5 +44,5 @@ export async function setupProject(configPath: string): Promise<{ configPath: st
   const lines = current.split('\n').map(line => line.trim());
   const gitignore = ignored.filter(entry => !lines.includes(entry));
   if (gitignore.length) await appendFile(gitignorePath, `${current && !current.endsWith('\n') ? '\n' : ''}${gitignore.join('\n')}\n`);
-  return { configPath: path, gates: gates.map(({ id, run }) => ({ id, run })), gitignore };
+  return { configPath: path, gates: gates.map(({ id, run }) => ({ id, run })), gitignore, ecosystems: proposals.map(({ ecosystem }) => ecosystem) };
 }
