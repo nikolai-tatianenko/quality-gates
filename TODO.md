@@ -77,13 +77,13 @@ Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitb
 
 ## Before an npm publish
 - [ ] T-039: New version, changelog and matching tag (`v0.1.0` is stale and unpushed); publish only on the owner's explicit go
-- [ ] T-040: Threat model for the CLI, dashboard, tunnel share and plugin loading (`docs/threat-model/`)
+- [x] T-040: Threat model for the CLI, dashboard, tunnel share and plugin loading (`docs/threat-model/`)
 - [ ] T-041: Enable GitHub private vulnerability reporting on the repository
-- [ ] T-042: Resolve or accept in `SECURITY.md` the zod 4 and minimatch advisories (7-day release-age policy applies, no overrides)
+- [x] T-042: Resolve or accept in `SECURITY.md` the zod 4 and minimatch advisories (7-day release-age policy applies, no overrides)
 
 ## Optional
-- [ ] T-043: Bump pnpm to 11.11 or later (touches 12 files; re-run `pnpm verify:release`)
-- [ ] T-044: Delete `legacy/lighthouse-v1` (nothing worth keeping was found; owner confirms)
+- [x] T-043: Bump pnpm to 11.28.9 (touches 12 files; re-run `pnpm verify:release`)
+- [x] T-044: Delete `legacy/lighthouse-v1` (done; history keeps it)
 
 ## Roadmap beyond v0.1 (remaining items from `docs/QUALITYGATE_DETAILED_ROADMAP.md`)
 Suggested order: adoption and distribution first, then gate depth, then trust/scale, then extra clients.

@@ -2,6 +2,11 @@
 
 ## Unreleased — local workspace and analysis
 
+- Removed the archived `legacy/lighthouse-v1/` service (history keeps it).
+
+- Dependencies: zod 4.6.7 (fixes the zod advisory; `z.record` now takes explicit key and value
+  schemas) and pnpm 11.28.9 for checkouts. Remaining advisories are documented in `SECURITY.md`.
+
 - CI notifications (`packages/ci`): `qualitygate status` (GitHub commit status `success`/`failure`/
   `error` with a report link, needs `statuses: write`), `qualitygate comment` (one sticky,
   marker-based PR comment, alternative to the description block) and `qualitygate notify` (Slack
