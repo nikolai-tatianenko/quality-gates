@@ -2,6 +2,13 @@
 
 ## Unreleased — local workspace and analysis
 
+- New `ecosystem` plugin kind (SDK `apiVersion` stays 1) and a multi-ecosystem `qualitygate setup`:
+  built-in `node` (the previous script detection), `python` (`ruff`, `pytest --junitxml`, optional
+  `mypy`), `unity` (`unity-compile` + EditMode `unity-tests`, `UNITY` override, stale
+  `Temp/UnityLockfile` removal), `playwright` and `maestro`. Proposals are merged
+  non-interactively, ids that collide are prefixed with the ecosystem, and an existing config is
+  never overwritten. `setup --json` gains an additive `ecosystems` list.
+
 - Command gates accept `report: { format, path }` (built-in parsers `junit`, `nunit`,
   `playwright-json`, `eslint-json`, `unity-log`) and `artifacts: [globs]`. Reports become
   findings with file and line; artifacts are copied into the run evidence and listed in an

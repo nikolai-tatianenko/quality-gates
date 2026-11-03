@@ -34,7 +34,7 @@ Order: parsers → ecosystems → external loading; each part ships on its own. 
 0/1/2/130, SDK `apiVersion: 1` (additive), 100% line / 95% branch coverage.
 - [x] T-020: `parser` plugin kind and `report: { format, path }` on command gates; built-in `junit`, `nunit`, `playwright-json`, `eslint-json`, `unity-log`. Rules: non-zero exit + no report = BLOCK with log; exit 0 + no report or unreadable report = `error`; a report never turns a non-zero exit into PASS; report path stays inside the project; size limits with truncation noted
 - [x] T-021: `artifacts: [globs]` on command gates; copy into run evidence, additive `artifacts: string[]` on gate results and JSON output, returned by MCP tools; globs inside the project root, symlinks not followed, count/byte limits
-- [ ] T-022: `ecosystem` plugin kind and `qualitygate setup` merging proposals (id prefixed on collision, never overwrites config): move node, add python (`ruff`, `pytest --junitxml`), unity (compile + EditMode via `-runTests`, macOS Hub path, `UNITY` override, stale `Temp/UnityLockfile`), playwright, maestro (`--format junit`)
+- [x] T-022: `ecosystem` plugin kind and `qualitygate setup` merging proposals (id prefixed on collision, never overwrites config): move node, add python (`ruff`, `pytest --junitxml`), unity (compile + EditMode via `-runTests`, macOS Hub path, `UNITY` override, stale `Temp/UnityLockfile`), playwright, maestro (`--format junit`)
 - [ ] T-023: `plugins: [package]` in `.qualitygate.yml` loaded from the project's `node_modules`, validated against plugin schemas, duplicate ids rejected; `setup --plugin <package>` (repeatable); docs and `SECURITY.md` say plugins run unsandboxed
 - [ ] T-024: Acceptance on real projects: Unity client (`setup && run`, failing test yields a finding with file and line), Python server (`ruff` + `pytest` gates), Playwright failure with screenshot and trace in the evidence
 - [ ] T-025: Open a PR `features/october31` → `main` (merge is the owner's call); tag the next release only after CI is green
@@ -67,7 +67,7 @@ Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitb
 - [ ] T-033 (backlog): run history and trend page (blocks per week, most frequent failing gates, flaky gates) once exports from several runs exist
 
 ## Plans and design notes still to write
-- [ ] T-034: Implementation plan for Phase 2 (T-022, ecosystem plugins and `setup`) with `superpowers:writing-plans`, after T-020/T-021 land
+- [x] T-034: Implementation plan for Phase 2 (T-022, ecosystem plugins and `setup`) with `superpowers:writing-plans`, after T-020/T-021 land
 - [ ] T-035: Implementation plan for Phase 3 (T-023, external plugin loading), after T-022
 - [ ] T-036: Short design note for T-028..T-032 (export format, tunnel read-only mode and token, status/comment permissions, Slack payload), then one plan; start with T-028 and T-030
 
