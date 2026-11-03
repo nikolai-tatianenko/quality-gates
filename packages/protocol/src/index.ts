@@ -57,7 +57,7 @@ export const configSchema = z.object({
   chrome: z.object({
     noSandbox: z.boolean().default(false),
     launchTimeoutMs: z.number().int().min(100).max(60000).default(10000),
-  }).strict().default({}),
+  }).strict().default({ noSandbox: false, launchTimeoutMs: 10000 }),
 }).strict().superRefine((config, ctx) => {
   if (!config.urls.length && !config.gates.length) ctx.addIssue({ code: 'custom', message: 'Configure at least one URL or gate' });
   if (config.urls.length && !config.thresholds) ctx.addIssue({ code: 'custom', path: ['thresholds'], message: 'thresholds are required when urls are set' });
