@@ -50,7 +50,8 @@ test('PR migration preserves untagged prose; later runs replace only the automat
     `${markers.autoStart}\n${markers.manualStart}\n${markers.autoEnd}\n${markers.manualEnd}`, '```md\nunclosed']) assert.throws(() => updateDescription(bad, 'new', metadata));
   assert.throws(() => updateDescription('human', markers.autoStart, metadata), /reserved/);
   assert.throws(() => updateDescription('x'.repeat(32000), 'report', metadata), /not truncated/);
-  assert.throws(() => updateDescription(`${markers.autoStart}\n<!-- qualitygate:metadata invalid -->\n${markers.autoEnd}`, 'new', metadata));
+  assert.equal(updateDescription(`${markers.autoStart}\n<!-- qualitygate:metadata invalid -->\n${markers.autoEnd}`, 'new', metadata).reason, 'updated');
+  assert.equal(updateDescription(`${markers.autoStart}\n<!-- qualitygate:metadata {"head":1} -->\n${markers.autoEnd}`, 'new', metadata).reason, 'updated');
 });
 
 function payload(provider: ForgeOptions['provider'], body: string | null, sha = head, open = true) {
@@ -67,7 +68,8 @@ test('forge adapters preview and publish only descriptions, preserve intervening
   });
   try {
     for (const provider of ['github', 'gitlab', 'bitbucket'] as const) {
-      const options = { provider, repository: provider === 'gitlab' ? 'org/group/repo' : 'owner/repo', number: 7, head, tokenEnv: 'QG_FORGE_TOKEN' };
+      const repository = provider === 'gitlab' ? 'org/group/repo' : 'owner/repo';
+      const options = { provider, repository, number: 7, head, tokenEnv: 'QG_FORGE_TOKEN', headRepository: repository };
       response = () => Response.json(payload(provider, 'Human text')); calls.length = 0;
       const dry = await publishDescription(options, path, new AbortController().signal); assert.equal(dry.write, false); assert.equal(calls.length, 1);
       assert.match(calls[0]!.url, provider === 'gitlab' ? /projects\/org%2Fgroup%2Frepo\/merge_requests\/7/ : /\/7$/);
@@ -84,14 +86,17 @@ test('forge adapters preview and publish only descriptions, preserve intervening
       response = () => Response.json(payload(provider, updateDescription('Human', 'newer', { ...metadata, finishedAt: '2026-10-30T22:00:00.000Z' }).body));
       assert.equal((await publishDescription({ ...options, write: true }, path, new AbortController().signal)).reason, 'older-run');
     }
-    const options = { provider: 'github', repository: 'owner/repo', number: 1, head, tokenEnv: 'QG_FORGE_TOKEN', write: true };
+    const options = { provider: 'github', repository: 'owner/repo', number: 1, head, tokenEnv: 'QG_FORGE_TOKEN', write: true, headRepository: 'owner/repo' };
     let edit = 0; response = () => Response.json(payload('github', `Edit ${++edit}`)); await assert.rejects(publishDescription(options, path, new AbortController().signal), /serialized/);
     for (const value of [new Response('secret', { status: 403 }), new Response('x'.repeat(1000001)), new Response('bad JSON'), Response.json({})]) {
       response = () => value; await assert.rejects(publishDescription(options, path, new AbortController().signal));
     }
+    response = () => Response.json(payload('github', 'Human text')); calls.length = 0;
+    await assert.rejects(publishDescription({ ...options, write: true, headRepository: undefined }, path, new AbortController().signal), /--head-repository/);
+    await assert.rejects(publishDescription({ ...options, write: true, headRepository: 'fork/repo' }, path, new AbortController().signal), /fork/); assert.equal(calls.length, 0);
     for (const apiUrl of ['http://remote.test', 'https://user:password@host', 'https://host/?token=x', 'file:///tmp']) await assert.rejects(publishDescription({ ...options, apiUrl }, path, new AbortController().signal), /HTTPS/);
-    await assert.rejects(publishDescription({ ...options, repository: 'one' }, path, new AbortController().signal), /owner\/name/);
-    await assert.rejects(publishDescription({ ...options, repository: '../repo' }, path, new AbortController().signal));
+    await assert.rejects(publishDescription({ ...options, repository: 'one', headRepository: 'one' }, path, new AbortController().signal), /owner\/name/);
+    await assert.rejects(publishDescription({ ...options, repository: '../repo', headRepository: 'x/y' }, path, new AbortController().signal));
     delete process.env.QG_FORGE_TOKEN; await assert.rejects(publishDescription(options, path, new AbortController().signal), /Missing/);
     await writeFile(path, 'x'.repeat(5000001)); await assert.rejects(readReport(path), /5 MB/);
     await writeFile(path, '{}'); await assert.rejects(readReport(path));
@@ -115,6 +120,7 @@ test('CLI renders reports and updates a fixture PR through real HTTP; JSON outpu
     assert.ok(JSON.parse((await cli(['report', '--input', input, '--output', output, '--json'])).stdout).output);
     const args = ['pr', '--provider', 'github', '--repository', 'owner/repo', '--number', '1', '--head', head, '--input', input,
       '--api-url', `http://127.0.0.1:${address.port}`, '--token-env', 'QG_CLI_TOKEN'];
+    await assert.rejects(cli([...args, '--write']), /--head-repository/); args.push('--head-repository', 'owner/repo');
     assert.match((await cli(args)).stdout, /Handwritten PR/); assert.equal(writes, 0);
     assert.equal(JSON.parse((await cli([...args, '--write', '--json'])).stdout).write, true); assert.equal(writes, 1);
     assert.match((await cli([...args, '--write'])).stdout, /Handwritten PR/); assert.equal(writes, 1);

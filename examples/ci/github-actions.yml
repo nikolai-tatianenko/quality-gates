@@ -74,10 +74,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_REPOSITORY: ${{ github.repository }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: >-
-          pnpm exec qualitygate pr --provider github --repository "$PR_REPOSITORY"
+          pnpm exec qualitygate pr --provider github --repository "$PR_REPOSITORY" --head-repository "$PR_HEAD_REPOSITORY"
           --number "$PR_NUMBER" --head "$PR_HEAD" --input incoming/.qualitygate-ci/result.json --write --json
       - name: Update the sticky comment
         if: ${{ vars.QUALITYGATE_PR_MODE == 'comment' }}

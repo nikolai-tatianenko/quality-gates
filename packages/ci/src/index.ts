@@ -11,6 +11,8 @@ export const forgeOptionsSchema = z.object({
   provider: z.enum(['github', 'gitlab', 'bitbucket']), repository: z.string().regex(/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/).refine(value => value.split('/').every(part => part !== '.' && part !== '..')),
   number: z.coerce.number().int().positive(), head: z.string().regex(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/),
   apiUrl: z.string().optional(), tokenEnv: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).optional(), write: z.boolean().default(false),
+  /** Repository the pull request comes from; required with `write` so a fork never reaches the write token. */
+  headRepository: z.string().regex(/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/).refine(value => value.split('/').every(part => part !== '.' && part !== '..')).optional(),
 }).strict();
 export type ForgeOptions = z.infer<typeof forgeOptionsSchema>;
 const defaults = { github: ['https://api.github.com', 'GITHUB_TOKEN'], gitlab: ['https://gitlab.com/api/v4', 'GITLAB_TOKEN'], bitbucket: ['https://api.bitbucket.org/2.0', 'BITBUCKET_TOKEN'] } as const;
@@ -62,7 +64,7 @@ export async function readReport(path: string) {
 }
 /** Remote writes are explicit; never invoked automatically by run_gates or MCP. */
 export async function publishDescription(input: unknown, reportPath: string, signal: AbortSignal) {
-  const options = forgeOptionsSchema.parse(input); const url = endpoint(options);
+  const options = forgeOptionsSchema.parse(input); refuseFork(options.repository, options.headRepository, options.write); const url = endpoint(options);
   const tokenEnv = options.tokenEnv ?? defaults[options.provider][1]; const token = process.env[tokenEnv];
   if (!token) throw new Error(`Missing PR API token environment variable: ${tokenEnv}`);
   const report = await readReport(reportPath); const markdown = `Source commit: ${options.head}\n\n${renderMarkdown(report, 16000)}`;
@@ -93,10 +95,12 @@ const repositoryField = z.string().regex(/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*
 const tokenEnvField = z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).optional();
 export const statusOptionsSchema = z.object({ repository: repositoryField, head: forgeOptionsSchema.shape.head, reportUrl: reportUrlSchema.optional(), headRepository: repositoryField.optional(),
   apiUrl: z.string().optional(), tokenEnv: tokenEnvField, write: z.boolean().default(false) }).strict();
-export const commentOptionsSchema = forgeOptionsSchema.extend({ reportUrl: reportUrlSchema.optional(), headRepository: repositoryField.optional() });
+/** `author` names the login the token comments as when it is a user, not a bot (GITHUB_TOKEN comments as `github-actions[bot]`). */
+export const commentOptionsSchema = forgeOptionsSchema.extend({ reportUrl: reportUrlSchema.optional(), author: z.string().min(1).max(100).optional() });
 export const slackOptionsSchema = z.object({ webhookEnv: z.string().regex(/^[A-Za-z_][A-Za-z0-9_]*$/).default('SLACK_WEBHOOK_URL'), reportUrl: reportUrlSchema.optional(), write: z.boolean().default(false) }).strict();
 /** Fork pull requests run untrusted code and must never reach a write token. */
-function refuseFork(repository: string, headRepository?: string) {
+function refuseFork(repository: string, headRepository: string | undefined, write: boolean) {
+  if (write && !headRepository) throw new Error('--head-repository is required with --write so fork pull requests never reach a write token');
   if (headRepository && headRepository.toLowerCase() !== repository.toLowerCase()) throw new Error(`Refusing fork pull request from ${headRepository}: publish only from a trusted same-repository job`);
 }
 function githubToken(tokenEnv: string | undefined) {
@@ -111,17 +115,18 @@ function githubRepo(apiUrl: string | undefined, repository: string) {
 }
 /** Commit status for the reviewed SHA (needs `statuses: write`); the gate's exit code is untouched. */
 export async function publishStatus(input: unknown, reportPath: string, signal: AbortSignal) {
-  const options = statusOptionsSchema.parse(input); refuseFork(options.repository, options.headRepository);
+  const options = statusOptionsSchema.parse(input); refuseFork(options.repository, options.headRepository, options.write);
   const url = `${githubRepo(options.apiUrl, options.repository)}/statuses/${options.head}`; const token = githubToken(options.tokenEnv);
   const payload = statusPayload(await readReport(reportPath), options.reportUrl);
   if (options.write) await request(url, token, { method: 'POST', body: JSON.stringify(payload) }, signal);
   return { write: options.write, payload };
 }
-async function ownComments(base: string, token: string, signal: AbortSignal) {
+/** Only the publisher's own comments: bot-authored, or by `author`. Anyone can post the marker text on a public repository. */
+async function ownComments(base: string, token: string, author: string | undefined, signal: AbortSignal) {
   const found: { id: number; body: string }[] = [];
   for (let page = 1; page <= 10; page++) {
-    const batch = z.array(z.object({ id: z.number(), body: z.string().nullable() })).parse(await request(`${base}/comments?per_page=100&page=${page}`, token, { method: 'GET' }, signal));
-    found.push(...batch.flatMap(comment => comment.body?.startsWith(commentMarker) ? [{ id: comment.id, body: comment.body }] : []));
+    const batch = z.array(z.object({ id: z.number(), body: z.string().nullable(), user: z.object({ login: z.string(), type: z.string() }).nullish() })).parse(await request(`${base}/comments?per_page=100&page=${page}`, token, { method: 'GET' }, signal));
+    found.push(...batch.flatMap(comment => comment.body?.startsWith(commentMarker) && (comment.user?.type === 'Bot' || (!!author && comment.user?.login === author)) ? [{ id: comment.id, body: comment.body }] : []));
     if (batch.length < 100) return found;
   }
   throw new Error('PR comment scan exceeds 1000 comments; refusing incomplete publication');
@@ -134,13 +139,13 @@ async function writeComment(issues: string, token: string, plan: { number: numbe
 }
 /** One marker-tagged comment per PR, updated in place; duplicates are removed. Needs `pull-requests: write`. */
 export async function publishComment(input: unknown, reportPath: string, signal: AbortSignal) {
-  const options = commentOptionsSchema.parse(input); refuseFork(options.repository, options.headRepository);
+  const options = commentOptionsSchema.parse(input); refuseFork(options.repository, options.headRepository, options.write);
   if (options.provider !== 'github') throw new Error('Sticky comments support GitHub only');
   const token = githubToken(options.tokenEnv); const current = parsePullRequest('github', await request(endpoint(options), token, { method: 'GET' }, signal));
   if (!current.open || current.head !== options.head) return { changed: false, reason: current.open ? 'stale-head' as const : 'closed' as const, write: false };
   const report = await readReport(reportPath); const metadata = { head: options.head, finishedAt: report.finishedAt, runId: report.runId };
   const body = commentBody(`Source commit: ${options.head}\n\n${renderMarkdown(report, 16000)}`, metadata, options.reportUrl);
-  const issues = `${githubRepo(options.apiUrl, options.repository)}/issues`; const [first, ...extra] = await ownComments(`${issues}/${options.number}`, token, signal);
+  const issues = `${githubRepo(options.apiUrl, options.repository)}/issues`; const [first, ...extra] = await ownComments(`${issues}/${options.number}`, token, options.author, signal);
   if ([...(first ? [first] : []), ...extra].some(comment => older(comment.body, metadata))) return { changed: false, reason: 'older-run' as const, write: false };
   const reason = !first ? 'created' as const : first.body !== body || extra.length ? 'updated' as const : 'unchanged' as const;
   if (!options.write || reason === 'unchanged') return { changed: false, reason, write: false, body };
