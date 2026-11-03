@@ -177,6 +177,11 @@ pnpm/yarn/npm from `packageManager` or the lockfile), **python** (`ruff check .`
 (`node-tests`, `playwright-tests`). It also adds the output folders to `.gitignore` and never
 overwrites an existing config:
 
+Third-party ecosystems, parsers and gates come from npm packages: `qualitygate setup --plugin <package>`
+(repeatable) loads them from the project's `node_modules` and writes a `plugins:` list. **Plugins are
+not sandboxed: they run inside QualityGate with your permissions**, so install only packages you
+trust (see [Third-party plugins](docs/PROJECT_SETUP.md#third-party-plugins) and [SECURITY.md](SECURITY.md)).
+
 ```sh
 pnpm exec qualitygate setup
 # without installing first, from a tarball:

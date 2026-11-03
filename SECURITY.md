@@ -11,7 +11,9 @@ Commands in `.qualitygate.yml` run through the system shell in the configuration
 file's directory, with the current user's permissions and inherited environment.
 They can read or modify files, access the network and launch processes. A timeout
 and process-group cleanup are lifecycle controls, not a security isolation boundary.
-Plugins are trusted local code and also run without a sandbox.
+Plugins are trusted local code and also run without a sandbox: a package listed under `plugins:`
+in `.qualitygate.yml` (or passed to `setup --plugin`) is imported into the QualityGate process with
+your permissions, environment and tokens. See "Third-party plugins" below.
 
 External review methodologies are trusted reference material selected in config.
 Source synchronization downloads bare Git objects, disables Git hooks and system/
@@ -33,6 +35,18 @@ Use a container or another isolation boundary you control when running untrusted
 checks. Lighthouse opens configured URLs in Chrome; only audit authorized targets.
 Raw reports and command logs may contain sensitive project data. Review artifacts
 before sharing them or uploading them to public CI storage.
+
+## Third-party plugins
+
+`plugins: [package]` loads code from the project's `node_modules`. Listing a package is the only
+opt-in: there is no lockfile pin, signature, permission prompt or sandbox yet (tracked as T-045).
+A plugin can read and write files, use the network, spawn processes and read secrets from the
+environment, exactly like a gate command. Only `run` imports plugins; listing gates, inspecting
+runs and the dashboard do not. Install only reviewed packages with pinned versions (the repository's
+7-day release-age policy applies to adding them), and do not run `qualitygate run` in CI on
+untrusted pull requests that can change `.qualitygate.yml`, `package.json` or the lockfile.
+The loader validates the manifest (`apiVersion: 1`, known kinds, unique ids, entry file inside
+the package folder); that is a correctness check, not a security boundary.
 
 ## Reports and artifacts
 
