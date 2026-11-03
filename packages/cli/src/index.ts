@@ -75,7 +75,7 @@ try {
     controller.signal.throwIfAborted();
     const result = await setupProject(configPath);
     if (json) console.log(JSON.stringify({ schemaVersion: 1, ...result }));
-    else console.log([`Created ${result.configPath}`, ...result.gates.map(gate => `  ${gate.id}: ${gate.run}`),
+    else console.log([`Created ${result.configPath}`, `Ecosystems: ${result.ecosystems.join(', ')}`, ...result.gates.map(gate => `  ${gate.id}: ${gate.run}`),
       ...(result.gitignore.length ? [`Added to .gitignore: ${result.gitignore.join(' ')}`] : []),
       'Check that the test script exits (not watch mode), then run: qualitygate run'].join('\n'));
   } else if (command === 'run' || command === 'inspect') {

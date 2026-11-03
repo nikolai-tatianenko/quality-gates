@@ -11,8 +11,17 @@ export const reviewSourceSchema = z.object({
   ref: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._/-]*$/).default('main'),
   path: z.string().regex(/^[A-Za-z0-9_-]+(?:\/[A-Za-z0-9_-]+)*$/),
 }).strict();
+const gateId = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, 'Gate id: letters, digits, - and _');
+const reportSpec = z.object({ format: z.string().regex(/^[a-z0-9-]+$/), path: z.string().min(1) }).strict();
+const artifactGlobs = z.array(z.string().min(1)).max(50);
+/** The command-gate subset an `ecosystem` plugin may propose to `qualitygate setup`. */
+export const detectedGateSchema = z.object({
+  id: gateId, run: z.string().min(1), timeoutMs: z.number().int().min(1).max(3600000).optional(),
+  report: reportSpec.optional(), artifacts: artifactGlobs.optional(),
+}).strict();
+export type DetectedGate = z.infer<typeof detectedGateSchema>;
 export const gateSchema = z.object({
-  id: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, 'Gate id: letters, digits, - and _'),
+  id: gateId,
   type: z.enum(['command', 'eslint', 'sonarqube', 'review']).default('command'),
   run: z.string().min(1),
   timeoutMs: z.number().int().min(1).max(3600000).optional(),
@@ -25,8 +34,8 @@ export const gateSchema = z.object({
     taskFile: z.string().min(1).default('.scannerwork/report-task.txt'),
   }).strict().optional(),
   review: z.object({ sourceId: z.string().min(1) }).strict().optional(),
-  report: z.object({ format: z.string().regex(/^[a-z0-9-]+$/), path: z.string().min(1) }).strict().optional(),
-  artifacts: z.array(z.string().min(1)).max(50).optional(),
+  report: reportSpec.optional(),
+  artifacts: artifactGlobs.optional(),
 }).strict().superRefine((gate, ctx) => {
   if (gate.type !== 'command' && (gate.report || gate.artifacts)) ctx.addIssue({ code: 'custom', message: 'report and artifacts are only for command gates' });
   if ((gate.type === 'sonarqube') !== !!gate.sonar) ctx.addIssue({ code: 'custom', message: 'sonar settings are required only for sonarqube gates' });

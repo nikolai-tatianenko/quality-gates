@@ -167,9 +167,15 @@ gates:
     report: { format: nunit, path: results.xml }
 ```
 
-Or let QualityGate write that file from your `package.json` scripts (`lint`, `typecheck`
-/ `type-check`, `test:ci` / `test`), pick pnpm/yarn/npm from `packageManager` or the lockfile,
-and add its output folders to `.gitignore`. It never overwrites an existing config:
+Or let QualityGate write that file. `setup` asks every built-in ecosystem plugin what it finds and
+merges the proposals: **node** (`lint`, `typecheck` / `type-check`, `test:ci` / `test` scripts, with
+pnpm/yarn/npm from `packageManager` or the lockfile), **python** (`ruff check .`,
+`pytest --junitxml`, `mypy .` when the project mentions it), **unity** (`unity-compile` and
+`unity-tests` through Unity batch mode; macOS Hub path, `UNITY` overrides the editor), **playwright**
+(JSON report plus screenshots, videos and traces as evidence) and **maestro**
+(`maestro test --format junit`). When two ecosystems propose the same gate id, both are prefixed
+(`node-tests`, `playwright-tests`). It also adds the output folders to `.gitignore` and never
+overwrites an existing config:
 
 ```sh
 pnpm exec qualitygate setup
