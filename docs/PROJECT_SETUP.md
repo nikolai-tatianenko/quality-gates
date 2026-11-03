@@ -7,7 +7,7 @@ returns a meaningful exit code.
 
 ## 1. Build a local CLI package
 
-From the QualityGate checkout, with Node 22.23.4+ and pnpm 11.5.1:
+From the QualityGate checkout, with Node 22.23.4+ and pnpm 11.28.9:
 
 ```sh
 pnpm install --frozen-lockfile

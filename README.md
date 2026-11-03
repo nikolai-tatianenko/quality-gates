@@ -74,7 +74,7 @@ synthetic charts. [Dashboard setup and verification](packages/dashboard/README.m
 
 ## Try it locally
 
-From a checkout of this source, use **Node 22.23.4+** and **pnpm 11.5.1**. The baseline
+From a checkout of this source, use **Node 22.23.4+** and **pnpm 11.28.9**. The baseline
 is pinned in [.nvmrc](.nvmrc) and [package.json](package.json).
 
 ```sh
@@ -358,7 +358,7 @@ quality policy available to people and agents through the same execution path.
 | --- | --- | --- |
 | Runtime | Node.js 22.23.4 baseline | CLI, service, MCP and dashboard backend |
 | Language | TypeScript 5.9.3 | Strict contracts and implementation |
-| Workspace | pnpm 11.5.1 | Monorepo, frozen installs and dependency policy |
+| Workspace | pnpm 11.28.9 | Monorepo, frozen installs and dependency policy |
 | Frontend | React / React DOM 19.2.0, CSS/SVG | Local dashboard with semantic theme tokens |
 | Local routing | Vercel Portless 0.12.0 | Named `.localhost` URL, loopback proxy |
 | Build | esbuild 0.25.10, tsx 4.20.6 | Bundles and source execution |

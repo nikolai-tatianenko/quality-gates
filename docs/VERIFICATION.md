@@ -149,7 +149,7 @@ are not yet bound to an exact worktree digest. See [setup and limits](SECURITY_R
 
 # Dependency policy verification — 2026-10-30
 
-The repository now requires pnpm 11.5.1 and a strict seven-day minimum registry
+The repository now requires pnpm 11.28.9 and a strict seven-day minimum registry
 release age (10080 minutes), without age exclusions. Native developer-engine
 checks reject npm checkout installs even with scripts disabled; a dependency-free
 preinstall guard covers other managers/versions. Packaged CLI consumers retain
