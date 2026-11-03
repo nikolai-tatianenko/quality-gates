@@ -22,8 +22,8 @@ URLs, explicit category thresholds, durable evidence, and CI exit codes.
 The legacy service suppressed audit and write errors, only killed Chrome on success,
 and relied on a transitive chrome-launcher dependency. The former workflow had no trigger,
 used an unsupported Node release and referenced a nonexistent entrypoint. There were
-no tests. That implementation is now archived in `legacy/lighthouse-v1/`, outside
-the main workspace; the root CLI is QualityGate.
+no tests. That implementation was removed from the tree (it remains in git history); the root CLI is
+QualityGate.
 
 ## Scope
 

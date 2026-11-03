@@ -424,6 +424,5 @@ project data. [Execution boundary and private reporting](SECURITY.md).
 Contributions should preserve explicit policy, versioned results, visible errors
 and cleanup guarantees. [Contributing](CONTRIBUTING.md).
 
-QualityGate is [MIT licensed](LICENSE). The original service remains archived under
-[`legacy/lighthouse-v1/`](legacy/lighthouse-v1/) with its ISC license and separate
-dependencies; it is excluded from the maintained workspace.
+QualityGate is [MIT licensed](LICENSE). The original ISC-licensed service was removed from
+the tree; it remains available in git history before the removal commit.
