@@ -19,16 +19,20 @@ const token = tunnel ? newShareToken() : undefined;
 const dashboard = createDashboard(config, undefined, publicOrigin, token);
 let shared: Tunnel | undefined;
 let stopping = false;
-const stop = async () => { stopping = true; shared?.close(); await dashboard.close(); };
+const stopTunnel = new AbortController();
+const stop = async () => { stopping = true; stopTunnel.abort(); shared?.close(); await dashboard.close(); };
 dashboard.server.listen(port, '127.0.0.1', async () => {
   const address = dashboard.server.address();
   if (!address || typeof address === 'string') return;
   console.log(`QualityGate: ${publicOrigin ?? `http://127.0.0.1:${address.port}`}\nProject: ${resolve(config)}`);
   if (!tunnel) return;
   try {
-    shared = await startTunnel(tunnel, address.port, code => { if (stopping) return; console.error(`QualityGate: ${tunnel} tunnel closed (code ${code}); stopping`); process.exitCode = 2; void stop(); });
+    shared = await startTunnel(tunnel, address.port, code => { if (stopping) return; console.error(`QualityGate: ${tunnel} tunnel closed (code ${code}); stopping`); process.exitCode = 2; void stop(); }, { signal: stopTunnel.signal });
+    if (stopping) { shared.close(); return; }
     dashboard.trustHost(new URL(shared.url).host);
-    console.log(`Warning: this link gives read-only access to logs, findings and evidence (file paths, command output) of ${resolve(config)} to anyone who has it. Press Ctrl+C to close the tunnel.\nShare: ${shared.url}/?token=${token}`);
-  } catch (error) { console.error(`QualityGate: ${error instanceof Error ? error.message : error}`); process.exitCode = 2; await stop(); }
+    console.log(`Warning: this link gives read-only access to logs, findings and evidence (file paths, command output), the gate command lines and the config path of ${resolve(config)} to anyone who has it. Press Ctrl+C to close the tunnel.\nShare: ${shared.url}/?token=${token}`);
+  } catch (error) {
+    if (stopping) return;
+    console.error(`QualityGate: ${error instanceof Error ? error.message : error}`); process.exitCode = 2; await stop(); }
 });
 process.once('SIGINT', stop); process.once('SIGTERM', stop);

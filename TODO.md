@@ -119,5 +119,5 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 - [ ] T-066 (backlog): Manifest V3 Chrome extension that scans the current tab through an authenticated local bridge with explicit consent
 
 ## Deferred review minors (from the whole-branch review)
-- [ ] T-067: Validate the Unity version from `ProjectVersion.txt` (`^[0-9A-Za-z.]+$`) before it is put into the generated gate command; stop the tunnel when Ctrl+C arrives before it is ready and reject `api.trycloudflare.com` as a share URL; add the gate `run` strings and config path to the shared-dashboard warning
-- [ ] T-068: Normalize and validate report URLs (`new URL(v).href`, reject `)`, `>`, `|`, whitespace) in the PR comment and Slack message; clear or freshness-check stale reports and artifacts between runs; do not silently drop artifacts when storage has no `copy`
+- [x] T-067: Validate the Unity version from `ProjectVersion.txt` (`^[0-9A-Za-z.]+$`) before it is put into the generated gate command; stop the tunnel when Ctrl+C arrives before it is ready and reject `api.trycloudflare.com` as a share URL; add the gate `run` strings and config path to the shared-dashboard warning
+- [x] T-068: Normalize and validate report URLs (`new URL(v).href`, reject `)`, `>`, `|`, whitespace) in the PR comment and Slack message; clear or freshness-check stale reports and artifacts between runs; do not silently drop artifacts when storage has no `copy`

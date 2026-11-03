@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import { exitCode, type RunResult } from '../../protocol/src/index.js';
 export const commentMarker = '<!-- qualitygate:comment -->';
-/** Report links must be public HTTPS URLs without credentials; they are embedded in third-party UIs. */
-export const reportUrlSchema = z.string().refine(value => { try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password; } catch { return false; } }, 'Use an HTTPS report URL without credentials');
+/** Report links must be public HTTPS URLs without credentials; they are embedded in Markdown and Slack links, so characters that can end a link early are refused and the normalized form is used. */
+export const reportUrlSchema = z.string().refine(value => { try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && !/[\s()<>|[\]]/.test(value); } catch { return false; } }, 'Use an HTTPS report URL without credentials, spaces or any of ( ) < > | [ ]').transform(value => new URL(value).href);
 export type Verdict = { state: 'success' | 'failure' | 'error'; label: 'PASS' | 'BLOCK' | 'ERROR' | 'INTERRUPTED'; summary: string };
 /** One verdict shared by commit status, comment and Slack. The CI exit code is never derived from it. */
 export function verdict(run: RunResult): Verdict {

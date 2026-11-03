@@ -4,18 +4,19 @@ export type TunnelProvider = (typeof tunnelProviders)[number];
 export type Spawn = (command: string, args: string[], options: { stdio: ['ignore', 'pipe', 'pipe'] }) => ChildProcess;
 /** The user's own installed binaries; nothing is downloaded. */
 const tools = {
-  cloudflare: { bin: 'cloudflared', args: (port: number) => ['tunnel', '--url', `http://127.0.0.1:${port}`], url: /https:\/\/[a-z0-9-]+\.trycloudflare\.com/ },
+  cloudflare: { bin: 'cloudflared', args: (port: number) => ['tunnel', '--url', `http://127.0.0.1:${port}`], url: /https:\/\/(?!api\.)[a-z0-9-]+\.trycloudflare\.com/ },
   ngrok: { bin: 'ngrok', args: (port: number) => ['http', `127.0.0.1:${port}`, '--log', 'stdout', '--log-format', 'logfmt'], url: /url=(https:\/\/[^\s"]+)/ },
 } as const;
 export interface Tunnel { url: string; close(): void }
 /** Resolves with the public URL once the tool prints it. Rejects with a readable message if the binary is missing, exits early or stays silent. */
 export function startTunnel(provider: TunnelProvider, port: number, onExit: (code: number | null) => void,
-  { spawnProcess = spawn as Spawn, timeoutMs = 30000 }: { spawnProcess?: Spawn; timeoutMs?: number } = {}): Promise<Tunnel> {
+  { spawnProcess = spawn as Spawn, timeoutMs = 30000, signal }: { spawnProcess?: Spawn; timeoutMs?: number; signal?: AbortSignal } = {}): Promise<Tunnel> {
   const tool = tools[provider];
   return new Promise((resolve, reject) => {
     const child = spawnProcess(tool.bin, [...tool.args(port)], { stdio: ['ignore', 'pipe', 'pipe'] });
     let ready = false; let text = '';
-    const stop = () => { clearTimeout(timer); };
+    const stop = () => { clearTimeout(timer); signal?.removeEventListener('abort', abort); };
+    const abort = () => { stop(); child.kill('SIGTERM'); if (!ready) reject(new Error(`${tool.bin} was stopped before a public URL was reported`)); };
     const timer = setTimeout(() => { child.kill('SIGTERM'); reject(new Error(`${tool.bin} did not report a public URL within ${timeoutMs / 1000}s`)); }, timeoutMs);
     const scan = (chunk: Buffer) => {
       if (ready) return;
@@ -25,6 +26,8 @@ export function startTunnel(provider: TunnelProvider, port: number, onExit: (cod
       ready = true; stop();
       resolve({ url: match[1] ?? match[0], close: () => { child.kill('SIGTERM'); } });
     };
+    signal?.addEventListener('abort', abort, { once: true });
+    if (signal?.aborted) abort();
     child.stdout!.on('data', scan); child.stderr!.on('data', scan);
     child.once('error', error => {
       stop();

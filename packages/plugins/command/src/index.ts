@@ -48,25 +48,29 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
 /** Runs a command gate; an optional `report` is parsed into findings (exit code still decides PASS/BLOCK). */
 export function commandPlugin(cwd: string, parsers: Record<string, ParserPlugin> = {}): GatePlugin {
   return { id: 'command', apiVersion: 1, kind: 'gate', async run(spec, context) {
+    const startedAt = Date.now() - FILE_TIME_SLACK_MS;
     const captured = await captureCommand(cwd, spec, context);
     if (!spec.report && !spec.artifacts) return { exitCode: captured.exitCode, output: captured.output, error: captured.error };
     const data: GateData = { exitCode: captured.exitCode, output: captured.output, error: captured.error, artifacts: [] };
-    if (spec.report && !captured.error) await applyReport(cwd, spec, parsers, data);
+    if (spec.report && !captured.error) await applyReport(spec, data, { cwd, parsers, startedAt });
     if (spec.artifacts) {
-      const { files, truncated } = await expandArtifacts(cwd, spec.artifacts);
+      const { files, truncated } = await expandArtifacts(cwd, spec.artifacts, DEFAULT_LIMITS, startedAt);
       data.artifacts!.push(...files);
       if (truncated) data.output += `\n[artifacts truncated: limit ${DEFAULT_LIMITS.maxFiles} files / ${DEFAULT_LIMITS.maxBytes / 1024 / 1024} MB]\n`;
     }
     return data;
   } };
 }
-async function applyReport(cwd: string, spec: GateSpec, parsers: Record<string, ParserPlugin>, data: GateData) {
+/** File times can be coarser than the clock (1-2 s on some filesystems), so a file counts as fresh a little before the run started. */
+const FILE_TIME_SLACK_MS = 2000;
+async function applyReport(spec: GateSpec, data: GateData, { cwd, parsers, startedAt }: { cwd: string; parsers: Record<string, ParserPlugin>; startedAt: number }) {
   const { format, path } = spec.report!;
   const parser = parsers[format];
   if (!parser) { data.error = `Unknown report format: ${format}`; return; }
-  const read = await readReport(cwd, path);
+  const read = await readReport(cwd, path, startedAt);
   if (read.status === 'missing') {
-    if (data.exitCode === 0) data.error = `Report not found: ${path}`; else data.output += `\nReport not found: ${path}\n`;
+    const reason = read.stale ? `Report was not written by this run: ${path}` : `Report not found: ${path}`;
+    if (data.exitCode === 0) data.error = reason; else data.output += `\n${reason}\n`;
     return;
   }
   if (read.status === 'error') { data.error = read.error; return; }
