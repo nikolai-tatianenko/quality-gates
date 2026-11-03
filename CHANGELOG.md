@@ -7,6 +7,12 @@
 - Dependencies: zod 4.6.7 (fixes the zod advisory; `z.record` now takes explicit key and value
   schemas) and pnpm 11.28.9 for checkouts. Remaining advisories are documented in `SECURITY.md`.
 
+- Security fixes: `status|comment|pr --write` now require `--head-repository` (fork PRs are refused
+  even when a workflow forgets the flag; `pr` gained the flag); the sticky comment trusts only
+  bot-authored marker comments (`comment --author <login>` for user tokens) and unreadable comment
+  metadata counts as "not older" instead of failing the step; external plugin names are validated as
+  npm package names and a package resolving outside `node_modules` is refused before any import.
+
 - CI notifications (`packages/ci`): `qualitygate status` (GitHub commit status `success`/`failure`/
   `error` with a report link, needs `statuses: write`), `qualitygate comment` (one sticky,
   marker-based PR comment, alternative to the description block) and `qualitygate notify` (Slack

@@ -81,11 +81,12 @@ is escaped to prevent marker/HTML injection and literal mentions.
 ```sh
 pnpm exec qualitygate pr \
   --provider github --repository owner/repo --number 42 \
-  --head <exact-source-commit-sha> --input result.json
+  --head <exact-source-commit-sha> --head-repository owner/repo --input result.json
 ```
 
 Default mode reads the PR and prints the proposed description, without writing.
-Add `--write --json` in the trusted publisher to apply it. JSON output reports
+Add `--write --json` in the trusted publisher to apply it; `--write` also requires
+`--head-repository` (the repository the PR comes from, which must equal `--repository`). JSON output reports
 `changed`, `write`, and a reason. `stale-head`, `closed`, `older-run` and `unchanged`
 are non-writing outcomes, not publication failures. Network, validation, permission
 and malformed-marker errors exit 2. No PR publishing tools are exposed through MCP.
@@ -112,12 +113,12 @@ Typical trusted publisher commands:
 # GitLab: source SHA must match the analyzed revision. CI_COMMIT_SHA is suitable
 # for a detached MR pipeline; a merged-results pipeline has a different commit.
 pnpm exec qualitygate pr --provider gitlab --repository "$CI_PROJECT_ID" \
-  --number "$CI_MERGE_REQUEST_IID" --head "$REVIEWED_SOURCE_SHA" \
+  --number "$CI_MERGE_REQUEST_IID" --head "$REVIEWED_SOURCE_SHA" --head-repository "$CI_PROJECT_PATH" \
   --input result.json --write --json
 
 # Bitbucket Cloud: carry the original source SHA from the check job into the publisher.
 pnpm exec qualitygate pr --provider bitbucket --repository "$BITBUCKET_REPO_FULL_NAME" \
-  --number "$BITBUCKET_PR_ID" --head "$REVIEWED_SOURCE_SHA" \
+  --number "$BITBUCKET_PR_ID" --head "$REVIEWED_SOURCE_SHA" --head-repository "$BITBUCKET_REPO_FULL_NAME" \
   --input result.json --write --json
 ```
 
@@ -145,7 +146,8 @@ pnpm exec qualitygate status --repository owner/repo --head "$PR_HEAD" \
   --head-repository "$PR_HEAD_REPOSITORY" --report-url "$REPORT_URL" --input result.json --write
 
 # Sticky PR comment (GitHub; needs pull-requests: write): one comment per PR, found by its
-# `<!-- qualitygate:comment -->` marker, updated in place; duplicates are deleted.
+# `<!-- qualitygate:comment -->` marker and author (bot comments only; `--author <login>` when the
+# token posts as a user), updated in place; duplicates are deleted. Unreadable metadata never blocks.
 pnpm exec qualitygate comment --repository owner/repo --number 42 --head "$PR_HEAD" \
   --head-repository "$PR_HEAD_REPOSITORY" --report-url "$REPORT_URL" --input result.json --write
 
@@ -153,8 +155,9 @@ pnpm exec qualitygate comment --repository owner/repo --number 42 --head "$PR_HE
 SLACK_WEBHOOK_URL=... pnpm exec qualitygate notify --input result.json --report-url "$REPORT_URL" --write
 ```
 
-- **Fork PRs are refused.** With `--head-repository` set to the PR's head repository, a value
-  different from `--repository` aborts before any token is read. The GitHub template also
+- **Fork PRs are refused.** `--write` on `pr`, `status` and `comment` requires `--head-repository`
+  (the PR's head repository); a missing value or one different from `--repository` aborts before
+  any token is read. Dry runs may omit it. The GitHub template also
   skips the whole publish job for forks; keep both guards.
 - **Status** targets the SHA given by `--head`; it does not read the PR. A newer commit gets its
   own status, so an old run cannot mark a new head.

@@ -26,7 +26,7 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--webhook-env'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
@@ -45,9 +45,9 @@ try {
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
     init: ['--config'], setup: ['--config'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
-    report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--api-url', '--token-env'],
+    report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
-    comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
+    comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
     notify: ['--input', '--webhook-env', '--report-url'],
     connect: ['--config', '--client'], ask: ['--config', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms'],
   };
@@ -110,14 +110,14 @@ try {
       console.log(json ? JSON.stringify(result) : `${result.payload.description}${result.write ? ' (posted)' : ' (dry run)'}`);
     } else if (command === 'comment') {
       const result = await publishComment({ provider: values.get('--provider') ?? 'github', repository: values.get('--repository'), number: values.get('--number'), head: values.get('--head'), reportUrl: values.get('--report-url'),
-        headRepository: values.get('--head-repository'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
+        headRepository: values.get('--head-repository'), author: values.get('--author'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
       console.log(json ? JSON.stringify(result) : 'body' in result ? result.body : `Comment: ${result.reason}`);
     } else if (command === 'notify') {
       const result = await notifySlack({ webhookEnv: values.get('--webhook-env'), reportUrl: values.get('--report-url'), write }, input, controller.signal);
       console.log(json ? JSON.stringify(result) : result.message ? `${result.message.text}${result.sent ? ' (sent)' : ' (dry run)'}` : `Slack: ${result.reason}`);
     } else {
       const result = await publishDescription({ provider: values.get('--provider'), repository: values.get('--repository'),
-        number: values.get('--number'), head: values.get('--head'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
+        number: values.get('--number'), head: values.get('--head'), headRepository: values.get('--head-repository'), apiUrl: values.get('--api-url'), tokenEnv: values.get('--token-env'), write }, input, controller.signal);
       console.log(json ? JSON.stringify(result) : 'body' in result ? result.body : `PR: ${result.reason}`);
     }
   } else if (command === 'export') {

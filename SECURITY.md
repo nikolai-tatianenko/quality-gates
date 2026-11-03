@@ -45,6 +45,9 @@ environment, exactly like a gate command. Only `run` imports plugins; listing ga
 runs and the dashboard do not. Install only reviewed packages with pinned versions (the repository's
 7-day release-age policy applies to adding them), and do not run `qualitygate run` in CI on
 untrusted pull requests that can change `.qualitygate.yml`, `package.json` or the lockfile.
+Names are checked as npm package names before anything is imported (so `setup --plugin ../../evil` is rejected,
+before any code runs), and a package whose real path is outside `<project>/node_modules` (pnpm's
+`node_modules/.pnpm` store is inside) is refused; workspace `link:` packages must be installed instead.
 The loader validates the manifest (`apiVersion: 1`, known kinds, unique ids, entry file inside
 the package folder); that is a correctness check, not a security boundary.
 
@@ -92,8 +95,10 @@ CI publication (`qualitygate pr|status|comment|notify --write`) is an explicit a
 gate runner. Keep PR-write tokens in a trusted serialized publisher, never in
 target-code check jobs. Read the [CI trust boundary and concurrency limits](docs/CI.md)
 before enabling description updates. Provider API roots are HTTPS (loopback HTTP
-only for tests), redirects are rejected, and generated tool text is escaped. Fork PRs are refused
-(`--head-repository`). The Slack webhook URL is a secret read from an environment variable, must be
+only for tests), redirects are rejected, and generated tool text is escaped. Fork PRs are refused:
+`--write` requires `--head-repository` and aborts when it differs from `--repository`. The sticky comment
+publisher only trusts marker comments written by a bot (or by `--author`), so other users cannot pin or
+block it. The Slack webhook URL is a secret read from an environment variable, must be
 HTTPS and is never printed; messages carry gate ids and a report link only.
 
 ## Report a vulnerability

@@ -35,8 +35,11 @@ export function older(section: string, metadata: ReportMetadata) {
   const matches = [...section.matchAll(/<!-- qualitygate:metadata (.+) -->/g)];
   if (matches.length > 1) throw new Error('Duplicate QualityGate metadata');
   if (!matches.length) return false;
-  const previous = metadataSchema.parse(JSON.parse(matches[0]![1]!));
-  return previous.head === metadata.head && Date.parse(previous.finishedAt) > Date.parse(metadata.finishedAt);
+  // Unparseable metadata is "not older": it must never block a publication.
+  let parsed: unknown;
+  try { parsed = JSON.parse(matches[0]![1]!); } catch { return false; }
+  const previous = metadataSchema.safeParse(parsed);
+  return previous.success && previous.data.head === metadata.head && Date.parse(previous.data.finishedAt) > Date.parse(metadata.finishedAt);
 }
 function compose(body: string, found: ReturnType<typeof boundaries>, generated: string) {
   const start = found.get(markers.autoStart); const end = found.get(markers.autoEnd);
