@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { RunResult } from '../../protocol/src/index.js';
 import { ThemeSwitcher } from './theme.js';
 import { Icon } from './Icon.js';
-interface Project { configPath: string; gates: { id: string; type: string; run: string }[]; urls: string[] }
+interface Project { configPath: string; gates: { id: string; type: string; run: string }[]; urls: string[]; readOnly?: boolean }
 export async function request<T>(path: string, method = 'GET'): Promise<T> {
   const response = await fetch(path, { method, ...(method === 'POST' ? { headers: { 'X-QualityGate-Request': '1' } } : {}) });
   const body = await response.json();
@@ -44,7 +44,7 @@ export function App() {
       <div className="content"><section className="heading"><div><p className="eyebrow">WORKSPACE OVERVIEW</p><h1>Quality overview</h1>
         <p className="muted">Your checks, findings and release evidence, in one place.</p></div>
         <div className="actions"><a className="button-outline" href="#findings">View evidence</a>{running && <button className="secondary" onClick={() => void cancel()}>Cancel run</button>}
-          <button className="run-checks" disabled={!project || running} onClick={() => void start()}><Icon name="play"/>{running ? 'Running checks…' : 'Run quality gates'}</button></div>
+          {!project?.readOnly && <button className="run-checks" disabled={!project || running} onClick={() => void start()}><Icon name="play"/>{running ? 'Running checks…' : 'Run quality gates'}</button>}</div>
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <Metrics project={project} run={run}/>

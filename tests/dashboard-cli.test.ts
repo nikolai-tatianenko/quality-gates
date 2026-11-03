@@ -12,7 +12,7 @@ test('dashboard CLI validates arguments and shuts down cleanly on SIGTERM', asyn
   try {
     const config = join(cwd, 'config.json');
     await writeFile(config, JSON.stringify({ schemaVersion: 1, gates: [{ id: 'check', run: 'true' }] }));
-    for (const args of [['--port'], ['--unknown', 'value'], ['--port', '99999'], ['--port', 'not-a-port']]) {
+    for (const args of [['--port'], ['--unknown', 'value'], ['--port', '99999'], ['--port', 'not-a-port'], ['--tunnel', 'bogus']]) {
       const child = spawn(process.execPath, ['--import', loader, entry, ...args]);
       child.stdout.resume(); child.stderr.resume();
       assert.notEqual(await new Promise(resolve => child.once('close', resolve)), 0);

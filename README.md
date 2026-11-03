@@ -234,6 +234,13 @@ credentials out of target-code jobs. Live provider setup and concurrency limits 
 explained in [CI and PR/MR reporting](docs/CI.md). Browser smoke tests can run in CI;
 that is different from deploying the local dashboard as a public service.
 
+**Share a run.** `qualitygate export --out report/` writes the last run (or `--input run.json`)
+as `index.html` + `report.json`: one self-contained page with inline CSS, no scripts and no network
+resources, ready to upload as a Pages/S3/CI artifact. It contains command output and file paths, so
+publish it only where the project's logs may be read. For a live view,
+`pnpm dashboard --tunnel cloudflare|ngrok` shares a **read-only**, token-protected dashboard through
+your installed tunnel tool ([details](packages/dashboard/README.md#share-through-a-tunnel-read-only)).
+
 ## Attach to Git with Husky
 
 **Yes: Husky can invoke QualityGate before commits and pushes.** Install Husky in
