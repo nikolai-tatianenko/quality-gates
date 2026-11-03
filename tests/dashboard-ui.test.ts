@@ -130,3 +130,11 @@ test('appearance follows the OS, persists explicit themes, ignores invalid prefe
   try { initializeTheme(); assert.equal(fallback.dom.window.document.documentElement.dataset.theme, 'light'); }
   finally { await fallback.cleanup(); }
 });
+test('React dashboard hides the run button for a read-only shared project', async () => {
+  const ui = environment();
+  const fetch = mock.method(globalThis, 'fetch', async (path: string) => response(path === '/api/project' ? { ...project, readOnly: true } : null));
+  try {
+    await act(async () => { ui.root.render(createElement(App)); });
+    assert.match(ui.container.textContent!, /lint/); assert.equal(ui.container.querySelector('.run-checks'), null);
+  } finally { await ui.cleanup(); fetch.mock.restore(); }
+});

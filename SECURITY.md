@@ -124,3 +124,12 @@ Both are re-checked on each release.
 `@qualitygate/code-analysis` depends on `eslint-plugin-sonarjs` (LGPL-3.0-only) as
 a normal runtime dependency. It is installed alongside the package, not copied
 into it or into the CLI bundle.
+
+## Sharing a run
+
+`qualitygate export` writes command output, findings and evidence paths into a static HTML file;
+treat it like the logs themselves before uploading it anywhere. `pnpm dashboard --tunnel
+cloudflare|ngrok` exposes a **read-only** dashboard through a public tunnel protected only by a
+random per-start token in the URL: anyone holding the link can read logs, findings and evidence.
+The tunnel offers no run-triggering endpoints, the tunnel process is stopped when the dashboard
+exits, and tunnel tools are the user's own installed binaries (they run with your permissions).
