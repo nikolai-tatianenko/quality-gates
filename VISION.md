@@ -99,8 +99,8 @@ Live provider/editor/model compatibility is limited to the evidence recorded in
    ownership and the corresponding security model.
 
 New interfaces must use the existing runner and policy engine. Package publication
-and hosted operation are separate release decisions. The archived CommonJS service
-in `legacy/lighthouse-v1/` retains ISC; the maintained implementation uses MIT.
+and hosted operation are separate release decisions. The original CommonJS service
+(removed from the tree, still in git history) was ISC; the maintained implementation uses MIT.
 
 ## Acceptance criteria
 

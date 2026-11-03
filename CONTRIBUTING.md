@@ -71,8 +71,7 @@ versioned protocol validation, deterministic policy evaluation, error visibility
 and resource cleanup. Test extension through the SDK with an independent plugin.
 Do not turn missing evidence or failed execution into a successful result.
 
-The maintained source lives under `packages/`. `legacy/lighthouse-v1/` is a historical
-archive with its own ISC license and separate dependency installation; it is excluded
-from the workspace. QualityGate contributions are made under the root MIT license.
+The maintained source lives under `packages/`. The original ISC-licensed service was removed
+from the tree (see git history). QualityGate contributions are made under the root MIT license.
 
 Report vulnerabilities privately using [SECURITY.md](SECURITY.md), not a public issue.

@@ -1,7 +1,7 @@
 # Security policy
 
 QualityGate is an early 0.1.x release. Fixes target the latest version; older releases
-and the `legacy/lighthouse-v1/` archive do not receive separate security backports.
+do not receive separate security backports.
 
 ## Execution boundary
 
@@ -108,18 +108,26 @@ Do not put exploit details or secrets in a public issue. If private reporting is
 unavailable, open an issue that only requests a private contact channel, without
 vulnerability details. There is no guaranteed response time for this project.
 
+The STRIDE analysis for the CLI, dashboard, tunnel share, CI publishers and plugin loading is in
+[docs/threat-model/](docs/threat-model/README.md).
+
 ## Known dependency advisories
 
-`pnpm audit --prod` (2026-11-01) reports 14 advisories. Twelve are in the repository's
-own `pnpm` tooling (`packageManager`), not in the published CLI. Two reach the runtime:
+`pnpm audit --prod` (2026-11-03) reports one advisory; `pnpm audit` adds five dev-only ones.
 
-- `zod` 3.x (memory exhaustion validating oversized constrained collections), via the
-  MCP SDK and our schemas. The fix exists only in zod 4, a separate migration. Inputs are
-  local config files and MCP tool arguments, not untrusted network data.
-- `minimatch` (denial of service via glob amplification) through ESLint in
-  `@qualitygate/code-analysis`. Patterns come from the project's own configuration.
+- Resolved: `zod` is on 4.6.7 (the memory-exhaustion advisory is fixed in 4.6.6), and the
+  repository's own `pnpm` is 11.28.9 (the pnpm tooling advisories are fixed in 11.11). A second
+  zod 3.x copy remains only under `puppeteer-core` (a development dependency, not shipped).
+- Accepted: `minimatch` (denial of service via glob amplification) reaches the runtime through
+  ESLint in `@qualitygate/code-analysis`. ESLint 9 requires `minimatch` 3.x, the patched line
+  (11.x) is a different major, and the policy forbids dependency overrides. Patterns come from
+  the project's own configuration, not from network input. Revisit when ESLint moves to a
+  patched `minimatch`.
+- Accepted, development only: `glob` and `minimatch` under `c8`; `extract-zip` and `basic-ftp`
+  under `puppeteer-core` (`@puppeteer/browsers`). They run in our test and verification
+  tooling, not in the published CLI.
 
-Both are re-checked on each release.
+These are re-checked on each release; the 7-day release-age policy applies to every upgrade.
 
 ## Licences
 
