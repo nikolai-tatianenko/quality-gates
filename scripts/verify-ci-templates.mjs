@@ -16,6 +16,12 @@ assert.equal(github.jobs.check.permissions, undefined);
 assert.ok(github.jobs.publish.steps[0].with.ref.includes('pull_request.base.sha'));
 assert.ok(github.jobs.publish.steps.some(step => step.run?.includes('--ignore-scripts')));
 assert.ok(github.jobs.publish.if.includes('head.repo.full_name == github.repository'));
+assert.equal(github.jobs.publish.permissions.statuses, 'write');
+assert.equal(github.jobs.check.permissions, undefined);
+const publishRuns = github.jobs.publish.steps.map(step => step.run ?? '').join('\n');
+for (const command of ['qualitygate status', 'qualitygate comment', 'qualitygate notify']) assert.ok(publishRuns.includes(command), `${command} runs in the trusted publish job`);
+assert.ok(!github.jobs.check.steps.some(step => /qualitygate (status|comment|notify|pr)\b/.test(step.run ?? '')), 'Check job must not publish');
+assert.ok(github.jobs.publish.steps.find(step => step.run?.includes('qualitygate status')).run.includes('--head-repository'));
 assert.ok(!github.on.pull_request.types.includes('edited'));
 assert.equal(gitlab.qualitygate.artifacts.when, 'always');
 const scripts = {

@@ -52,6 +52,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+      statuses: write
     steps:
       # Publication runs trusted base code, never code from the pull request.
       - uses: actions/checkout@v4
@@ -67,7 +68,9 @@ jobs:
         with:
           name: qualitygate-report
           path: incoming
+      # Pick one report surface with the repository variable QUALITYGATE_PR_MODE (default: description).
       - name: Update the managed description block
+        if: ${{ vars.QUALITYGATE_PR_MODE != 'comment' }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PR_REPOSITORY: ${{ github.repository }}
@@ -76,3 +79,35 @@ jobs:
         run: >-
           pnpm exec qualitygate pr --provider github --repository "$PR_REPOSITORY"
           --number "$PR_NUMBER" --head "$PR_HEAD" --input incoming/.qualitygate-ci/result.json --write --json
+      - name: Update the sticky comment
+        if: ${{ vars.QUALITYGATE_PR_MODE == 'comment' }}
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_REPOSITORY: ${{ github.repository }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          pnpm exec qualitygate comment --repository "$PR_REPOSITORY" --head-repository "$PR_HEAD_REPOSITORY"
+          --number "$PR_NUMBER" --head "$PR_HEAD" --report-url "$REPORT_URL"
+          --input incoming/.qualitygate-ci/result.json --write --json
+      - name: Set the commit status
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PR_REPOSITORY: ${{ github.repository }}
+          PR_HEAD_REPOSITORY: ${{ github.event.pull_request.head.repo.full_name }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+          REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          pnpm exec qualitygate status --repository "$PR_REPOSITORY" --head-repository "$PR_HEAD_REPOSITORY"
+          --head "$PR_HEAD" --report-url "$REPORT_URL" --input incoming/.qualitygate-ci/result.json --write --json
+      # Optional: needs the repository secret SLACK_WEBHOOK_URL. Sends only on BLOCK or error.
+      - name: Notify Slack
+        if: ${{ vars.QUALITYGATE_SLACK == 'true' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          REPORT_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: >-
+          pnpm exec qualitygate notify --input incoming/.qualitygate-ci/result.json
+          --report-url "$REPORT_URL" --write --json

@@ -2,6 +2,14 @@
 
 ## Unreleased — local workspace and analysis
 
+- CI notifications (`packages/ci`): `qualitygate status` (GitHub commit status `success`/`failure`/
+  `error` with a report link, needs `statuses: write`), `qualitygate comment` (one sticky,
+  marker-based PR comment, alternative to the description block) and `qualitygate notify` (Slack
+  incoming webhook on BLOCK or error, HTTPS only, URL from an env var). All are dry runs without
+  `--write`; status and comment refuse fork PRs when `--head-repository` differs. Status and
+  Slack omit tool output; comments include the detailed report. Publishers do not change the
+  gate verdict or its exit code. The GitHub example publishes them from the trusted job.
+
 - Sharing: `qualitygate export --out <dir>` writes a self-contained static HTML report
   (`index.html`, no scripts, no network resources) plus `report.json` for the last run or `--input`.
   `pnpm dashboard --tunnel cloudflare|ngrok` starts your installed `cloudflared`/`ngrok`, prints a
