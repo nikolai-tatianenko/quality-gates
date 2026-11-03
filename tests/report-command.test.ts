@@ -70,6 +70,7 @@ test('malformed XML and unknown formats are errors, never crashes', async () => 
 test('readReport rejects directories and other read failures', async () => withDir(async dir => {
   await mkdir(join(dir, 'd'));
   assert.equal((await readReport(dir, 'd')).status, 'error');
+  assert.match((await readReport(dir, 'bad\0name') as { error: string }).error, /^Cannot read report/);
   assert.deepEqual(await readReport(dir, 'nothing.xml'), { status: 'missing' });
   assert.deepEqual(await readReport(dir, 'nested/nothing.xml'), { status: 'missing' });
 }));
