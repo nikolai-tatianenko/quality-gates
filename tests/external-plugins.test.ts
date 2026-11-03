@@ -28,7 +28,7 @@ test('plugin manifest schema validates kind, apiVersion and required functions',
   assert.throws(() => externalPluginSchema.parse({ apiVersion: 1, kind: 'storage', id: 's' }));
 });
 
-import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { access, cp, mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { loadExternalPlugins } from '../packages/core/src/external.js';
@@ -96,4 +96,40 @@ test('rejects duplicate ids across built-ins, packages and within a package', as
   await assert.rejects(loadExternalPlugins(dir, ['p1'], ['shared']), /Duplicate plugin id: shared \(p1\)/);
   await assert.rejects(loadExternalPlugins(dir, ['p1', 'p2']), /Duplicate plugin id: shared \(p2\)/);
   await assert.rejects(loadExternalPlugins(dir, ['twice']), /Duplicate plugin id: same/);
+}));
+
+import { stringify } from 'yaml';
+import { execute } from '../packages/cli/src/runner.js';
+async function project(dir: string, config: object) {
+  await cp(fixture, join(dir, 'node_modules', 'qg-plugin-fixture'), { recursive: true });
+  await writeFile(join(dir, '.qualitygate.yml'), stringify({ schemaVersion: 1, ...config }));
+  return join(dir, '.qualitygate.yml');
+}
+test('run uses third-party parsers and gates', async () => withProject(async dir => {
+  const path = await project(dir, { plugins: ['qg-plugin-fixture'], gates: [
+    { id: 'parsed', run: 'echo \'[{"message":"bad","file":"a.ts","line":3}]\' > r.json; exit 1', report: { format: 'fixture-json', path: 'r.json' } },
+    { id: 'custom', type: 'fixture-gate', run: 'whatever' }] });
+  const result = await execute(path, new AbortController().signal);
+  assert.equal(result.execution, 'completed');
+  assert.deepEqual(result.gates.map(g => [g.id, g.decision]), [['parsed', 'BLOCK'], ['custom', 'PASS']]);
+  assert.deepEqual(result.gates[0]!.findings.map(f => [f.file, f.line, f.message]), [['a.ts', 3, 'bad']]);
+  assert.match(result.gates[1]!.outputTail, /fixture gate ran: whatever/);
+}));
+test('run rejects unknown gate types, inherited names and missing packages before running anything', async () => withProject(async dir => {
+  const marker = join(dir, 'ran');
+  const path = await project(dir, { gates: [{ id: 'first', run: `touch ${marker}` }, { id: 'odd', type: 'fixture-gate', run: 'x' }] });
+  await assert.rejects(execute(path, new AbortController().signal), /Unknown gate type: fixture-gate/);
+  await assert.rejects(access(marker));
+  const inherited = await project(dir, { gates: [{ id: 'odd', type: 'constructor', run: 'x' }] });
+  await assert.rejects(execute(inherited, new AbortController().signal), /Unknown gate type: constructor/);
+  const missing = await project(dir, { plugins: ['absent'], gates: [{ id: 'a', run: 'true' }] });
+  await assert.rejects(execute(missing, new AbortController().signal), /Plugin package not found: absent/);
+  const reserved = await project(dir, { plugins: ['qg-plugin-fixture'], gates: [{ id: 'a', run: 'true' }] });
+  await install(dir, 'clash', {}, { 'index.js': manifestOf('junit') });
+  await writeFile(reserved, stringify({ schemaVersion: 1, plugins: ['clash'], gates: [{ id: 'a', run: 'true' }] }));
+  await assert.rejects(execute(reserved, new AbortController().signal), /Duplicate plugin id: junit/);
+}));
+test('projects without plugins still run with built-ins only', async () => withProject(async dir => {
+  const path = await project(dir, { gates: [{ id: 'ok', run: 'true' }] });
+  assert.equal((await execute(path, new AbortController().signal)).decision, 'PASS');
 }));
