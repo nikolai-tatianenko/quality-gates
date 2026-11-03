@@ -24,7 +24,7 @@ process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
 try {
   let command: string | undefined;
   const values = new Map<string, string>();
-  const positional: string[] = []; const only: string[] = [];
+  const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
   let help = false;
   const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env'];
   for (let i = 0; i < args.length; i++) {
@@ -32,10 +32,10 @@ try {
     if (arg === '--json') continue;
     if (arg === '--write') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
-    if (valueFlags.includes(arg) || arg === '--gate') {
+    if (valueFlags.includes(arg) || arg === '--gate' || arg === '--plugin') {
       const value = args[++i];
-      if (!value || value.startsWith('-') || (arg !== '--gate' && values.has(arg))) throw new Error(`Expected one ${arg} <value>`);
-      if (arg === '--gate') only.push(value); else values.set(arg, value);
+      if (!value || value.startsWith('-') || (arg !== '--gate' && arg !== '--plugin' && values.has(arg))) throw new Error(`Expected one ${arg} <value>`);
+      if (arg === '--gate') only.push(value); else if (arg === '--plugin') plugins.push(value); else values.set(arg, value);
       continue;
     }
     if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
@@ -51,11 +51,12 @@ try {
   if (command && validFlags[command]) {
     for (const key of values.keys()) if (!validFlags[command]!.includes(key)) throw new Error(`${command} does not accept ${key}`);
     if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate`);
+    if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
     if (write && command !== 'pr') throw new Error(`${command} does not accept --write`);
   }
   if (help || args.length === 0) {
     const help = 'Usage: qualitygate init [URL...] [--config <path>] [--json]\n'
-      + '       qualitygate setup [--config <path>] [--json]\n'
+      + '       qualitygate setup [--config <path>] [--plugin <package>...] [--json]\n'
       + '       qualitygate run [--config <path>] [--gate <id>...] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
@@ -73,9 +74,10 @@ try {
   } else if (command === 'setup') {
     if (positional.length) throw new Error('setup takes only --config');
     controller.signal.throwIfAborted();
-    const result = await setupProject(configPath);
+    const result = await setupProject(configPath, undefined, plugins);
     if (json) console.log(JSON.stringify({ schemaVersion: 1, ...result }));
-    else console.log([`Created ${result.configPath}`, `Ecosystems: ${result.ecosystems.join(', ')}`, ...result.gates.map(gate => `  ${gate.id}: ${gate.run}`),
+    else console.log([`Created ${result.configPath}`, `Ecosystems: ${result.ecosystems.join(', ')}`,
+      ...(result.plugins.length ? [`Plugins (run unsandboxed with your permissions): ${result.plugins.join(', ')}`] : []), ...result.gates.map(gate => `  ${gate.id}: ${gate.run}`),
       ...(result.gitignore.length ? [`Added to .gitignore: ${result.gitignore.join(' ')}`] : []),
       'Check that the test script exits (not watch mode), then run: qualitygate run'].join('\n'));
   } else if (command === 'run' || command === 'inspect') {

@@ -2,6 +2,12 @@
 
 ## Unreleased — local workspace and analysis
 
+- External plugins: `plugins: [package]` in `.qualitygate.yml` loads `parser`, `ecosystem` and
+  `gate` plugins from the project's `node_modules` (manifest `apiVersion: 1`, validated, duplicate
+  ids rejected, load failures exit 2), a gate `type` may name a third-party gate, and
+  `qualitygate setup --plugin <package>` (repeatable) writes the list. `setup --json` gains an
+  additive `plugins` array. Plugins run unsandboxed with your permissions (README, `SECURITY.md`).
+
 - New `ecosystem` plugin kind (SDK `apiVersion` stays 1) and a multi-ecosystem `qualitygate setup`:
   built-in `node` (the previous script detection), `python` (`ruff`, `pytest --junitxml`, optional
   `mypy`), `unity` (`unity-compile` + EditMode `unity-tests`, `UNITY` override, stale

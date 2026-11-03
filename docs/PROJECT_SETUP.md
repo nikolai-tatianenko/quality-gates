@@ -122,6 +122,49 @@ gates:
 - Artifacts can contain secrets or personal data (screenshots, logs); treat the evidence
   folder like the logs it already holds.
 
+### Third-party plugins
+
+**Plugins are not sandboxed.** A package listed under `plugins:` is imported into the QualityGate
+process and runs with your user's permissions: it can read files, use the network, spawn processes
+and read the environment, including tokens. Listing the package is the only opt-in, so install only
+packages you have reviewed, pin their versions, and never enable a plugin from a pull request you
+do not trust (CI that runs `qualitygate run` executes it).
+
+```sh
+pnpm add -D qg-plugin-example
+pnpm exec qualitygate setup --plugin qg-plugin-example   # repeatable; writes the plugins: list
+```
+
+```yaml
+plugins: [qg-plugin-example]    # resolved from this project's node_modules only
+gates:
+  - id: e2e
+    run: example-runner --out results.json
+    report: { format: example-json, path: results.json }   # a parser the package provides
+```
+
+A plugin package's entry module exports `manifest` (or a default export):
+
+```js
+export const manifest = {
+  apiVersion: 1,
+  plugins: [
+    { apiVersion: 1, kind: 'parser', id: 'example-json', parse: (raw, { gateId, cwd }) => [/* Finding[] */] },
+    { apiVersion: 1, kind: 'ecosystem', id: 'example', detect: async directory => null },  // for setup
+    { apiVersion: 1, kind: 'gate', id: 'example-gate', run: async (spec, context) => ({ exitCode: 0, output: '' }) },
+  ],
+};
+```
+
+- Kinds: `parser` (a `report.format`), `ecosystem` (proposals for `setup`) and `gate` (selected
+  with `type: <id>` on a gate). `audit`, `storage` and `reporter` stay built-in.
+- The manifest must declare `apiVersion: 1` and is validated; ids are lowercase letters, digits,
+  `-` and `_`. A duplicate id, including a clash with a built-in (`junit`, `node`, `command`...),
+  a missing package or an invalid manifest is an execution error (exit code 2) and nothing runs.
+- Only `<project>/node_modules/<package>` is searched. An unknown gate `type` also fails before
+  any gate runs. Listing gates and viewing runs (`inspect`, dashboard, MCP `list_gates`) does not
+  import plugins; `run` does.
+
 ## 3. Attach Husky hooks
 
 QualityGate supplies the gate runner. [Husky](https://typicode.github.io/husky/get-started.html)
