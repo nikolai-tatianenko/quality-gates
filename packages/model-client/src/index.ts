@@ -13,7 +13,7 @@ export interface ModelOptions {
 interface Message { role: string; content: string | null; [key: string]: unknown }
 const nativeMessage = z.object({
   content: z.string().optional(), tool_calls: z.array(z.object({
-    function: z.object({ name: z.string(), arguments: z.record(z.unknown()) }),
+    function: z.object({ name: z.string(), arguments: z.record(z.string(), z.unknown()) }),
   })).max(16).optional(),
 });
 const completionMessage = z.object({
@@ -102,7 +102,7 @@ function normalizeCalls(rawCalls: NonNullable<ReturnType<typeof parseResponse>['
   const calls = rawCalls.map((call, index) => ({
     id: 'id' in call ? call.id : `call-${turn}-${index}`,
     name: call.function.name,
-    args: z.record(z.unknown()).parse(typeof call.function.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function.arguments),
+    args: z.record(z.string(), z.unknown()).parse(typeof call.function.arguments === 'string' ? JSON.parse(call.function.arguments) : call.function.arguments),
   }));
   if (new Set(calls.map(call => call.id)).size !== calls.length) throw new Error('Model returned duplicate tool call IDs');
   return calls;
