@@ -161,7 +161,9 @@ export const manifest = {
 - The manifest must declare `apiVersion: 1` and is validated; ids are lowercase letters, digits,
   `-` and `_`. A duplicate id, including a clash with a built-in (`junit`, `node`, `command`...),
   a missing package or an invalid manifest is an execution error (exit code 2) and nothing runs.
-- Only `<project>/node_modules/<package>` is searched. An unknown gate `type` also fails before
+- Only `<project>/node_modules/<package>` is searched; the name must be a plain npm package name and
+  its real path (after symlinks, e.g. the pnpm store under `node_modules/.pnpm`) must stay inside
+  `node_modules`. An unknown gate `type` also fails before
   any gate runs. Listing gates and viewing runs (`inspect`, dashboard, MCP `list_gates`) does not
   import plugins; `run` does.
 

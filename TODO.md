@@ -107,6 +107,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 - [ ] T-044: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
 
 ### Trust and scale (QG-1008–1010)
+- [x] T-050: Review fixes: sticky comment trusts only bot-authored marker comments and tolerates unreadable metadata; `--write` requires `--head-repository` for `pr`, `status`, `comment` (template verifier covers all three); plugin names validated and real path kept inside `node_modules` before import
 - [ ] T-045: Stronger plugin isolation, signed manifests and permission prompts; required before recommending third-party plugins to others (see T-023)
 - [ ] T-046 (backlog): Optional remote execution runner, reusing the GitHub/GitLab integrations
 - [ ] T-047: Stable v1.0 SDK: freeze plugin contracts, semver policy, migration guide

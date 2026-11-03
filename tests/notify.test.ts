@@ -69,6 +69,7 @@ test('commit status posts the verdict for the exact head only with --write, refu
     await assert.rejects(publishStatus({ ...options, repository: 'one', headRepository: 'one' }, path, signal()), /owner\/name/);
     await assert.rejects(publishStatus({ ...options, apiUrl: 'http://remote.test' }, path, signal()), /HTTPS/);
     h.state.respond = () => new Response('no', { status: 403 }); await assert.rejects(publishStatus({ ...options, write: true }, path, signal()), /HTTP 403/);
+    await assert.rejects(publishStatus({ ...options, headRepository: undefined, write: true }, path, signal()), /--head-repository/);
     delete process.env.QG_T; await assert.rejects(publishStatus(options, path, signal()), /Missing/);
     process.env.QG_T = 'tok'; const noRepo = { repository: 'owner/repo', head }; delete process.env.GITHUB_TOKEN; await assert.rejects(publishStatus(noRepo, path, signal()), /GITHUB_TOKEN/);
   } finally { h.restore(); delete process.env.QG_T; await rm(dir, { recursive: true, force: true }); }
@@ -77,10 +78,12 @@ test('commit status posts the verdict for the exact head only with --write, refu
 test('sticky comment creates one comment, updates in place, removes duplicates, skips stale/closed/older runs', async () => {
   const dir = await mkdtemp(join(tmpdir(), 'qg-comment-')); const path = join(dir, 'run.json'); await writeFile(path, JSON.stringify(base)); process.env.QG_T = 'tok';
   const h = harness(); const options = { provider: 'github' as const, repository: 'owner/repo', number: 3, head, tokenEnv: 'QG_T', headRepository: 'owner/repo' };
-  let comments: { id: number; body: string }[] = [];
+  type Comment = { id: number; body: string; user?: { login: string; type: string } };
+  const bot = { login: 'github-actions[bot]', type: 'Bot' }; const stranger = { login: 'mallory', type: 'User' };
+  let comments: Comment[] = [];
   h.state.respond = call => {
     if (call.url.includes('/pulls/')) return Response.json(pr());
-    if (call.options.method === 'GET') { const page = Number(new URL(call.url).searchParams.get('page')); return Response.json(page === 1 ? comments.slice(0, 100) : comments.slice(100)); }
+    if (call.options.method === 'GET') { const page = Number(new URL(call.url).searchParams.get('page')); return Response.json((page === 1 ? comments.slice(0, 100) : comments.slice(100)).map(item => ({ user: bot, ...item }))); }
     return call.options.method === 'DELETE' ? new Response(null, { status: 204 }) : Response.json({});
   };
   const writes = () => h.calls.filter(call => !['GET'].includes(call.options.method!));
@@ -110,7 +113,19 @@ test('sticky comment creates one comment, updates in place, removes duplicates, 
     comments = [{ id: 7, body: `${commentMarker}\nno metadata` }]; assert.equal((await publishComment({ ...options, write: true }, path, signal())).reason, 'updated');
     comments = [{ id: 7, body: `${commentMarker}\n<!-- qualitygate:metadata ${JSON.stringify({ head: 'b'.repeat(40), runId, finishedAt: '2030-01-01T00:00:00.000Z' })} -->` }];
     assert.equal((await publishComment({ ...options, write: true }, path, signal())).reason, 'updated');
-    comments = [{ id: 7, body: `${commentMarker}\n<!-- qualitygate:metadata nope -->` }]; await assert.rejects(publishComment({ ...options, write: true }, path, signal()));
+    // malformed or schema-invalid metadata is "not older": the comment is refreshed instead of failing the step
+    for (const metadata of ['nope', '{"head":1}']) { comments = [{ id: 7, body: `${commentMarker}\n<!-- qualitygate:metadata ${metadata} -->` }]; assert.equal((await publishComment({ ...options, write: true }, path, signal())).reason, 'updated'); }
+    // only the publisher's own (Bot) comments count: a stranger's marker comment cannot pin a stale result nor be deleted
+    const forged = commentBody('forged', { head, runId, finishedAt: '2099-01-01T00:00:00.000Z' });
+    comments = [{ id: 8, body: forged, user: stranger }, { id: 9, body: `${commentMarker}\n<!-- qualitygate:metadata nope -->`, user: stranger }]; h.calls.length = 0;
+    assert.equal((await publishComment({ ...options, write: true }, path, signal())).reason, 'created'); assert.deepEqual(writes().map(call => call.options.method), ['POST']);
+    comments = [{ id: 8, body: forged, user: stranger }, { id: 10, body: stale }, { id: 11, body: stale, user: stranger }]; h.calls.length = 0;
+    await publishComment({ ...options, write: true }, path, signal()); assert.deepEqual(writes().map(call => [call.options.method, call.url.split('/').at(-1)]), [['PATCH', '10']]);
+    // a token that posts as a user can name its login explicitly
+    comments = [{ id: 12, body: stale, user: stranger }]; h.calls.length = 0;
+    await publishComment({ ...options, write: true, author: 'mallory' }, path, signal()); assert.deepEqual(writes().map(call => [call.options.method, call.url.split('/').at(-1)]), [['PATCH', '12']]);
+    comments = [{ id: 13, body: stale, user: null as never }, { id: 14, body: stale, user: bot }]; h.calls.length = 0;
+    await publishComment({ ...options, write: true }, path, signal()); assert.deepEqual(writes().map(call => [call.options.method, call.url.split('/').at(-1)]), [['PATCH', '14']]);
     const original = h.state.respond;
     h.state.respond = call => call.url.includes('/pulls/') ? Response.json(pr('b'.repeat(40))) : original(call); assert.equal((await publishComment(options, path, signal())).reason, 'stale-head');
     h.state.respond = call => call.url.includes('/pulls/') ? Response.json(pr(head, false)) : original(call); assert.equal((await publishComment(options, path, signal())).reason, 'closed');
@@ -118,6 +133,8 @@ test('sticky comment creates one comment, updates in place, removes duplicates, 
     await assert.rejects(publishComment({ ...options, headRepository: 'fork/repo' }, path, signal()), /fork/);
     await assert.rejects(publishComment({ ...options, provider: 'gitlab' }, path, signal()), /GitHub/);
     await assert.rejects(publishComment({ ...options, reportUrl: 'http://x.test' }, path, signal()), /HTTPS/);
+    await assert.rejects(publishComment({ ...options, headRepository: undefined, write: true }, path, signal()), /--head-repository/);
+    assert.equal((await publishComment({ ...options, headRepository: undefined }, path, signal())).write, false);
     delete process.env.QG_T; await assert.rejects(publishComment(options, path, signal()), /Missing/);
   } finally { h.restore(); delete process.env.QG_T; await rm(dir, { recursive: true, force: true }); }
 });
@@ -160,7 +177,7 @@ test('CLI status, comment and notify run against fixture servers and keep dry-ru
     const status = ['status', '--repository', 'owner/repo', '--head', head, '--input', input, '--report-url', url, '--head-repository', 'owner/repo', ...api];
     assert.match((await cli(status)).stdout, /QualityGate BLOCK/); assert.equal(seen.length, 0);
     assert.equal(JSON.parse((await cli([...status, '--write', '--json'])).stdout).write, true); assert.deepEqual(seen, [`POST /repos/owner/repo/statuses/${head}`]);
-    seen.length = 0; const comment = ['comment', '--repository', 'owner/repo', '--number', '1', '--head', head, '--input', input, ...api];
+    seen.length = 0; const comment = ['comment', '--repository', 'owner/repo', '--number', '1', '--head', head, '--input', input, '--head-repository', 'owner/repo', ...api];
     assert.match((await cli(comment)).stdout, new RegExp(commentMarker)); assert.equal(seen.filter(item => !item.startsWith('GET')).length, 0);
     assert.match((await cli([...comment, '--write'])).stdout, /Comment: created/); assert.ok(seen.some(item => item.startsWith('POST') && item.includes('/issues/1/comments')));
     assert.equal(JSON.parse((await cli([...comment, '--json'])).stdout).reason, 'created');
