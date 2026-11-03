@@ -1,0 +1,7 @@
+{
+  "name": "qg-plugin-fixture",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": { "import": "./index.js" } }
+}
