@@ -68,7 +68,7 @@ test('dashboard --tunnel prints the tokenized read-only URL with a warning and c
     const run = t.start();
     await new Promise<void>(res => { const timer = setInterval(() => { if (run.out().includes('Share:')) { clearInterval(timer); res(); } }, 20); });
     assert.match(run.out(), /Share: https:\/\/fake-name\.trycloudflare\.com\/\?token=[A-Za-z0-9_-]{43}\n/);
-    assert.match(run.out(), /read-only/i); assert.match(run.out(), /logs, findings and evidence/i);
+    assert.match(run.out(), /read-only/i); assert.match(run.out(), /logs, findings and evidence/i); assert.match(run.out(), /gate command lines and the config path/i);
     const pid = Number((await readFile(join(tmpdir(), `qg-tunnel-pid-${run.child.pid}`), 'utf8')).trim());
     process.kill(pid, 0); run.child.kill('SIGTERM'); assert.equal(await run.closed, 0);
     await delay(100); assert.throws(() => process.kill(pid, 0));
@@ -79,4 +79,35 @@ test('dashboard --tunnel exits 2 when the tunnel process dies', async () => {
   const t = await setup(`#!/bin/sh\necho "https://gone.trycloudflare.com" >&2\nsleep 0.3\n`);
   try { const run = t.start(); assert.equal(await run.closed, 2); assert.match(run.err(), /tunnel (?:closed|exited)/i); }
   finally { await rm(t.dir, { recursive: true, force: true }); }
+});
+
+test('startTunnel stops the child and rejects when it is aborted before the URL appears', async () => {
+  const pending = fake(); const controller = new AbortController();
+  const waiting = startTunnel('cloudflare', 1, () => assert.fail('exit'), { spawnProcess: pending.spawn, signal: controller.signal });
+  controller.abort();
+  await assert.rejects(waiting, /stopped before a public URL was reported/);
+  assert.deepEqual(pending.child.killed, ['SIGTERM']);
+  const early = fake(); const aborted = new AbortController(); aborted.abort();
+  await assert.rejects(startTunnel('ngrok', 1, () => {}, { spawnProcess: early.spawn, signal: aborted.signal }), /stopped before a public URL was reported/);
+  assert.deepEqual(early.child.killed, ['SIGTERM']);
+});
+test('startTunnel never takes the cloudflare API host from an error message for the share URL', async () => {
+  const cf = fake();
+  const pending = startTunnel('cloudflare', 1, () => {}, { spawnProcess: cf.spawn });
+  cf.child.stderr.emit('data', Buffer.from('ERR failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel": EOF\n'));
+  cf.child.stderr.emit('data', Buffer.from('INF https://real-name.trycloudflare.com\n'));
+  assert.equal((await pending).url, 'https://real-name.trycloudflare.com');
+});
+test('dashboard --tunnel stops the tunnel process when interrupted before the URL appears', async () => {
+  const t = await setup(`#!/bin/sh\necho $$ > "${tmpdir()}/qg-tunnel-early-$PPID"\nexec sleep 30\n`);
+  try {
+    const run = t.start();
+    await new Promise<void>(res => { const timer = setInterval(() => { if (run.out().includes('QualityGate:')) { clearInterval(timer); res(); } }, 20); });
+    const pidFile = join(tmpdir(), `qg-tunnel-early-${run.child.pid}`);
+    let pid = 0; for (let i = 0; i < 100 && !pid; i++) { pid = Number(await readFile(pidFile, 'utf8').then(text => text.trim(), () => '')); if (!pid) await delay(20); }
+    assert.ok(pid); run.child.kill('SIGTERM');
+    assert.equal(await run.closed, 0); assert.doesNotMatch(run.out(), /Share:/); assert.doesNotMatch(run.err(), /exited|stopped/);
+    await delay(100); assert.throws(() => process.kill(pid, 0));
+    await rm(pidFile, { force: true });
+  } finally { await rm(t.dir, { recursive: true, force: true }); }
 });
