@@ -24,21 +24,24 @@ function semaphore(limit: number) {
 
 /**
  * Runs gates with at most `limit` in parallel. A gate starts once the selected gates it `dependsOn` have finished;
- * if one of them did not pass, it is reported as skipped instead. Results keep the order of `specs`.
+ * if one of them did not pass, it is reported as skipped instead. Results keep the order of `specs`, and the listing
+ * order does not matter: a gate's dependencies are looked up among all selected gates, not only those started so far.
+ * Dependencies must be acyclic (the config schema rejects cycles).
  */
 export async function scheduleGates(specs: GateSpec[], limit: number, execute: (spec: GateSpec, index: number) => Promise<GateResult>): Promise<GateResult[]> {
   const slots = semaphore(limit);
+  const selected = new Map(specs.map((spec, index) => [spec.id.toLowerCase(), { spec, index }]));
   const finished = new Map<string, Promise<GateResult>>();
-  const start = (spec: GateSpec, index: number) => {
-    const task = (async () => {
-      const dependencies = await Promise.all((spec.dependsOn ?? []).filter(id => finished.has(id.toLowerCase())).map(id => finished.get(id.toLowerCase())!));
+  const finish = (id: string): Promise<GateResult> => {
+    if (!finished.has(id)) finished.set(id, (async () => {
+      const { spec, index } = selected.get(id)!;
+      const dependencies = await Promise.all((spec.dependsOn ?? []).map(name => name.toLowerCase()).filter(name => selected.has(name)).map(finish));
       const failed = dependencies.find(result => result.decision !== 'PASS' || result.execution !== 'completed');
       if (failed) return dependencySkipped(spec, failed.id);
       await slots.acquire();
       try { return await execute(spec, index); } finally { slots.release(); }
-    })();
-    finished.set(spec.id.toLowerCase(), task);
+    })());
+    return finished.get(id)!;
   };
-  specs.forEach(start);
-  return Promise.all(specs.map(spec => finished.get(spec.id.toLowerCase())!));
+  return Promise.all(specs.map(spec => finish(spec.id.toLowerCase())));
 }

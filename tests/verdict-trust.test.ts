@@ -214,3 +214,14 @@ test('CI reports show the step registry, skipped and cached gates, and a TIMEOUT
     assert.equal(verdict({ ...full, execution: 'error' } as RunResult).label, 'ERROR');
   });
 });
+
+test('dependsOn holds whatever order the gates are listed in', async () => {
+  await inProject({}, {}, async dir => {
+    // "build" is listed before the gate it depends on; it must still wait for lint and be skipped when lint fails.
+    const failing = await direct(dir, [{ id: 'build', run: 'echo built > built.txt', dependsOn: ['lint'] }, { id: 'lint', run: 'sleep 0.3; exit 1' }]);
+    assert.equal(failing.gates[0]!.skipped, 'dependency lint did not pass');
+    await assert.rejects(readFile(join(dir, 'built.txt'), 'utf8'), /ENOENT/);
+    const passing = await direct(dir, [{ id: 'build', run: 'test -f lint.done && echo ok', dependsOn: ['lint'] }, { id: 'lint', run: 'sleep 0.3; touch lint.done' }]);
+    assert.deepEqual(passing.gates.map(gate => gate.decision), ['PASS', 'PASS']);
+  });
+});
