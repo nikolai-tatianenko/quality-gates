@@ -11,7 +11,7 @@ import { markers } from '../packages/ci/src/description.js';
 import type { RunResult } from '../packages/protocol/src/index.js';
 const head = 'a'.repeat(40); const runId = '12345678-1234-4123-8123-123456789012';
 const run: RunResult = { schemaVersion: 1, runId, startedAt: '2026-10-30T20:00:00.000Z', finishedAt: '2026-10-30T20:01:00.000Z',
-  execution: 'completed', decision: 'BLOCK', gates: [{ id: 'lint', command: 'lint', execution: 'completed', decision: 'BLOCK', exitCode: 1, durationMs: 10,
+  execution: 'completed', decision: 'BLOCK', steps: [], gates: [{ id: 'lint', command: 'lint', execution: 'completed', decision: 'BLOCK', exitCode: 1, durationMs: 10,
     outputTail: 'failed @someone <script>bad</script>', errors: ['tool error'], reportPath: 'lint.json', findings: [], artifacts: [] }],
   results: [{ url: 'https://example.com', execution: 'error', decision: 'BLOCK', scores: {}, violations: ['missing metric'], errors: ['offline'], evidencePath: 'audit.json' }],
   errors: ['write failed'], findings: [{ gateId: 'lint', file: 'src/a.ts', line: 2, severity: 'error', message: '<!-- qualitygate:auto:end --> @someone | [link](x)', ruleId: 'rule', evidencePath: 'lint.json' },

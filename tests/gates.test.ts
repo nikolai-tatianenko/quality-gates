@@ -20,8 +20,8 @@ async function project(gates: { id: string; run: string; timeoutMs?: number }[])
   await writeFile(join(dir, '.qualitygate.yml'), JSON.stringify(config));
   return { dir };
 }
-function execute(dir: string, gates: { id: string; run: string; timeoutMs?: number }[], signal?: AbortSignal, only?: string[]) {
-  const config = configSchema.parse({ schemaVersion: 1, gates, outputDir: join(dir, 'out') });
+function execute(dir: string, gates: { id: string; run: string; timeoutMs?: number }[], signal?: AbortSignal, only?: string[], concurrency?: number) {
+  const config = configSchema.parse({ schemaVersion: 1, gates, outputDir: join(dir, 'out'), ...(concurrency ? { concurrency } : {}) });
   return run(config, { gate: commandPlugin(dir), storage: filesystemPlugin(config.outputDir), reporter: jsonReporter }, signal, only);
 }
 /** Runs the CLI from the repo (where tsx resolves) against the project's config file. */
@@ -70,15 +70,16 @@ test('gate commands run in the config directory', async () => {
     assert.equal(result.gates[0]?.decision, 'PASS');
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
-test('a hanging gate times out as an error and its whole process tree is killed', async () => {
+test('a hanging gate times out with its own status and exit code, and its whole process tree is killed', async () => {
   const { dir } = await project([]);
   try {
     const pidFile = join(dir, 'child.pid');
     const started = Date.now();
     const result = await execute(dir, [{ id: 'hang', run: `sleep 30 & echo $! > ${pidFile}; wait`, timeoutMs: 400 }]);
     assert.ok(Date.now() - started < 10000);
-    assert.equal(result.gates[0]?.execution, 'error'); assert.equal(result.gates[0]?.decision, 'BLOCK');
-    assert.match(result.gates[0]!.errors.join(), /timed out after 400ms/); assert.equal(exitCode(result), 2);
+    assert.equal(result.gates[0]?.execution, 'timeout'); assert.equal(result.gates[0]?.decision, 'BLOCK');
+    assert.match(result.gates[0]!.errors.join(), /timed out after 400ms/); assert.equal(result.execution, 'timeout'); assert.equal(exitCode(result), 3);
+    assert.deepEqual(result.steps, [{ id: 'hang', kind: 'gate', status: 'timeout' }]);
     const pid = Number((await readFile(pidFile, 'utf8')).trim());
     assert.throws(() => process.kill(pid, 0), /ESRCH/);
   } finally { await rm(dir, { recursive: true, force: true }); }
@@ -88,7 +89,7 @@ test('interruption stops the running gate, skips the rest and exits 130', async 
   try {
     const controller = new AbortController();
     setTimeout(() => controller.abort(), 300);
-    const result = await execute(dir, [{ id: 'hang', run: 'sleep 30' }, { id: 'later', run: 'true' }], controller.signal);
+    const result = await execute(dir, [{ id: 'hang', run: 'sleep 30' }, { id: 'later', run: 'true' }], controller.signal, undefined, 1);
     assert.equal(result.gates[0]?.execution, 'interrupted'); assert.equal(result.gates[1]?.execution, 'skipped');
     assert.equal(result.gates[1]?.decision, 'BLOCK'); assert.equal(exitCode(result), 130);
   } finally { await rm(dir, { recursive: true, force: true }); }

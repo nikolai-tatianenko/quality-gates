@@ -18,6 +18,9 @@ import { readReport, renderMarkdown, publishDescription, exportReport, publishSt
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const write = args.includes('--write');
+const changed = args.includes('--changed');
+const cache = args.includes('--cache');
+const noGitignore = args.includes('--no-gitignore');
 const controller = new AbortController();
 const interrupt = () => controller.abort();
 process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
@@ -26,16 +29,17 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
-    if (arg === '--write') continue;
+    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
-    if (valueFlags.includes(arg) || arg === '--gate' || arg === '--plugin') {
+    if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin') {
       const value = args[++i];
-      if (!value || value.startsWith('-') || (arg !== '--gate' && arg !== '--plugin' && values.has(arg))) throw new Error(`Expected one ${arg} <value>`);
-      if (arg === '--gate') only.push(value); else if (arg === '--plugin') plugins.push(value); else values.set(arg, value);
+      const repeatable = arg === '--gate' || arg === '--only' || arg === '--plugin';
+      if (!value || value.startsWith('-') || (!repeatable && values.has(arg))) throw new Error(`Expected one ${arg} <value>`);
+      if (arg === '--gate' || arg === '--only') only.push(value); else if (arg === '--plugin') plugins.push(value); else values.set(arg, value);
       continue;
     }
     if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
@@ -44,7 +48,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
     report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -53,14 +57,16 @@ try {
   };
   if (command && validFlags[command]) {
     for (const key of values.keys()) if (!validFlags[command]!.includes(key)) throw new Error(`${command} does not accept ${key}`);
-    if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate`);
+    if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate or --only`);
+    if ((changed || cache) && command !== 'run') throw new Error(`${command} does not accept --changed or --cache`);
+    if (noGitignore && command !== 'setup') throw new Error(`${command} does not accept --no-gitignore`);
     if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
     if (write && !['pr', 'status', 'comment', 'notify'].includes(command)) throw new Error(`${command} does not accept --write`);
   }
   if (help || args.length === 0) {
     const help = 'Usage: qualitygate init [URL...] [--config <path>] [--json]\n'
-      + '       qualitygate setup [--config <path>] [--plugin <package>...] [--json]\n'
-      + '       qualitygate run [--config <path>] [--gate <id>...] [--json]\n'
+      + '       qualitygate setup [--config <path>] [--from <gates.json|gates.mjs>] [--plugin <package>...] [--no-gitignore] [--json]\n'
+      + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
       + '       qualitygate report --input <run.json> [--output <report.md>] [--json]\n'
@@ -81,15 +87,18 @@ try {
   } else if (command === 'setup') {
     if (positional.length) throw new Error('setup takes only --config');
     controller.signal.throwIfAborted();
-    const result = await setupProject(configPath, undefined, plugins);
+    const result = await setupProject(configPath, undefined, plugins, { from: values.get('--from'), gitignore: !noGitignore });
     if (json) console.log(JSON.stringify({ schemaVersion: 1, ...result }));
     else console.log([`Created ${result.configPath}`, `Ecosystems: ${result.ecosystems.join(', ')}`,
       ...(result.plugins.length ? [`Plugins (run unsandboxed with your permissions): ${result.plugins.join(', ')}`] : []), ...result.gates.map(gate => `  ${gate.id}: ${gate.run}`),
+      ...(result.skipped.length ? ['Found but not enabled (listed as comments in the config):', ...result.skipped.map(gate => `  ${gate.id}: ${gate.reason}`)] : []),
+      ...result.notes.map(note => `Note: ${note}`),
       ...(result.gitignore.length ? [`Added to .gitignore: ${result.gitignore.join(' ')}`] : []),
+      `Files changed: ${result.changed.join(', ')}`,
       'Check that the test script exits (not watch mode), then run: qualitygate run'].join('\n'));
   } else if (command === 'run' || command === 'inspect') {
     if ((command === 'run' && positional.length) || positional.length > 1) throw new Error(`${command}: unexpected arguments`);
-    const result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined) : await getRun(configPath, positional[0]);
+    const result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache }) : await getRun(configPath, positional[0]);
     if (json) process.stdout.write(jsonReporter.render(result));
     else {
       printRun(result);

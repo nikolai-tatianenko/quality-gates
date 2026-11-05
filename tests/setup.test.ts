@@ -18,9 +18,13 @@ test('setup maps scripts to gates with the declared package manager and ignores 
   try {
     const result = await setupProject(join(dir, '.qualitygate.yml'));
     assert.deepEqual(result.gates, [
-      { id: 'lint', run: 'pnpm run lint' }, { id: 'typecheck', run: 'pnpm run type-check' }, { id: 'tests', run: 'pnpm run test:ci' }]);
+      { id: 'lint', run: 'pnpm exec eslint . --format json --output-file .qualitygate/node/eslint.json' }, { id: 'typecheck', run: 'pnpm run type-check' },
+      { id: 'tests', run: 'pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=.qualitygate/node/junit.xml' }]);
     const config = parse(await readFile(result.configPath, 'utf8'));
     assert.equal(config.gates[2].timeoutMs, 300000);
+    assert.deepEqual(config.gates[0].report, { format: 'eslint-json', path: '.qualitygate/node/eslint.json' });
+    assert.deepEqual(config.gates[2].report, { format: 'junit', path: '.qualitygate/node/junit.xml' });
+    assert.deepEqual(result.changed, [result.configPath, join(dir, '.gitignore')]);
     assert.deepEqual(result.gitignore, ['.qualitygate/', '.qualitygate-ci/', '.qualitygate-review-sources/']);
     assert.match(await readFile(join(dir, '.gitignore'), 'utf8'), /^\.qualitygate\/\n\.qualitygate-ci\/\n/);
     await assert.rejects(setupProject(result.configPath), /EEXIST/);
@@ -45,8 +49,9 @@ test('setup leaves a complete .gitignore alone and rejects projects without usab
   const bare = await project({});
   try {
     const result = await setupProject(join(dir, '.qualitygate.yml'));
-    assert.deepEqual(result.gates, [{ id: 'lint', run: 'pnpm run lint' }]);
+    assert.deepEqual(result.gates, [{ id: 'lint', run: 'pnpm exec eslint . --format json --output-file .qualitygate/node/eslint.json' }]);
     assert.deepEqual(result.gitignore, []);
+    assert.deepEqual(result.changed, [result.configPath]);
     await assert.rejects(setupProject(join(bare, '.qualitygate.yml')), /No lint, typecheck or test script/);
     await assert.rejects(setupProject(join(bare, 'missing', '.qualitygate.yml')), /ENOENT/);
   } finally { await rm(dir, { recursive: true, force: true }); await rm(bare, { recursive: true, force: true }); }

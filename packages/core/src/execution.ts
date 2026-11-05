@@ -1,6 +1,6 @@
 import { basename, join } from 'node:path';
-import { auditDataSchema, gateDataSchema, message, runResultSchema,
-  type AuditResult, type GateResult, type GateSpec, type RunResult } from '../../protocol/src/index.js';
+import { auditDataSchema, gateDataSchema, message, runResultSchema, stepStatus,
+  type AuditResult, type GateResult, type GateSpec, type RunResult, type Step } from '../../protocol/src/index.js';
 import type { AuditPlugin, Context, GatePlugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
 interface Environment { signal: AbortSignal; storage: StoragePlugin; directory?: string }
 type Item = GateResult | AuditResult;
@@ -21,19 +21,22 @@ async function lifecycle(item: Item, signal: AbortSignal, execute: (context: Con
     }
   }
 }
+/** Copies the plugin's answer onto the result; a timeout keeps its own status instead of becoming a generic error. */
+function applyGateData(item: GateResult, data: ReturnType<typeof gateDataSchema.parse>, signal: AbortSignal) {
+  item.exitCode = data.exitCode; item.outputTail = data.output.slice(-4000); item.counts = data.counts;
+  item.findings = data.findings.map(finding => ({ ...finding, gateId: item.id }));
+  item.decision = data.exitCode === 0 ? 'PASS' : 'BLOCK';
+  if (!data.error) return;
+  item.execution = signal.aborted ? 'interrupted' : data.timedOut ? 'timeout' : 'error';
+  item.decision = 'BLOCK'; item.errors.push(data.error);
+}
 export async function executeGate(spec: GateSpec, index: number, env: Environment, plugin: GatePlugin): Promise<GateResult> {
   const item: GateResult = { id: spec.id, command: spec.run, execution: 'completed', decision: 'BLOCK',
     exitCode: null, durationMs: 0, outputTail: '', errors: [], findings: [], artifacts: [] };
   const started = Date.now();
   await lifecycle(item, env.signal, async context => {
     const data = gateDataSchema.parse(await plugin.run(spec, context));
-    item.exitCode = data.exitCode; item.outputTail = data.output.slice(-4000);
-    item.findings = data.findings.map(finding => ({ ...finding, gateId: spec.id }));
-    item.decision = data.exitCode === 0 ? 'PASS' : 'BLOCK';
-    if (data.error) {
-      item.execution = env.signal.aborted ? 'interrupted' : 'error';
-      item.decision = 'BLOCK'; item.errors.push(data.error);
-    }
+    applyGateData(item, data, env.signal);
     if (env.directory) {
       item.evidencePath = await env.storage.write(env.directory, `gate-${index + 1}-${spec.id}.log`, data.output);
       if (data.artifacts.length && !env.storage.copy) item.errors.push(`${data.artifacts.length} artifact(s) not stored: the storage plugin cannot copy files`);
@@ -58,9 +61,12 @@ export async function executeAudit(url: string, index: number, env: Environment,
   });
   return item;
 }
+/** Interrupted beats error, error beats timeout: a timeout alone is reported (and exits) as its own status. */
 export function executionStatus(result: RunResult, signal: AbortSignal): RunResult['execution'] {
   if (signal.aborted) return 'interrupted';
-  return result.errors.length || [...result.results, ...result.gates].some(r => r.execution !== 'completed') ? 'error' : 'completed';
+  const items = [...result.results, ...result.gates];
+  if (result.errors.length || items.some(item => item.execution !== 'completed' && item.execution !== 'timeout')) return 'error';
+  return items.some(item => item.execution === 'timeout') ? 'timeout' : 'completed';
 }
 export async function saveReport(result: RunResult, env: Environment, reporter: ReporterPlugin) {
   if (!env.directory) return;
@@ -75,4 +81,13 @@ export async function saveReport(result: RunResult, env: Environment, reporter: 
     delete result.reportPath; result.errors.push(`Report write: ${message(error)}`);
     result.execution = env.signal.aborted ? 'interrupted' : 'error';
   }
+}
+/** Every configured gate and URL with its outcome; steps that were not selected or never started are `not-run`. */
+export function buildSteps(config: { gates: { id: string }[]; urls: string[] }, result: RunResult): Step[] {
+  const gates = new Map(result.gates.map(gate => [gate.id, gate]));
+  const audits = new Map(result.results.map(audit => [audit.url, audit]));
+  return [
+    ...config.gates.map((gate): Step => ({ id: gate.id, kind: 'gate', status: gates.has(gate.id) ? stepStatus(gates.get(gate.id)!) : 'not-run' })),
+    ...config.urls.map((url): Step => ({ id: url, kind: 'url', status: audits.has(url) ? stepStatus(audits.get(url)!) : 'not-run' })),
+  ];
 }

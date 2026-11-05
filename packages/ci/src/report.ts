@@ -1,4 +1,4 @@
-import { runResultSchema, exitCode, type RunResult } from '../../protocol/src/index.js';
+import { runResultSchema, exitCode, coverageLine, type RunResult } from '../../protocol/src/index.js';
 /** Treat report/tool text as data: no injected HTML, marker comments or mentions. */
 export function markdownText(value: string): string {
   return value.replace(/[\\*_{}[\]()#!]/g, '\\$&').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
@@ -6,7 +6,10 @@ export function markdownText(value: string): string {
     .replace(/\r?\n/g, '<br>');
 }
 function gateRows(run: RunResult) {
-  return run.gates.map(gate => `| ${markdownText(gate.id)} | ${gate.decision} | ${gate.execution} | ${gate.exitCode ?? '—'} | ${gate.durationMs} |`);
+  return run.gates.map(gate => `| ${markdownText(gate.id)} | ${gate.decision} | ${gate.skipped ? `skipped (${markdownText(gate.skipped)})` : gate.cached ? 'cached' : gate.execution} | ${gate.exitCode ?? '—'} | ${gate.durationMs} |`);
+}
+function stepRows(run: RunResult) {
+  return run.steps.map(step => `| ${markdownText(step.id)} | ${step.kind} | ${step.status} |`);
 }
 function auditRows(run: RunResult) {
   return run.results.map(audit => `| ${markdownText(audit.url)} | ${audit.decision} | ${audit.execution} | ${markdownText(JSON.stringify(audit.scores))} |`);
@@ -45,6 +48,7 @@ export function renderMarkdown(input: RunResult, maxBytes = 60000): string {
   const run = runResultSchema.parse(input);
   const title = run.execution === 'completed' ? run.decision : run.execution.toUpperCase();
   const sections = [`## QualityGate: ${title}\n\nRun: ${markdownText(run.runId)}\n\nFinished: ${run.finishedAt}\n\nDecision: ${run.decision}; execution: ${run.execution}; exit: ${exitCode(run)}.\n`];
+  if (run.steps.length) sections.push([`### Steps (${coverageLine(run)})\n\n| Step | Kind | Status |\n| --- | --- | --- |`, ...stepRows(run)].join('\n'));
   if (run.gates.length) sections.push(['### Gates\n\n| Gate | Decision | Execution | Exit | Duration, ms |\n| --- | --- | --- | --- | --- |', ...gateRows(run)].join('\n'));
   if (run.results.length) sections.push(['### URL audits\n\n| URL | Decision | Execution | Scores |\n| --- | --- | --- | --- |', ...auditRows(run)].join('\n'));
   sections.push(`### Findings (${run.findings.length})`, ...findingLines(run), ...gateDetails(run), ...auditDetails(run));

@@ -18,7 +18,7 @@ test('qualitygate run turns a JUnit report into findings and stores artifacts', 
   const dir = await mkdtemp(join(tmpdir(), 'qg-report-cli-'));
   try {
     const xml = '<testsuite><testcase classname="A" name="b"><failure message="boom"/></testcase></testsuite>';
-    const script = `const fs=require('fs');fs.writeFileSync('r.xml',Buffer.from('${Buffer.from(xml).toString('base64')}','base64'));fs.mkdirSync('shots');fs.writeFileSync('shots/a.png',Buffer.from([137,80,78,71]));process.exit(1)`;
+    const script = `const fs=require('fs');fs.writeFileSync('r.xml',Buffer.from('${Buffer.from(xml).toString('base64')}','base64'));fs.mkdirSync('shots',{recursive:true});fs.writeFileSync('shots/a.png',Buffer.from([137,80,78,71]));process.exit(1)`;
     await writeFile(join(dir, '.qualitygate.yml'), JSON.stringify({ schemaVersion: 1, gates: [{ id: 'e2e', run: `node -e "${script}"`,
       report: { format: 'junit', path: 'r.xml' }, artifacts: ['shots/*.png'] }] }));
     const json = await cli(dir, ['run', '--json']);
