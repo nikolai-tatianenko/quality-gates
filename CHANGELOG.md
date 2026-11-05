@@ -2,6 +2,23 @@
 
 ## Unreleased — local workspace and analysis
 
+- Verdict trust: a gate that runs out of time now has its own status, `TIMEOUT` (`execution: timeout`), and its own exit code `3`,
+  instead of looking like a tool crash (`2`). When the gate's report can be read, the message keeps the partial counts
+  ("passed 40, failed 0, stopped by timeout"; JUnit, NUnit and Playwright reports). Every run now carries a step registry (`steps`:
+  passed, failed, timeout, error, interrupted, skipped, cached, not-run) shown in the JSON report, Markdown/HTML reports, the CI
+  verdict and the terminal, so "PASS" from 3 of 30 gates reads "3 of 30 steps ran". Additive to the JSON schema; `exitCode()`
+  gains the value 3.
+- Speed and noise: independent gates run in parallel (`concurrency`, default 4; `1` keeps the old sequential behaviour),
+  `dependsOn` orders them and skips a gate whose dependency did not pass, `inputs` + `--changed` / `--cache` support fast local
+  runs, `--only` is an alias of `--gate`, and the terminal prints one line per gate with its log path while npm/pnpm warnings stay in the log.
+- `setup`: understands monorepos (pnpm/npm workspaces), every `test:*` script and `vitest*.config`; lists slow gates and
+  gates that need a browser or an emulator as "found but not enabled" with the reason (Maestro is now listed, not enabled);
+  warns about large test runs; writes `report:` for plain `eslint`, `vitest` and `node --test` scripts; reads an existing
+  gate list with `--from`; prints the files it changed and accepts `--no-gitignore`.
+- Local tarballs are built by `pnpm pack:local` into `.packages/<version>/` with a SHA-256 file instead of a shared `/tmp` folder.
+- Tests: exit-code contract for 0, 1, 2, 3 and 130, and reference repositories (pnpm monorepo, Playwright, Maestro, Python) that
+  `setup` must understand.
+
 - Removed the archived `legacy/lighthouse-v1/` service (history keeps it).
 
 - Hardening (review minors): the Unity editor version from `ProjectVersion.txt` must be letters, digits and dots (a crafted version can no longer inject shell syntax into the generated gate); `dashboard --tunnel` now stops the tunnel process when interrupted before the URL appears, never takes `api.trycloudflare.com` as the share URL, and its warning names the gate command lines and config path that become visible; report URLs for the PR comment, commit status and Slack are normalized and refused when they contain spaces or `( ) < > | [ ]`; a report or artifact file older than the run is treated as a leftover (missing report, skipped artifact) instead of being attached; artifacts that cannot be stored because the storage plugin has no `copy` are now reported as a gate error note.

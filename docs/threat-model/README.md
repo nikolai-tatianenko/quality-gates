@@ -14,7 +14,7 @@ Related: [SECURITY.md](../../SECURITY.md), [CI trust boundary](../CI.md),
 | `.qualitygate.yml`, `package.json`, lockfile | They decide which commands and plugins execute |
 | Run evidence in `.qualitygate/` (logs, reports, screenshots, traces) | May contain secrets and personal data |
 | PR-write, `statuses: write` and Slack webhook credentials | Allow changing PR state and posting to a channel |
-| The gate verdict and exit code (0/1/2/130) | Merge decisions depend on them |
+| The gate verdict and exit code (0/1/2/3/130) | Merge decisions depend on them |
 
 ## Trust boundaries
 

@@ -1,7 +1,8 @@
 # CI reports and managed PR/MR descriptions
 
 QualityGate runs the same project configuration on GitHub Actions, GitLab CI and
-Bitbucket Pipelines. The CI exit code enforces the gate; JSON, Markdown and raw
+Bitbucket Pipelines. The CI exit code enforces the gate (0 PASS, 1 BLOCK, 2 error, 3 a gate timed out, 130 interrupted; the PR comment and
+commit status show a timeout as `TIMEOUT`, and a PASS from part of the configuration as "N of M steps ran"); JSON, Markdown and raw
 files remain downloadable artifacts even when a gate blocks.
 
 CI invokes the CLI directly; it does not host the local dashboard or require
@@ -11,14 +12,14 @@ share the same gate configuration; see [project installation and Husky setup](PR
 ## Install in a target repository
 
 The package is not published to npm yet. Build a tarball from the local QualityGate
-checkout with `pnpm build`, `mkdir -p /tmp/qualitygate-packages` and
-`pnpm pack --pack-destination /tmp/qualitygate-packages`.
-For CI, copy that tarball into the target repository and install the repository-local
-path, rather than an absolute path under `/tmp`:
+checkout with `pnpm pack:local`, which writes a versioned folder (`.packages/<version>/`) with a SHA-256 file.
+For CI, copy that tarball into the target repository, verify the checksum and install the
+repository-local path, rather than an absolute path:
 
 ```sh
 mkdir -p tools
-cp /tmp/qualitygate-packages/qualitygate-toolbox-0.1.0.tgz tools/
+cp .packages/0.1.0/qualitygate-toolbox-0.1.0.tgz .packages/0.1.0/qualitygate-toolbox-0.1.0.tgz.sha256 tools/
+(cd tools && shasum -a 256 -c qualitygate-toolbox-0.1.0.tgz.sha256)
 pnpm add -D ./tools/qualitygate-toolbox-0.1.0.tgz
 ```
 
