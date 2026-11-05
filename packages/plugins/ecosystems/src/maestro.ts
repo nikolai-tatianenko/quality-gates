@@ -11,10 +11,13 @@ async function hasFlow(directory: string): Promise<boolean> {
   return false;
 }
 
-/** Proposes `maestro test` with a JUnit report when `.maestro/` or `flows/` holds Maestro flows. */
+/** Folders searched for Maestro flows: `.maestro`, `maestro` and `flows`. */
+const FOLDERS = ['.maestro', 'maestro', 'flows'];
+/** Proposes `maestro test` with a JUnit report, listed as not enabled because it needs an emulator or simulator. */
 export const maestro: EcosystemPlugin = { id: 'maestro', apiVersion: 1, kind: 'ecosystem', async detect(directory) {
-  const folder = (await hasFlow(join(directory, '.maestro'))) ? '.maestro' : (await hasFlow(join(directory, 'flows'))) ? 'flows' : undefined;
+  let folder: string | undefined;
+  for (const candidate of FOLDERS) if (!folder && await hasFlow(join(directory, candidate))) folder = candidate;
   if (!folder) return null;
   return [{ id: 'e2e-mobile', run: `mkdir -p .qualitygate/maestro && maestro test --format junit --output ${REPORT} ${folder}`,
-    timeoutMs: 900000, report: { format: 'junit', path: REPORT } }];
+    timeoutMs: 900000, skip: 'needs an emulator or simulator and is slow', report: { format: 'junit', path: REPORT } }];
 } };

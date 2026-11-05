@@ -11,7 +11,7 @@ import { verdict, statusPayload, commentBody, slackMessage, slackTarget, comment
 import type { RunResult } from '../packages/protocol/src/index.js';
 const head = 'a'.repeat(40); const runId = '12345678-1234-4123-8123-123456789012'; const exec = promisify(execFile);
 const gate = (id: string, decision: 'PASS' | 'BLOCK') => ({ id, command: id, execution: 'completed' as const, decision, exitCode: decision === 'PASS' ? 0 : 1, durationMs: 1, outputTail: 'token=SECRET', errors: ['SECRET error'], findings: [], artifacts: [] });
-const base: RunResult = { schemaVersion: 1, runId, startedAt: '2026-10-30T20:00:00.000Z', finishedAt: '2026-10-30T20:01:00.000Z', execution: 'completed', decision: 'BLOCK',
+const base: RunResult = { schemaVersion: 1, runId, startedAt: '2026-10-30T20:00:00.000Z', finishedAt: '2026-10-30T20:01:00.000Z', execution: 'completed', decision: 'BLOCK', steps: [],
   gates: [gate('lint', 'BLOCK'), gate('test', 'PASS')], results: [{ url: 'https://example.com/?token=SECRET', execution: 'completed', decision: 'BLOCK', scores: {}, violations: [], errors: [] }], errors: ['SECRET run error'], findings: [] };
 const pass: RunResult = { ...base, decision: 'PASS', gates: [gate('test', 'PASS')], results: [], errors: [] };
 const many: RunResult = { ...base, gates: ['a', 'b', 'c', 'd', 'e', 'f', 'g'].map(id => gate(id, 'BLOCK')), results: [] };

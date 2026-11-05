@@ -46,6 +46,10 @@ test('a project with Node, Playwright, Python and Maestro gets one valid config'
   await mkdir(join(dir, '.maestro')); await writeFile(join(dir, '.maestro', 'a.yaml'), 'appId: x\n');
   const result = await setupProject(join(dir, '.qualitygate.yml'));
   assert.deepEqual(result.ecosystems, ['node', 'python', 'playwright', 'maestro']);
-  assert.deepEqual(result.gates.map(gate => gate.id), ['node-lint', 'node-tests', 'python-lint', 'python-tests', 'playwright-tests', 'e2e-mobile']);
-  configSchema.parse(parse(await readFile(result.configPath, 'utf8')));
+  assert.deepEqual(result.gates.map(gate => gate.id), ['node-lint', 'node-tests', 'python-lint', 'python-tests', 'playwright-tests']);
+  assert.deepEqual(result.skipped.map(gate => [gate.id, gate.reason]), [['e2e-mobile', 'needs an emulator or simulator and is slow']]);
+  assert.match(result.notes.join('\n'), /playwright-tests: Playwright needs its browsers once: pnpm exec playwright install/);
+  const written = await readFile(result.configPath, 'utf8');
+  assert.equal(configSchema.parse(parse(written)).gates.length, 5);
+  assert.match(written, /# Found but not enabled[\s\S]*# e2e-mobile: needs an emulator[\s\S]*#   run: mkdir -p \.qualitygate\/maestro/);
 }));

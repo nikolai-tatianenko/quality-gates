@@ -9,4 +9,10 @@ export const junit: ParserPlugin = { id: 'junit', apiVersion: 1, kind: 'parser',
     const name = [testcase['@_classname'], testcase['@_name']].filter(Boolean).join('.');
     return [{ gateId, severity: 'error' as const, message: `${name}: ${detail}` }];
   });
+},
+count(raw) {
+  const cases = collect(parseXml(raw), 'testcase');
+  const failed = cases.filter(item => item['failure'] !== undefined || item['error'] !== undefined).length;
+  const skipped = cases.filter(item => item['skipped'] !== undefined).length;
+  return { passed: Math.max(0, cases.length - failed - skipped), failed, skipped };
 } };

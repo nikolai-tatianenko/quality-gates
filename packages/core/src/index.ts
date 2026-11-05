@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { configSchema, message, runResultSchema, type Config, type RunResult } from '../../protocol/src/index.js';
 import type { AuditPlugin, GatePlugin, Plugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
-import { executeGate, executeAudit, executionStatus, saveReport } from './execution.js';
+import { executeGate, executeAudit, executionStatus, saveReport, buildSteps } from './execution.js';
+import { scheduleGates, cachedGate } from './schedule.js';
 import { evaluate } from '../../policy/src/index.js';
 export class Registry {
   private plugins = new Map<string, Plugin>();
@@ -31,24 +32,36 @@ function selectPlugins(config: Config, plugins: RunPlugins, only?: string[]) {
     gate: gateSpecs.length ? registry.get(plugins.gate?.id ?? 'gate', 'gate') : undefined,
     storage: registry.get(plugins.storage.id, 'storage'), reporter: registry.get(plugins.reporter.id, 'reporter') };
 }
+export interface RunOptions {
+  signal?: AbortSignal;
+  /** Run only these gate IDs; URL audits are skipped. */
+  only?: string[];
+  /** Gate ID to a note: the gate passes without running (inputs unchanged since a passing run). */
+  cached?: Record<string, string>;
+}
 /** Runs configured gates then audits; selection by gate ID skips URL audits. */
 export async function run(configInput: Config, plugins: RunPlugins,
   signal: AbortSignal = new AbortController().signal, only?: string[]): Promise<RunResult> {
+  return runWith(configInput, plugins, { signal, only });
+}
+/** Like `run`, with the optional selection and cache information. */
+export async function runWith(configInput: Config, plugins: RunPlugins, options: RunOptions = {}): Promise<RunResult> {
+  const signal = options.signal ?? new AbortController().signal;
   const config = configSchema.parse(configInput);
-  const selected = selectPlugins(config, plugins, only);
+  const selected = selectPlugins(config, plugins, options.only);
   const result: RunResult = {
     schemaVersion: 1, runId: randomUUID(), startedAt: new Date().toISOString(),
     finishedAt: new Date().toISOString(), execution: 'completed', decision: 'PASS',
-    thresholds: config.thresholds, results: [], gates: [], errors: [], findings: [],
+    thresholds: config.thresholds, results: [], gates: [], errors: [], findings: [], steps: [],
   };
   let directory: string | undefined;
   try { directory = await selected.storage.createRun(result.runId); }
   catch (error) { result.errors.push(`Storage initialization: ${message(error)}`); }
   const environment = { signal, storage: selected.storage, directory };
-  for (const [index, spec] of selected.gateSpecs.entries()) {
-    const item = await executeGate(spec, index, environment, selected.gate!);
-    result.gates.push(item); result.findings.push(...item.findings);
-  }
+  const cached = options.cached ?? {};
+  const gateResults = await scheduleGates(selected.gateSpecs, config.concurrency, async (spec, index) =>
+    spec.id in cached ? cachedGate(spec, cached[spec.id]!) : executeGate(spec, index, environment, selected.gate!));
+  for (const item of gateResults) { result.gates.push(item); result.findings.push(...item.findings); }
   for (const [index, url] of selected.urls.entries()) {
     const item = await executeAudit(url, index, environment, selected.audit!);
     Object.assign(item, evaluate(item.scores, config.thresholds!)); result.results.push(item);
@@ -56,6 +69,7 @@ export async function run(configInput: Config, plugins: RunPlugins,
   result.execution = executionStatus(result, signal);
   result.decision = [...result.results, ...result.gates].some(r => r.decision === 'BLOCK') ? 'BLOCK' : 'PASS';
   result.finishedAt = new Date().toISOString();
+  result.steps = buildSteps(config, result);
   await saveReport(result, environment, selected.reporter);
   return runResultSchema.parse(result);
 }

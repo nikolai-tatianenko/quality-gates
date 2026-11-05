@@ -4,7 +4,7 @@ export interface ArtifactLimits { maxFiles: number; maxBytes: number }
 export const DEFAULT_LIMITS: ArtifactLimits = { maxFiles: 50, maxBytes: 50 * 1024 * 1024 };
 const GLOB_CHARS = /[*?]/;
 /** `*` stays within one path segment, `**` crosses directories, `?` is one character. */
-function globToRegExp(pattern: string): RegExp {
+export function globToRegExp(pattern: string): RegExp {
   let source = '';
   for (let i = 0; i < pattern.length; i++) {
     const char = pattern[i]!;
@@ -41,6 +41,18 @@ async function walk(cwd: string, start: string, matcher: RegExp): Promise<string
     }
   }
   return matches;
+}
+/** Project-relative regular files (sorted, symlinks skipped) matching any of the globs; no size limits, for hashing inputs. */
+export async function globFiles(cwd: string, patterns: string[]): Promise<string[]> {
+  const found = new Set<string>();
+  for (const pattern of patterns.filter(item => !escapes(item))) {
+    const segments = pattern.replaceAll('\\', '/').split('/');
+    const firstGlob = segments.findIndex(part => GLOB_CHARS.test(part));
+    const literal = segments.slice(0, firstGlob === -1 ? -1 : firstGlob);
+    if (!(await plainDirectories(cwd, literal))) continue;
+    for (const path of await walk(cwd, literal.join('/'), globToRegExp(segments.join('/')))) found.add(path);
+  }
+  return [...found].sort();
 }
 /** Expands project-relative globs to absolute regular files; symlinks are never followed, limits are enforced, and files last modified before `notBefore` (leftovers from earlier runs) are skipped. */
 export async function expandArtifacts(cwd: string, patterns: string[], limits: ArtifactLimits = DEFAULT_LIMITS, notBefore?: number): Promise<{ files: string[]; truncated: boolean }> {

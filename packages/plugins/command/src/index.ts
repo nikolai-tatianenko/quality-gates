@@ -7,7 +7,7 @@ const MAX_OUTPUT_BYTES = 1_000_000;
 const DEFAULT_TIMEOUT_MS = 300_000;
 export interface CommandOutput {
   exitCode: number | null; output: string; stdout: string; stderr: string;
-  truncated: boolean; error?: string;
+  truncated: boolean; error?: string; timedOut?: boolean;
 }
 /** Captures a trusted shell command; timers and aborts kill the owned process group. */
 export async function captureCommand(cwd: string, spec: GateSpec, context: Context): Promise<CommandOutput> {
@@ -30,12 +30,12 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   };
   child.stdout.on('data', chunk => append('stdout', chunk));
   child.stderr.on('data', chunk => append('stderr', chunk));
-  const stop = (error: string) => { result.error ??= error; kill(); };
+  const stop = (error: string, timedOut = false) => { result.error ??= error; if (timedOut) result.timedOut = true; kill(); };
   const abort = () => stop('Interrupted');
   context.signal.addEventListener('abort', abort, { once: true });
   if (context.signal.aborted) abort();
   const timeoutMs = spec.timeoutMs ?? DEFAULT_TIMEOUT_MS;
-  const timer = setTimeout(() => stop(`Gate ${spec.id} timed out after ${timeoutMs}ms`), timeoutMs);
+  const timer = setTimeout(() => stop(`Gate ${spec.id} timed out after ${timeoutMs}ms`, !result.error), timeoutMs);
   try {
     result.exitCode = await new Promise<number | null>((resolve, reject) => {
       child.once('error', reject); child.once('close', code => resolve(code));
@@ -50,9 +50,10 @@ export function commandPlugin(cwd: string, parsers: Record<string, ParserPlugin>
   return { id: 'command', apiVersion: 1, kind: 'gate', async run(spec, context) {
     const startedAt = Date.now() - FILE_TIME_SLACK_MS;
     const captured = await captureCommand(cwd, spec, context);
-    if (!spec.report && !spec.artifacts) return { exitCode: captured.exitCode, output: captured.output, error: captured.error };
+    if (!spec.report && !spec.artifacts) return { exitCode: captured.exitCode, output: captured.output, error: captured.error, ...(captured.timedOut ? { timedOut: true } : {}) };
     const data: GateData = { exitCode: captured.exitCode, output: captured.output, error: captured.error, artifacts: [] };
-    if (spec.report && !captured.error) await applyReport(spec, data, { cwd, parsers, startedAt });
+    if (spec.report && (!captured.error || captured.timedOut)) await applyReport(spec, data, { cwd, parsers, startedAt });
+    if (captured.timedOut) markTimeout(data, captured.error!);
     if (spec.artifacts) {
       const { files, truncated } = await expandArtifacts(cwd, spec.artifacts, DEFAULT_LIMITS, startedAt);
       data.artifacts!.push(...files);
@@ -60,6 +61,11 @@ export function commandPlugin(cwd: string, parsers: Record<string, ParserPlugin>
     }
     return data;
   } };
+}
+/** A timed-out gate keeps whatever the partial report showed: "timed out after 5ms: passed 40, failed 0, stopped by timeout". */
+function markTimeout(data: GateData, error: string) {
+  data.timedOut = true;
+  data.error = data.counts ? `${error}: passed ${data.counts.passed}, failed ${data.counts.failed}, stopped by timeout` : error;
 }
 /** File times can be coarser than the clock (1-2 s on some filesystems), so a file counts as fresh a little before the run started. */
 const FILE_TIME_SLACK_MS = 2000;
@@ -76,6 +82,7 @@ async function applyReport(spec: GateSpec, data: GateData, { cwd, parsers, start
   if (read.status === 'error') { data.error = read.error; return; }
   try {
     data.findings = parser.parse(read.raw, { gateId: spec.id, cwd });
+    data.counts = parser.count?.(read.raw);
     data.artifacts!.push(read.absolutePath);
     if (data.exitCode === 0 && data.findings.some(finding => finding.severity === 'error')) data.error = `Gate ${spec.id} exited 0 but report contains failures`;
   } catch (cause) { data.error = `Invalid ${format} report: ${message(cause)}`; }

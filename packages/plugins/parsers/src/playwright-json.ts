@@ -24,4 +24,18 @@ export const playwrightJson: ParserPlugin = { id: 'playwright-json', apiVersion:
   };
   for (const suite of reportSchema.parse(JSON.parse(raw)).suites ?? []) walk(suite);
   return findings;
+},
+count(raw) {
+  const counts = { passed: 0, failed: 0, skipped: 0 };
+  const walk = (suite: Suite) => {
+    for (const spec of suite.specs ?? []) {
+      const statuses = spec.tests.flatMap(test => test.results).map(result => result.status);
+      if (statuses.some(status => FAILED.has(status))) counts.failed++;
+      else if (statuses.length && statuses.every(status => status === 'skipped')) counts.skipped++;
+      else counts.passed++;
+    }
+    for (const child of suite.suites ?? []) walk(child);
+  };
+  for (const suite of reportSchema.parse(JSON.parse(raw)).suites ?? []) walk(suite);
+  return counts;
 } };

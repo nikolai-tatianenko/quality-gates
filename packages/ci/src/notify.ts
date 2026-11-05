@@ -1,16 +1,17 @@
 import { z } from 'zod';
-import { exitCode, type RunResult } from '../../protocol/src/index.js';
+import { coverageLine, exitCode, type RunResult } from '../../protocol/src/index.js';
 export const commentMarker = '<!-- qualitygate:comment -->';
 /** Report links must be public HTTPS URLs without credentials; they are embedded in Markdown and Slack links, so characters that can end a link early are refused and the normalized form is used. */
 export const reportUrlSchema = z.string().refine(value => { try { const url = new URL(value); return url.protocol === 'https:' && !url.username && !url.password && !/[\s()<>|[\]]/.test(value); } catch { return false; } }, 'Use an HTTPS report URL without credentials, spaces or any of ( ) < > | [ ]').transform(value => new URL(value).href);
-export type Verdict = { state: 'success' | 'failure' | 'error'; label: 'PASS' | 'BLOCK' | 'ERROR' | 'INTERRUPTED'; summary: string };
+export type Verdict = { state: 'success' | 'failure' | 'error'; label: 'PASS' | 'BLOCK' | 'ERROR' | 'TIMEOUT' | 'INTERRUPTED'; summary: string };
 /** One verdict shared by commit status, comment and Slack. The CI exit code is never derived from it. */
 export function verdict(run: RunResult): Verdict {
   const blocked = run.gates.filter(gate => gate.decision === 'BLOCK').map(gate => gate.id); const audits = run.results.filter(audit => audit.decision === 'BLOCK').length;
   const parts = [...(blocked.length ? [`gates ${blocked.slice(0, 5).join(', ')}${blocked.length > 5 ? `, +${blocked.length - 5} more` : ''}`] : []), ...(audits ? [`${audits} URL audit(s)`] : [])];
   const detail = parts.length ? `blocked: ${parts.join('; ')}` : `${run.gates.length + run.results.length} check(s)`;
-  if (run.execution !== 'completed') return { state: 'error', label: run.execution === 'interrupted' ? 'INTERRUPTED' : 'ERROR', summary: `run ${run.execution}; exit ${exitCode(run)}` };
-  return run.decision === 'PASS' ? { state: 'success', label: 'PASS', summary: `all gates passed (${detail})` } : { state: 'failure', label: 'BLOCK', summary: detail };
+  if (run.execution !== 'completed') return { state: 'error', label: run.execution === 'interrupted' ? 'INTERRUPTED' : run.execution === 'timeout' ? 'TIMEOUT' : 'ERROR', summary: `run ${run.execution}; exit ${exitCode(run)}` };
+  const partial = run.steps.some(step => step.status === 'not-run');
+  return run.decision === 'PASS' ? { state: 'success', label: 'PASS', summary: partial ? `no gate blocked, but only ${coverageLine(run)}` : `all gates passed (${detail})` } : { state: 'failure', label: 'BLOCK', summary: detail };
 }
 export function statusPayload(run: RunResult, reportUrl?: string) {
   const v = verdict(run);

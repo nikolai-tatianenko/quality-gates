@@ -13,4 +13,9 @@ export const nunit: ParserPlugin = { id: 'nunit', apiVersion: 1, kind: 'parser',
     const inside = isAbsolute(path) ? relative(cwd, path) : path;
     return { gateId, severity: 'error' as const, message, file: inside.startsWith('..') ? path : inside.replaceAll('\\', '/'), line: Number(location[2]) };
   });
+},
+count(raw) {
+  const cases = collect(parseXml(raw), 'test-case');
+  const tally = (result: string) => cases.filter(item => item['@_result'] === result).length;
+  return { passed: tally('Passed'), failed: tally('Failed'), skipped: cases.length - tally('Passed') - tally('Failed') };
 } };

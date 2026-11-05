@@ -10,6 +10,7 @@ export const playwright: EcosystemPlugin = { id: 'playwright', apiVersion: 1, ki
   if (!(await readdir(directory)).some(name => /^playwright\.config\.[cm]?[jt]s$/.test(name))) return null;
   const pkg = await readJson(join(directory, 'package.json')) as { packageManager?: unknown } | undefined;
   const prefix = execPrefix(await packageManager(directory, pkg?.packageManager));
-  return [{ id: 'tests', run: `PLAYWRIGHT_JSON_OUTPUT_NAME=${REPORT} ${prefix} playwright test --reporter=list,json`, timeoutMs: 600000,
+  const note = `Playwright needs its browsers once: ${prefix} playwright install`;
+  return [{ id: 'tests', note, run: `PLAYWRIGHT_JSON_OUTPUT_NAME=${REPORT} ${prefix} playwright test --reporter=list,json`, timeoutMs: 600000,
     report: { format: 'playwright-json', path: REPORT }, artifacts: ['test-results/**/*.png', 'test-results/**/*.webm', 'test-results/**/*.zip'] }];
 } };

@@ -1,4 +1,4 @@
-import type { AuditData, DetectedGate, Finding, GateData, GateSpec, RunResult } from '../../protocol/src/index.js';
+import type { AuditData, Counts, DetectedGate, Finding, GateData, GateSpec, RunResult } from '../../protocol/src/index.js';
 export interface Manifest { id: string; apiVersion: 1 }
 export interface Context { signal: AbortSignal; defer(cleanup: () => void | Promise<void>): void }
 export interface AuditPlugin extends Manifest {
@@ -15,6 +15,8 @@ export interface StoragePlugin extends Manifest {
 }
 export interface ParserPlugin extends Manifest {
   kind: 'parser'; parse(raw: string, context: { gateId: string; cwd: string }): Finding[];
+  /** Optional: how many tests passed, failed or were skipped; shown when a gate times out with a partial report. */
+  count?(raw: string): Counts;
 }
 /** Proposes gates for `qualitygate setup`; `null` or `[]` means the ecosystem is not present in `directory`. */
 export interface EcosystemPlugin extends Manifest {

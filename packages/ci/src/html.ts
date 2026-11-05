@@ -1,4 +1,4 @@
-import { runResultSchema, exitCode, type RunResult } from '../../protocol/src/index.js';
+import { runResultSchema, exitCode, coverageLine, type RunResult } from '../../protocol/src/index.js';
 /** Run data and tool output are data: every value is escaped before it reaches the page. */
 export function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -19,8 +19,10 @@ const cell = (value: string | number, cls = '') => `<td${cls ? ` class="${e(cls)
 export function renderHtml(input: RunResult): string {
   const run = runResultSchema.parse(input);
   const title = run.execution === 'completed' ? run.decision : run.execution.toUpperCase();
+  const steps = run.steps.length ? `<h2>Steps (${e(coverageLine(run))})</h2>${table(['Step', 'Kind', 'Status'],
+    run.steps.map(s => [cell(s.id), cell(s.kind), cell(s.status, s.status === 'passed' || s.status === 'cached' ? 'PASS' : s.status === 'not-run' || s.status === 'skipped' ? 'warning' : 'BLOCK')]))}` : '';
   const gates = run.gates.length ? `<h2>Gates</h2>${table(['Gate', 'Decision', 'Execution', 'Exit', 'Duration, ms'],
-    run.gates.map(g => [cell(g.id), cell(g.decision, g.decision), cell(g.execution), cell(g.exitCode ?? '—'), cell(g.durationMs)]))}` : '';
+    run.gates.map(g => [cell(g.id), cell(g.decision, g.decision), cell(g.skipped ? `skipped (${g.skipped})` : g.cached ? 'cached' : g.execution), cell(g.exitCode ?? '—'), cell(g.durationMs)]))}` : '';
   const audits = run.results.length ? `<h2>URL audits</h2>${table(['URL', 'Decision', 'Execution', 'Scores'],
     run.results.map(a => [cell(a.url), cell(a.decision, a.decision), cell(a.execution), cell(JSON.stringify(a.scores))]))}` : '';
   const findings = run.findings.length ? `<ul>${run.findings.map(f => `<li><strong class="${f.severity}">${f.severity}</strong> <code>${e(f.file ?? f.gateId)}${f.line ? `:${f.line}` : ''}</code>: ${e(f.message)}${f.ruleId ? ` (${e(f.ruleId)})` : ''}${f.evidencePath ? `<br><small>Evidence: ${e(f.evidencePath)}</small>` : ''}</li>`).join('')}</ul>` : '<p>No findings.</p>';
@@ -36,6 +38,6 @@ export function renderHtml(input: RunResult): string {
 <title>QualityGate ${e(title)}</title><style>${css}</style></head><body><main>
 <h1>QualityGate: <span class="${run.decision}">${e(title)}</span></h1>
 <p>Run ${e(run.runId)} · finished ${e(run.finishedAt)} · decision ${run.decision}, execution ${run.execution}, exit ${exitCode(run)}</p>
-${gates}${audits}<h2>Findings (${run.findings.length})</h2>${findings}${details.length ? `<h2>Details</h2><ul>${details.join('')}</ul>` : ''}
+${steps}${gates}${audits}<h2>Findings (${run.findings.length})</h2>${findings}${details.length ? `<h2>Details</h2><ul>${details.join('')}</ul>` : ''}
 <p><small>Static export. Output and evidence paths may contain sensitive project data.</small></p></main></body></html>\n`;
 }
