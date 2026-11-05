@@ -116,16 +116,16 @@ pnpm dashboard --port 4173
 The CLI is **not published to npm yet**. Build a local tarball in the QualityGate checkout:
 
 ```sh
-pnpm build
-mkdir -p /tmp/qualitygate-packages
-pnpm pack --pack-destination /tmp/qualitygate-packages
+pnpm pack:local
 ```
 
-Then, in the project you want to check:
+It builds, packs into a versioned folder (`.packages/<version>/`, so two versions or checkouts never
+overwrite each other) and writes a `.sha256` file next to the tarball. Then, in the project you want to check:
 
 ```sh
 mkdir -p tools
-cp /tmp/qualitygate-packages/qualitygate-toolbox-0.1.0.tgz tools/
+cp .packages/0.1.0/qualitygate-toolbox-0.1.0.tgz .packages/0.1.0/qualitygate-toolbox-0.1.0.tgz.sha256 tools/
+(cd tools && shasum -a 256 -c qualitygate-toolbox-0.1.0.tgz.sha256)
 pnpm add -D ./tools/qualitygate-toolbox-0.1.0.tgz
 ```
 
@@ -176,6 +176,20 @@ pnpm/yarn/npm from `packageManager` or the lockfile), **python** (`ruff check .`
 (`maestro test --format junit`). When two ecosystems propose the same gate id, both are prefixed
 (`node-tests`, `playwright-tests`). It also adds the output folders to `.gitignore` and never
 overwrites an existing config:
+
+**Monorepos and large projects.** The node ecosystem also reads `pnpm-workspace.yaml` / `workspaces` and proposes
+`pnpm -r --if-present run <script>` (or `npm run <script> --workspaces --if-present`) when only the packages define a script,
+a `vitest*.config` file when there is no test script, and every other `test:*` script. Anything slow, or needing a
+browser or an emulator (`test:e2e`, `test:ios`, Maestro flows in `.maestro/`, `maestro/` or `flows/`), is listed as **found but not
+enabled** with the reason, written as a commented block at the end of `.qualitygate.yml`; copy it under `gates:` to
+enable it. A project with more than 300 test files gets a 30 minute timeout and a warning to use a faster subset
+(`--changed` with `inputs`). Plain `eslint`, `vitest` and `node --test` scripts are rewritten with a JSON/JUnit report
+(`.qualitygate/node/`) so findings arrive with file and line instead of a log; scripts with shell operators are left alone.
+
+**One list of gates.** If the project already declares its gates, `qualitygate setup --from gates.json` (or an ES module
+exporting `gates`; a module is imported, so it runs with your permissions) reads them instead of detecting ecosystems:
+`[{ "id": "lint", "run": "pnpm lint" }]`, `{ "gates": [...] }` or `{ "lint": "pnpm lint" }`; `name` and `command` are accepted for
+`id` and `run`. `setup` lists the files it changed; `--no-gitignore` leaves `.gitignore` alone.
 
 Third-party ecosystems, parsers and gates come from npm packages: `qualitygate setup --plugin <package>`
 (repeatable) loads them from the project's `node_modules` and writes a `plugins:` list. **Plugins are
@@ -335,10 +349,23 @@ an error and cannot guarantee a saved artifact.
 | `0` | Completed, PASS |
 | `1` | Completed, BLOCK |
 | `2` | Configuration, execution, cleanup or storage error |
+| `3` | A gate timed out (nothing else went wrong). Reported as `TIMEOUT`, not as a tool error |
 | `130` | Interrupted |
 
-Execution errors take precedence over a policy BLOCK. Commands and URLs execute
-sequentially; cancellation stops owned processes. [Lifecycle details](docs/ARCHITECTURE.md).
+Execution errors take precedence over a timeout, and a timeout over a policy BLOCK. A gate that times out keeps the
+partial test counts its report showed ("timed out after 300000ms: passed 40, failed 0, stopped by timeout").
+
+Every run records a **step registry** (`steps` in `report.json`, the Markdown/HTML report and the terminal): each
+configured gate and URL is `passed`, `failed`, `timeout`, `error`, `interrupted`, `skipped`, `cached` or
+`not-run`. A PASS built from 3 of 30 gates says "3 of 30 steps ran". Independent gates run in parallel
+(`concurrency: 4` by default, `1` for strictly sequential runs); `dependsOn: [gate-id]` orders them and skips a
+gate whose dependency did not pass. URL audits run after the gates, one at a time; cancellation stops owned
+processes. [Lifecycle details](docs/ARCHITECTURE.md).
+
+Fast local runs: `qualitygate run --only <gate>` (alias of `--gate`), `--changed` (a gate with `inputs: [globs]` runs only
+when a changed file matches; gates without `inputs` always run) and `--cache` (a gate whose `inputs` are unchanged since it
+last passed is reported as `cached`). The terminal shows one line per gate with the path to its log; npm and pnpm
+warnings stay in the log.
 
 ## How it fits alongside existing tools
 

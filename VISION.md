@@ -50,7 +50,7 @@ results can vary with the page, machine and execution environment.
 The initial Lighthouse CLI supports sequential HTTP(S) audits, explicit category
 thresholds, raw JSON evidence and machine-readable output. Configuration creation
 does not overwrite existing files. Exit codes distinguish PASS (`0`), BLOCK (`1`),
-execution/configuration/storage errors (`2`) and interruption (`130`).
+execution/configuration/storage errors (`2`), a gate timeout (`3`) and interruption (`130`).
 
 The current Node.js/TypeScript monorepo extends that foundation with:
 

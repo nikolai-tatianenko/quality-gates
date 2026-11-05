@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node dist/qualitygate.mjs",
     "build": "node scripts/build.mjs",
+    "pack:local": "node scripts/pack-local.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint packages tests scripts --no-error-on-unmatched-pattern",
     "test": "node --experimental-test-module-mocks --import tsx --test tests/*.test.ts",

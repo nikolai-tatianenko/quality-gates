@@ -11,16 +11,16 @@ From the QualityGate checkout, with Node 22.23.4+ and pnpm 11.28.9:
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm build
-mkdir -p /tmp/qualitygate-packages
-pnpm pack --pack-destination /tmp/qualitygate-packages
+pnpm pack:local
 ```
 
-No package is published to npm by these commands. In your target project:
+No package is published to npm by these commands; the tarball and its `.sha256` file land in
+`.packages/<version>/`. In your target project:
 
 ```sh
 mkdir -p tools
-cp /tmp/qualitygate-packages/qualitygate-toolbox-0.1.0.tgz tools/
+cp .packages/0.1.0/qualitygate-toolbox-0.1.0.tgz .packages/0.1.0/qualitygate-toolbox-0.1.0.tgz.sha256 tools/
+(cd tools && shasum -a 256 -c qualitygate-toolbox-0.1.0.tgz.sha256)
 pnpm add -D ./tools/qualitygate-toolbox-0.1.0.tgz
 ```
 
@@ -95,6 +95,37 @@ saves its JSON report and evidence beneath `.qualitygate/<run-id>/` when writabl
 For an ESLint JSON report with file/line/rule findings, use `type: eslint` and an
 actual command such as `pnpm exec eslint . --format json`. A generic command gate
 uses its exit code and saves output; it does not infer source locations from text.
+
+**Monorepos and large projects.** The node ecosystem also reads `pnpm-workspace.yaml` / `workspaces` and proposes
+`pnpm -r --if-present run <script>` (or `npm run <script> --workspaces --if-present`) when only the packages define a script,
+a `vitest*.config` file when there is no test script, and every other `test:*` script. Anything slow, or needing a
+browser or an emulator (`test:e2e`, `test:ios`, Maestro flows in `.maestro/`, `maestro/` or `flows/`), is listed as **found but not
+enabled** with the reason, written as a commented block at the end of `.qualitygate.yml`; copy it under `gates:` to
+enable it. A project with more than 300 test files gets a 30 minute timeout and a warning to use a faster subset
+(`--changed` with `inputs`). Plain `eslint`, `vitest` and `node --test` scripts are rewritten with a JSON/JUnit report
+(`.qualitygate/node/`) so findings arrive with file and line instead of a log; scripts with shell operators are left alone.
+
+**One list of gates.** If the project already declares its gates, `qualitygate setup --from gates.json` (or an ES module
+exporting `gates`; a module is imported, so it runs with your permissions) reads them instead of detecting ecosystems:
+`[{ "id": "lint", "run": "pnpm lint" }]`, `{ "gates": [...] }` or `{ "lint": "pnpm lint" }`; `name` and `command` are accepted for
+`id` and `run`. `setup` lists the files it changed; `--no-gitignore` leaves `.gitignore` alone.
+
+### Gate order, speed and caching
+
+```yaml
+concurrency: 4                    # independent gates at once; 1 = strictly sequential
+gates:
+  - id: lint
+    run: pnpm run lint
+    inputs: ["src/**/*.ts", "package.json"]   # used by --changed and --cache
+  - id: build
+    run: pnpm run build
+    dependsOn: [lint]             # skipped, not errored, when lint did not pass
+```
+
+`qualitygate run --only build` (alias of `--gate`) selects gates; `--changed` runs the gates without `inputs` plus those whose `inputs`
+match a file reported by `git status`; `--cache` reports a gate as `cached` when the hash of its command and input files equals the
+hash of its last passing run (stored in `<outputDir>/cache.json`). Unselected gates show as `not-run` in the step registry.
 
 ### Test reports and artifacts
 

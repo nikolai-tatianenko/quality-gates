@@ -10,3 +10,4 @@ __pycache__/
 .qualitygate-review-sources/
 qualitygate.sources.lock.json.*.tmp
 .qualitygate-ci/
+.packages/
