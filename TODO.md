@@ -119,3 +119,33 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 ## Deferred review minors (from the whole-branch review)
 - [x] T-067: Validate the Unity version from `ProjectVersion.txt` (`^[0-9A-Za-z.]+$`) before it is put into the generated gate command; stop the tunnel when Ctrl+C arrives before it is ready and reject `api.trycloudflare.com` as a share URL; add the gate `run` strings and config path to the shared-dashboard warning
 - [x] T-068: Normalize and validate report URLs (`new URL(v).href`, reject `)`, `>`, `|`, whitespace) in the PR comment and Slack message; clear or freshness-check stale reports and artifacts between runs; do not silently drop artifacts when storage has no `copy`
+
+## Feedback from the first real-project trial (ordered by priority)
+
+### 1. Trust in the verdict (do first)
+- [ ] T-069: Add a distinct `TIMEOUT` gate status instead of reporting a timeout as `error`. A timed-out gate must not look like a tool crash; report partial counts ("passed N, failed 0, stopped by timeout") when the parser can read a partial report
+- [ ] T-070: Give the timeout its own exit code and add it to the exit-code contract (0, 1, 2, 130, plus the new one); document it in the README and CI docs
+- [ ] T-071: Explicit step registry in `report.json` and the HTML/exported report: list every configured gate as passed, failed, timed out, skipped or not run. A verdict built from 3 of 30 gates must say so and must not read as "project is green"
+- [ ] T-072: Single source of gates: `qualitygate setup --from scripts/gates.mjs` (or read `package.json` and `gates.json`) so projects that already declare gates do not maintain a second list by hand
+
+### 2. Setup that understands monorepos
+- [ ] T-073: Detect more than `scripts.test`: `test:*` scripts, `vitest*.config`, `playwright*.config`, `maestro/` (without a leading dot) and `pnpm -r` workspaces
+- [ ] T-074: Show "found but not enabled" gates with a checkbox and the reason (slow, needs a browser, needs an emulator) so the owner decides instead of the tool silently skipping them
+- [ ] T-075: Warn about large runs (for example a 647-file glob will not fit in 300 s); propose a fast subset or mark the gate as `slow`
+- [ ] T-076: Write `report:` automatically for recognised tools (eslint-json, junit, playwright-json) so findings arrive with file and line instead of a raw log; start with the `node` ecosystem plugin (eslint and junit)
+
+### 3. Speed and noise
+- [ ] T-077: Run independent gates in parallel (lint and typecheck took about 50 s sequentially) with `dependsOn` for gates that need another gate first
+- [ ] T-078: One output line per gate with the path to its log; move npm and pnpm warnings into the log
+- [ ] T-079: Add `--only <gate>` and `--changed` for fast local runs, and a cache keyed by the hash of a gate's input files
+
+### 4. Safe operation
+- [ ] T-080: `setup` must not touch files other than the ones explicitly allowed; print "these files changed" so `.qualitygate.yml` and `.gitignore` do not leak into someone else's auto-commits
+- [ ] T-081: Replace the shared `/tmp/qualitygate-packages/` tarball location in the install docs with a versioned folder and a checksum check
+
+### 5. Testing the tool itself
+- [ ] T-082: Self-test suite on 3–4 reference repositories (pnpm monorepo, Playwright, Maestro, Python) asserting that `setup` finds the expected gates
+- [ ] T-083: Exit-code contract tests, one per code (0, 1, 2, 130 and the timeout code)
+
+### Suggested start
+T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic `report:` for eslint and junit. These are small changes in the `node` plugin and the runner, and they remove what made the trial result hard to trust.
