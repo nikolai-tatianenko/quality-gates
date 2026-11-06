@@ -31,7 +31,7 @@ test('setup writes merged gates, lists the contributing ecosystems and never ove
   assert.deepEqual(result.gates, [{ id: 'a-tests', run: 'a' }, { id: 'b-tests', run: 'b' }]);
   const written = await readFile(path, 'utf8');
   assert.equal(configSchema.parse(parse(written)).gates.length, 2);
-  await assert.rejects(setupProject(path, [stub('c', [{ id: 'x', run: 'c' }])]), /EEXIST/);
+  await assert.rejects(setupProject(path, [stub('c', [{ id: 'x', run: 'c' }])]), /already exists/);
   assert.equal(await readFile(path, 'utf8'), written);
 }));
 test('setup fails clearly when nothing is detected, a plugin proposes an invalid gate, or the folder is missing', async () => withDir(async dir => {

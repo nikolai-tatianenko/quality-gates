@@ -453,3 +453,10 @@ and cleanup guarantees. [Contributing](CONTRIBUTING.md).
 
 QualityGate is [MIT licensed](LICENSE). The original ISC-licensed service was removed from
 the tree; it remains available in git history before the removal commit.
+
+### Attribution
+
+Copyright (c) 2026 QualityGate contributors. The MIT license requires keeping this copyright
+notice and the [LICENSE](LICENSE) text in every copy or substantial portion of the software,
+including redistributed builds and forks. If you build on QualityGate, please also credit
+the author and link to <https://github.com/example-org/qualitygate>.

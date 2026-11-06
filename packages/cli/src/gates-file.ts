@@ -7,9 +7,11 @@ type Entry = Record<string, unknown>;
 const text = (value: unknown) => (typeof value === 'string' && value.trim() ? value.trim() : undefined);
 const gateId = (value: string) => value.toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
 
-/** Accepts `[...]`, `{ gates: [...] }` or `{ id: "command" }`. */
+/** Accepts `[...]`, `{ gates: [...] }`, `{ id: "command" }` or `{ gates: { id: { command } } }` (a results ledger). */
 function entries(data: unknown): Entry[] {
   const list = Array.isArray(data) ? data : data && typeof data === 'object' && 'gates' in data ? (data as { gates: unknown }).gates : undefined;
+  if (list && typeof list === 'object' && !Array.isArray(list) && Object.values(list).every(value => value && typeof value === 'object'))
+    return Object.entries(list).map(([id, value]) => ({ id, ...(value as Entry) }));
   if (Array.isArray(list)) return list.filter((item): item is Entry => !!item && typeof item === 'object');
   if (data && typeof data === 'object' && !Array.isArray(data) && Object.values(data).every(value => typeof value === 'string'))
     return Object.entries(data).map(([id, run]) => ({ id, run }));

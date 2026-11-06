@@ -96,7 +96,9 @@ export async function setupProject(configPath: string, ecosystems: EcosystemPlug
     ? `Every gate found needs a decision (${skipped.map(gate => `${gate.id}: ${gate.skip}`).join('; ')}); write .qualitygate.yml by hand`
     : 'No lint, typecheck or test script found in package.json and no other ecosystem detected; write .qualitygate.yml by hand');
   const config = configSchema.parse({ schemaVersion: 1, ...(plugins.length ? { plugins } : {}), gates: gates.map(configGate) });
-  await writeFile(path, stringify(config) + skippedBlock(skipped), { flag: 'wx' });
+  await writeFile(path, stringify(config) + skippedBlock(skipped), { flag: 'wx' }).catch((error: NodeJS.ErrnoException) => {
+    throw new Error(error.code === 'EEXIST' ? `${path} already exists; remove it or pick another path with --config` : error.message);
+  });
   const gitignore = options.gitignore === false ? [] : await updateGitignore(directory);
   return { configPath: path, gates: gates.map(({ id, run }) => ({ id, run })), gitignore, ecosystems: found.map(({ ecosystem }) => ecosystem), plugins,
     skipped: skipped.map(({ id, run, skip }) => ({ id, run, reason: skip! })), notes: merged.flatMap(gate => gate.note ? [`${gate.id}: ${gate.note}`] : []),

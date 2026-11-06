@@ -4,7 +4,7 @@ const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_
 /** Parses XML into plain objects; elements in ARRAYS are always arrays. Throws `Invalid XML: ...`. */
 export function parseXml(raw: string): Record<string, unknown> {
   const valid = XMLValidator.validate(raw);
-  if (valid !== true) throw new Error(`Invalid XML: ${valid.err.msg}`);
+  if (valid !== true) throw new Error(`Invalid XML: ${valid.err.msg}${/unclosed|end of|unexpected/i.test(valid.err.msg) ? ' (the report looks truncated: the tool may have been stopped or still writing it)' : ''}`);
   return parser.parse(raw) as Record<string, unknown>;
 }
 const asObjects = (value: unknown): Record<string, unknown>[] =>

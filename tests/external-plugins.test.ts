@@ -178,7 +178,7 @@ test('setup --plugin adds the package ecosystems and writes plugins: into the co
   const config = configSchema.parse(parse(await readFile(path, 'utf8')));
   assert.deepEqual(config.plugins, ['qg-plugin-fixture']);
   assert.deepEqual(config.gates.map(g => g.id), ['fixture-check']);
-  await assert.rejects(setupProject(path, [], ['qg-plugin-fixture']), /EEXIST/);
+  await assert.rejects(setupProject(path, [], ['qg-plugin-fixture']), /already exists/);
 }));
 test('setup without --plugin writes no plugins key; a missing package writes nothing', async () => withProject(async dir => {
   const path = await setupDir(dir);
