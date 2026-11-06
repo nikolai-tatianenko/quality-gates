@@ -115,13 +115,14 @@ export const auditResultSchema = z.object({
   decision: z.enum(['PASS', 'BLOCK']), scores: scoresSchema,
   violations: z.array(z.string()), errors: z.array(z.string()), evidencePath: z.string().optional(),
 }).strict();
+const isHttpUrl = (value: string) => URL.canParse(value) && ['http:', 'https:'].includes(new URL(value).protocol);
 export const findingSchema = z.object({
   gateId: z.string().min(1), severity: z.enum(['error', 'warning', 'info']),
   message: z.string().min(1), file: z.string().optional(),
   line: z.number().int().positive().optional(), column: z.number().int().positive().optional(),
   ruleId: z.string().optional(), evidencePath: z.string().optional(),
-  /** Documentation for the rule, when the tool provides one (axe-core `helpUrl`). */
-  helpUrl: z.string().url().optional(),
+  /** Documentation for the rule, when the tool provides one (axe-core `helpUrl`); anything but an http(s) URL is dropped, not an error. */
+  helpUrl: z.string().refine(isHttpUrl).optional().catch(undefined),
 }).strict();
 /** Test counts a report parser could read; on a timeout they show how far the run got. */
 export const countsSchema = z.object({ passed: z.number().int().min(0), failed: z.number().int().min(0), skipped: z.number().int().min(0) }).strict();

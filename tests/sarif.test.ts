@@ -6,8 +6,8 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { renderSarif } from '../packages/ci/src/sarif.js';
 import { runResultSchema } from '../packages/protocol/src/index.js';
-const run = (findings: unknown[]) => runResultSchema.parse({ schemaVersion: 1, runId: 'r1', startedAt: '2026-11-05T10:00:00.000Z', finishedAt: '2026-11-05T10:00:01.000Z',
-  execution: 'completed', decision: 'BLOCK', results: [], errors: [], findings });
+const run = (findings: unknown[], extra = {}) => runResultSchema.parse({ schemaVersion: 1, runId: 'r1', startedAt: '2026-11-05T10:00:00.000Z', finishedAt: '2026-11-05T10:00:01.000Z',
+  execution: 'completed', decision: 'BLOCK', results: [], errors: [], findings, ...extra });
 test('SARIF 2.1.0 structure: tool driver, rules, levels, messages and locations only when a file exists', () => {
   const sarif = JSON.parse(renderSarif(run([
     { gateId: 'a11y', severity: 'error', ruleId: 'color-contrast', message: 'Low contrast (.btn)', helpUrl: 'https://example.com/rule' },
@@ -30,6 +30,39 @@ test('SARIF 2.1.0 structure: tool driver, rules, levels, messages and locations 
 test('a run without findings still yields a valid empty SARIF run', () => {
   assert.deepEqual(JSON.parse(renderSarif(run([]))).runs[0].results, []);
 });
+test('a run that is not PASS never looks clean: failed gates become results and executionSuccessful follows the run', () => {
+  const gate = (id: string, execution: string, decision: string, extra = {}) => ({ id, command: 'x', execution, decision, exitCode: 1, durationMs: 1, outputTail: '', errors: ['boom'], ...extra });
+  const lintFinding = { gateId: 'lint', severity: 'error', message: 'bad' };
+  const sarif = JSON.parse(renderSarif(run([lintFinding], { gates: [gate('unit', 'completed', 'BLOCK'), gate('e2e', 'timeout', 'BLOCK'), gate('ok', 'completed', 'PASS'),
+    gate('lint', 'completed', 'BLOCK', { findings: [lintFinding] })] })));
+  const [only] = sarif.runs;
+  assert.equal(only.invocations[0].executionSuccessful, false);
+  assert.deepEqual(only.results.map((result: { ruleId: string }) => result.ruleId), ['lint', 'unit', 'e2e']);
+  assert.equal(only.results[1].level, 'error'); assert.match(only.results[1].message.text, /BLOCK/); assert.match(only.results[1].message.text, /completed/);
+  assert.match(only.results[2].message.text, /timeout/);
+  assert.deepEqual(only.tool.driver.rules.map((rule: { id: string }) => rule.id), ['lint', 'unit', 'e2e']);
+  const skipped = JSON.parse(renderSarif(run([], { gates: [gate('slow', 'skipped', 'BLOCK', { skipped: 'dependency unit did not pass', errors: [] })] }))).runs[0].results;
+  assert.match(skipped[0].message.text, /dependency unit did not pass/); assert.doesNotMatch(skipped[0].message.text, /:\s*$/);
+  const url = { url: 'https://example.com/', execution: 'completed', decision: 'BLOCK', scores: {}, violations: ['performance 50 < 80'], errors: [] };
+  const audit = JSON.parse(renderSarif(run([], { results: [url] }))).runs[0].results;
+  assert.equal(audit.length, 1); assert.match(audit[0].message.text, /performance 50 < 80/);
+  const bare = JSON.parse(renderSarif(run([], { results: [{ ...url, violations: [] }] }))).runs[0].results;
+  assert.match(bare[0].message.text, /no detail/);
+  const passed = JSON.parse(renderSarif(run([], { decision: 'PASS' }))).runs[0];
+  assert.equal(passed.invocations[0].executionSuccessful, true); assert.deepEqual(passed.results, []);
+  const crashed = JSON.parse(renderSarif(run([], { decision: 'PASS', execution: 'error', errors: ['config broke'] }))).runs[0];
+  assert.equal(crashed.invocations[0].executionSuccessful, false); assert.match(crashed.results[0].message.text, /config broke/);
+});
+test('SARIF file uris are relative and normalised; absolute or escaping paths are emitted without a location', () => {
+  const uri = (file: string) => JSON.parse(renderSarif(run([{ gateId: 'l', severity: 'error', message: 'm', file }]))).runs[0].results[0].locations?.[0].physicalLocation.artifactLocation.uri;
+  assert.equal(uri('./src//a b.ts'), 'src/a%20b.ts'); assert.equal(uri('src/../lib/x.ts'), 'lib/x.ts');
+  assert.equal(uri(join(process.cwd(), 'src', 'a.ts')), 'src/a.ts');
+  for (const file of ['/etc/passwd', '../x.ts', 'a/../../x.ts', 'C:\\proj\\a.ts', '\\\\host\\share\\a.ts', '..', '.']) assert.equal(uri(file), undefined, file);
+});
+test('a help URL that is not http(s) is dropped from the finding without invalidating the run', () => {
+  const [bad, good] = run([{ gateId: 'a', severity: 'error', message: 'm', helpUrl: 'javascript:alert(1)' }, { gateId: 'a', severity: 'error', message: 'm', helpUrl: 'http://x.test/r' }]).findings;
+  assert.equal(bad?.helpUrl, undefined); assert.equal(JSON.stringify(bad).includes('helpUrl'), false); assert.equal(good?.helpUrl, 'http://x.test/r');
+});
 const entry = resolve('packages/cli/src/index.ts');
 function cli(dir: string, args: string[]) {
   const child = spawn(process.execPath, ['--import', resolve('node_modules/tsx/dist/loader.mjs'), entry, ...args], { cwd: dir });
@@ -46,6 +79,10 @@ test('qualitygate report --sarif prints or writes SARIF and is refused on other 
     await writeFile(input, JSON.stringify(run([{ gateId: 'a11y', severity: 'error', message: 'bad', ruleId: 'x' }])));
     const out = await cli(dir, ['report', '--input', input, '--sarif']);
     assert.equal(out.code, 0, out.stderr); assert.equal(JSON.parse(out.stdout).version, '2.1.0');
+    const both = await cli(dir, ['report', '--input', input, '--sarif', '--json']);
+    assert.equal(both.code, 0, both.stderr); const payload = JSON.parse(both.stdout);
+    assert.equal(JSON.parse(payload.sarif).version, '2.1.0'); assert.equal(payload.markdown, undefined);
+    assert.match((await cli(dir, ['--help'])).stdout, /--json prints .*--output/s);
     const target = join(dir, 'out.sarif');
     const written = await cli(dir, ['report', '--input', input, '--sarif', '--output', target, '--json']);
     assert.equal(written.code, 0, written.stderr); assert.equal(JSON.parse(written.stdout).output, target);

@@ -143,7 +143,10 @@ gates:
   Failures become findings with file, line and message where the format provides them.
 - `axe-json` reads axe-core results (one object, or the list `@axe-core/cli` writes for several pages). Each
   violating node becomes a finding: severity from impact (critical and serious are errors, moderate and unknown
-  are warnings, minor is info), the axe rule id, the selector in the message and the rule's help URL.
+  are warnings, minor is info), the axe rule id, the selector in the message and the rule's help URL (http(s) only;
+  anything else is dropped). This is a report parser, not an accessibility preset: you provide the command that
+  writes the axe JSON. Only `violations` are read (`incomplete` needs manual review and is ignored), selectors come
+  from the audited page and carry no source file or line, and input without a `violations` array is an error.
 
   ```yaml
   - id: a11y

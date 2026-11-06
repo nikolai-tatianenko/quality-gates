@@ -84,7 +84,10 @@ pnpm exec qualitygate report --input result.json --sarif --output qualitygate.sa
 ```
 
 `--sarif` renders the run's findings as SARIF 2.1.0 (rule id or gate id as `ruleId`, `error`/`warning`/`note`
-levels, a location when the finding has a file, with the region when it has a line) instead of Markdown. Upload it with
+levels, a location when the finding has a repo-relative file, with the region when it has a line) instead of Markdown. Absolute
+or `../` paths are emitted without a location. Gates that ended BLOCK, error or timeout without findings appear as results
+(rule id = gate id), and `invocations[].executionSuccessful` is true only for a completed PASS run. With `--json` and no
+`--output` the SARIF text is returned under `sarif`; with `--output` the JSON names the file. Upload it with
 `github/codeql-action/upload-sarif`. Findings without a file, such as accessibility violations that
 only have a selector, carry no location; code scanning may not display those, so keep the Markdown report too.
 
