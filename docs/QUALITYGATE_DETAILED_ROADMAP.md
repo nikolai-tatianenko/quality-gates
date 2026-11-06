@@ -54,6 +54,67 @@ qualitygate/
 
 Create packages incrementally rather than scaffolding all at once.
 
+## Status (2026-11-05)
+
+This roadmap was written before the build. Statuses below were checked against the code and `TODO.md`; open work is tracked there as T-0xx.
+
+Done: 36 · Partial: 6 · Superseded: 6 · Needs review: 8 · Open: 23
+
+**Open (23)**
+
+- QG-402 Add React Ink progress, streaming logs, gate statuses, and summary — T-058
+- QG-405 Test clean installation and `npx`/`pnpm dlx` execution — T-053/T-054
+- QG-704 Configure release/version automation, package publishing, provenance — T-053/T-054
+- QG-707 Verify package install on clean macOS/Linux environments — T-053/T-054
+- QG-708 Publish v0.1 beta, tag release, then rename repository if desired — T-053/T-054
+- QG-801 Wrap shared web dashboard in Tauri with minimal duplicated UI — T-065
+- QG-802 Implement secure local runner connection and explicit permissions — T-065
+- QG-803 Add workspace selection, recent projects, and run history — T-065
+- QG-804 Support desktop notifications and artifact opening — T-065
+- QG-805 Add platform packaging, signing plan, and macOS/Windows smoke tests — T-065
+- QG-901 Build Manifest V3 extension with React popup/devtools panel — T-066
+- QG-902 Detect current tab URL and request user consent before scans — T-066
+- QG-903 Implement authenticated local bridge with origin validation and pairing — T-066
+- QG-904 Launch Lighthouse/a11y gates for the current page through approved runner — T-066
+- QG-905 Link browser findings and screenshots to QualityGate run IDs — T-066
+- QG-906 Add browser permissions review and store submission preparation — T-066
+- QG-1002 Add visual regression baseline management and approval flow — T-027
+- QG-1003 Add accessibility plugin (axe-core) and SARIF reporting — T-059
+- QG-1004 Add security/dependency scanner adapters — T-060
+- QG-1006 Add SQLite history, comparisons, trends, and regression analysis — T-061
+- QG-1007 Add plugin authoring generator, compatibility matrix, and registry metadata — T-056
+- QG-1008 Add stronger plugin isolation, signed manifests, and permission UX — T-062
+- QG-1010 Publish stable v1.0 SDK with migration guide and semver policy — T-064
+
+**Partial (6)**
+
+- QG-304 Add Vitest gate with test counts and coverage report parsing — generic test commands work; a dedicated Vitest/coverage plugin is open
+- QG-401 Implement `qualitygate init`, `run`, `list`, `inspect`, `doctor` — init, run, inspect exist; list and doctor are T-057
+- QG-502 Expose `list_gates`, `run_gates`, `get_run`, `get_findings`, `get_artifacts` — list_gates, run_gates, get_run exist; findings and artifacts are returned with the run
+- QG-705 Add documentation: quickstart, plugin tutorial, configuration, security — README and docs exist; plugin tutorial is T-056
+- QG-706 Add demo video/GIF, example repository, badges, issue templates — demo GIF and issue templates exist; badges and example repo are T-055
+- QG-1009 Add optional remote execution and GitHub/GitLab integrations — GitHub, GitLab and Bitbucket CI publishing exist; remote runner is T-063
+
+**Superseded by a simpler design (6)**
+
+- QG-102 Implement plugin registry, ID validation, discovery, and duplicate detection — shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model
+- QG-103 Implement lifecycle: validate → setup → ready → execute → dispose — shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model
+- QG-104 Resolve plugin dependencies and API compatibility; reject cycles — shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model
+- QG-105 Implement typed event bus and structured logging — shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model
+- QG-106 Define plugin context, cancellation, and capability permissions — shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model
+- QG-108 Add SDK test harness and two example gate plugins — shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model
+
+**Needs review (8)**
+
+- QG-204 Restrict working directories and approved commands; no arbitrary shell from MCP — not verified against the code in this pass
+- QG-208 Store policy fingerprint, git revision, tool versions, and artifact metadata — not verified against the code in this pass
+- QG-504 Enforce project scope, approved gates, and execution permissions — not verified against the code in this pass
+- QG-505 Provide verified examples for Claude Code, Cursor, and Codex — not verified
+- QG-601 Define semantic design tokens, light/dark themes, spacing, typography — not verified against the code in this pass
+- QG-602 Configure React + Vite + Tailwind + shadcn/ui — not verified against the code in this pass
+- QG-603 Build RunSummary, GateCard, FindingsTable, Timeline, ArtifactViewer — not verified against the code in this pass
+- QG-608 Add accessibility, keyboard support, responsive design, E2E/visual tests — not verified against the code in this pass
+
 ## How to execute this plan
 
 Each task is independently trackable as a GitHub issue. Work in small PRs (ideally 1–3 tasks), with a failing test or reproducible example before implementation. A task is complete only when its acceptance criteria are demonstrated, tests pass, and docs/examples reflect the behavior.
@@ -79,86 +140,86 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** none
 
-### QG-001 — Audit old Lighthouse implementation, dependencies, workflows, generated artifacts, and license
+### QG-001 — Audit old Lighthouse implementation, dependencies, workflows, generated artifacts, and license — **DONE**
 
 **Depends on:** `none`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Inspect `index.js`, Lighthouse service, workflows, package manifest and generated output. 
-- [ ] Inventory reusable behavior. 
-- [ ] Record dependency/security/license risks. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Inspect `index.js`, Lighthouse service, workflows, package manifest and generated output. 
+- [x] Inventory reusable behavior. 
+- [x] Record dependency/security/license risks. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-001` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-002 — Tag legacy baseline and create `feat/qualitygate-foundation` branch
+### QG-002 — Tag legacy baseline and create `feat/qualitygate-foundation` branch — **DONE**
 
 **Depends on:** `QG-001`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create an annotated baseline tag. 
-- [ ] Create migration branch. 
-- [ ] Document rollback and ensure no force-push. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create an annotated baseline tag. 
+- [x] Create migration branch. 
+- [x] Document rollback and ensure no force-push. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-002` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-003 — Preserve old implementation under `legacy/lighthouse-v1`
+### QG-003 — Preserve old implementation under `legacy/lighthouse-v1` — **DONE**
 
 **Depends on:** `QG-002`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Move source and README to legacy directory with attribution. 
-- [ ] Ensure old behavior can still be reproduced. 
-- [ ] Avoid committing generated reports. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Move source and README to legacy directory with attribution. 
+- [x] Ensure old behavior can still be reproduced. 
+- [x] Avoid committing generated reports. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-003` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-004 — Configure pnpm workspaces, strict TypeScript, builds, lint, formatting, and CI
+### QG-004 — Configure pnpm workspaces, strict TypeScript, builds, lint, formatting, and CI — **DONE**
 
 **Depends on:** `QG-003`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create pnpm workspace and root scripts. 
-- [ ] Strict TS config and package references. 
-- [ ] CI install/typecheck/lint/test/build with pinned Node. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create pnpm workspace and root scripts. 
+- [x] Strict TS config and package references. 
+- [x] CI install/typecheck/lint/test/build with pinned Node. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-004` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-005 — Add README, LICENSE (choose MIT/Apache-2.0), CONTRIBUTING, SECURITY, and ADR template
+### QG-005 — Add README, LICENSE (choose MIT/Apache-2.0), CONTRIBUTING, SECURITY, and ADR template — **DONE**
 
 **Depends on:** `QG-004`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Select license after verifying existing rights. 
-- [ ] Write contribution workflow, vulnerability reporting, support scope, ADR-0001. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Select license after verifying existing rights. 
+- [x] Write contribution workflow, vulnerability reporting, support scope, ADR-0001. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-005` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-006 — Create minimal example and smoke test
+### QG-006 — Create minimal example and smoke test — **DONE**
 
 **Depends on:** `QG-005`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create deterministic fixture project. 
-- [ ] Add smoke script. 
-- [ ] Verify fresh clone bootstrap from documented commands. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create deterministic fixture project. 
+- [x] Add smoke script. 
+- [x] Verify fresh clone bootstrap from documented commands. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-006` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
@@ -167,21 +228,21 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 0 (except independent UI planning)
 
-### QG-101 — Define versioned manifest, run, gate, findings, artifacts, events, and error schemas with Zod
+### QG-101 — Define versioned manifest, run, gate, findings, artifacts, events, and error schemas with Zod — **DONE**
 
 **Depends on:** `QG-006`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Specify Zod schemas for plugin manifest, config, run, finding, artifact, event and errors. 
-- [ ] Assign `schemaVersion`. 
-- [ ] Provide serialized examples and compatibility rules. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Specify Zod schemas for plugin manifest, config, run, finding, artifact, event and errors. 
+- [x] Assign `schemaVersion`. 
+- [x] Provide serialized examples and compatibility rules. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-101` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-102 — Implement plugin registry, ID validation, discovery, and duplicate detection
+### QG-102 — Implement plugin registry, ID validation, discovery, and duplicate detection — **SUPERSEDED** (shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model)
 
 **Depends on:** `QG-101`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -195,7 +256,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-102` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-103 — Implement lifecycle: validate → setup → ready → execute → dispose
+### QG-103 — Implement lifecycle: validate → setup → ready → execute → dispose — **SUPERSEDED** (shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model)
 
 **Depends on:** `QG-102`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -209,7 +270,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-103` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-104 — Resolve plugin dependencies and API compatibility; reject cycles
+### QG-104 — Resolve plugin dependencies and API compatibility; reject cycles — **SUPERSEDED** (shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model)
 
 **Depends on:** `QG-103`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -223,7 +284,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-104` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-105 — Implement typed event bus and structured logging
+### QG-105 — Implement typed event bus and structured logging — **SUPERSEDED** (shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model)
 
 **Depends on:** `QG-104`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -237,7 +298,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-105` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-106 — Define plugin context, cancellation, and capability permissions
+### QG-106 — Define plugin context, cancellation, and capability permissions — **SUPERSEDED** (shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model)
 
 **Depends on:** `QG-105`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -251,21 +312,21 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-106` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-107 — Implement trusted-plugin allowlist; document isolation limitations
+### QG-107 — Implement trusted-plugin allowlist; document isolation limitations — **DONE**
 
 **Depends on:** `QG-106`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Load only explicitly trusted local packages in v0.1. 
-- [ ] Define trust config and warnings. 
-- [ ] Document that in-process code is not sandboxed. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Load only explicitly trusted local packages in v0.1. 
+- [x] Define trust config and warnings. 
+- [x] Document that in-process code is not sandboxed. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-107` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-108 — Add SDK test harness and two example gate plugins
+### QG-108 — Add SDK test harness and two example gate plugins — **SUPERSEDED** (shipped with simpler plugin kinds (gate, parser, ecosystem, reporter, storage); no registry, event bus or capability model)
 
 **Depends on:** `QG-107`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -279,17 +340,17 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-108` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-109 — Contract-test third-party plugin registration without modifying core
+### QG-109 — Contract-test third-party plugin registration without modifying core — **DONE**
 
 **Depends on:** `QG-108`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create independent external-style fixture package. 
-- [ ] Load without importing private core files. 
-- [ ] Assert schema compatibility and result consistency. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create independent external-style fixture package. 
+- [x] Load without importing private core files. 
+- [x] Assert schema compatibility and result consistency. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-109` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
@@ -298,50 +359,50 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 1 (except independent UI planning)
 
-### QG-201 — Implement run IDs, state machine, and execution records
+### QG-201 — Implement run IDs, state machine, and execution records — **DONE**
 
 **Depends on:** `QG-109`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Define immutable run ID and states queued/running/completed/failed/cancelled. 
-- [ ] Persist timestamps. 
-- [ ] Enforce legal transitions. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Define immutable run ID and states queued/running/completed/failed/cancelled. 
+- [x] Persist timestamps. 
+- [x] Enforce legal transitions. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-201` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-202 — Add bounded concurrency and gate dependencies
+### QG-202 — Add bounded concurrency and gate dependencies — **DONE**
 
 **Depends on:** `QG-201`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Build DAG from gate dependencies. 
-- [ ] Enforce concurrency limit. 
-- [ ] Mark downstream blocked/skipped explicitly. 
-- [ ] Test cycle detection. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Build DAG from gate dependencies. 
+- [x] Enforce concurrency limit. 
+- [x] Mark downstream blocked/skipped explicitly. 
+- [x] Test cycle detection. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-202` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-203 — Add timeout, cancellation, subprocess cleanup, and log limits
+### QG-203 — Add timeout, cancellation, subprocess cleanup, and log limits — **DONE**
 
 **Depends on:** `QG-202`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Add per-gate timeout, AbortSignal propagation and process-group termination. 
-- [ ] Cap stdout/stderr and artifact sizes. 
-- [ ] Test orphan cleanup. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Add per-gate timeout, AbortSignal propagation and process-group termination. 
+- [x] Cap stdout/stderr and artifact sizes. 
+- [x] Test orphan cleanup. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-203` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-204 — Restrict working directories and approved commands; no arbitrary shell from MCP
+### QG-204 — Restrict working directories and approved commands; no arbitrary shell from MCP — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-203`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -356,47 +417,47 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-204` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-205 — Implement policy schema: required gates, thresholds, severity, missing evidence
+### QG-205 — Implement policy schema: required gates, thresholds, severity, missing evidence — **DONE**
 
 **Depends on:** `QG-204`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Define required/optional gates, threshold operators, severities and missing evidence behavior. 
-- [ ] Validate malformed policies before execution. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Define required/optional gates, threshold operators, severities and missing evidence behavior. 
+- [x] Validate malformed policies before execution. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-205` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-206 — Implement deterministic aggregate PASS/BLOCK/WARN/ERROR/CANCELLED decisions
+### QG-206 — Implement deterministic aggregate PASS/BLOCK/WARN/ERROR/CANCELLED decisions — **DONE**
 
 **Depends on:** `QG-205`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Specify PASS/WARN/BLOCK/ERROR/CANCELLED precedence. 
-- [ ] Implement pure evaluator. 
-- [ ] Test table-driven edge cases. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Specify PASS/WARN/BLOCK/ERROR/CANCELLED precedence. 
+- [x] Implement pure evaluator. 
+- [x] Test table-driven edge cases. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-206` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-207 — Separate tool execution status from policy outcome
+### QG-207 — Separate tool execution status from policy outcome — **DONE**
 
 **Depends on:** `QG-206`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Represent execution status separately from policy decision. 
-- [ ] Keep tool exit codes, parser errors and rule violations distinct. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Represent execution status separately from policy decision. 
+- [x] Keep tool exit codes, parser errors and rule violations distinct. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-207` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-208 — Store policy fingerprint, git revision, tool versions, and artifact metadata
+### QG-208 — Store policy fingerprint, git revision, tool versions, and artifact metadata — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-207`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -410,16 +471,16 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-208` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-209 — Test failures, timeouts, skips, cancellation, and repeatability
+### QG-209 — Test failures, timeouts, skips, cancellation, and repeatability — **DONE**
 
 **Depends on:** `QG-208`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Add fault injection fixtures for timeout, crash, cancellation, malformed output and missing required gates. 
-- [ ] Assert stable decisions. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Add fault injection fixtures for timeout, crash, cancellation, malformed output and missing required gates. 
+- [x] Assert stable decisions. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-209` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
@@ -428,49 +489,49 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 2 (except independent UI planning)
 
-### QG-301 — Migrate existing Lighthouse logic into `plugin-lighthouse`
+### QG-301 — Migrate existing Lighthouse logic into `plugin-lighthouse` — **DONE**
 
 **Depends on:** `QG-209`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Extract legacy Lighthouse invocation. 
-- [ ] Modernize API and browser launch. 
-- [ ] Implement `GatePlugin` adapter with URL input and normalized output. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Extract legacy Lighthouse invocation. 
+- [x] Modernize API and browser launch. 
+- [x] Implement `GatePlugin` adapter with URL input and normalized output. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-301` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-302 — Support Lighthouse categories, thresholds, and HTML/JSON artifacts
+### QG-302 — Support Lighthouse categories, thresholds, and HTML/JSON artifacts — **DONE**
 
 **Depends on:** `QG-301`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Map performance/accessibility/SEO/best-practices scores. 
-- [ ] Enforce per-category thresholds. 
-- [ ] Save original JSON and optional HTML as evidence. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Map performance/accessibility/SEO/best-practices scores. 
+- [x] Enforce per-category thresholds. 
+- [x] Save original JSON and optional HTML as evidence. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-302` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-303 — Add ESLint gate and normalize errors/warnings
+### QG-303 — Add ESLint gate and normalize errors/warnings — **DONE**
 
 **Depends on:** `QG-302`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Run ESLint using project-local binary/API. 
-- [ ] Map ruleId/file/line/severity. 
-- [ ] Handle ignore files and zero-findings cases. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Run ESLint using project-local binary/API. 
+- [x] Map ruleId/file/line/severity. 
+- [x] Handle ignore files and zero-findings cases. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-303` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-304 — Add Vitest gate with test counts and coverage report parsing
+### QG-304 — Add Vitest gate with test counts and coverage report parsing — **PARTIAL** (generic test commands work; a dedicated Vitest/coverage plugin is open)
 
 **Depends on:** `QG-303`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -484,44 +545,44 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-304` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-305 — Add approved-command gate for custom tools
+### QG-305 — Add approved-command gate for custom tools — **DONE**
 
 **Depends on:** `QG-304`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Implement configured executable + argument array, never free-form shell. 
-- [ ] Parse exit code and optional JSON/JUnit. 
-- [ ] Enforce allowlist. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Implement configured executable + argument array, never free-form shell. 
+- [x] Parse exit code and optional JSON/JUnit. 
+- [x] Enforce allowlist. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-305` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-306 — Handle missing binaries, malformed reports, and exit codes
+### QG-306 — Handle missing binaries, malformed reports, and exit codes — **DONE**
 
 **Depends on:** `QG-305`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Handle missing binary, unsupported tool version, invalid JSON and nonzero exit. 
-- [ ] Return typed error with remediation hint. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Handle missing binary, unsupported tool version, invalid JSON and nonzero exit. 
+- [x] Return typed error with remediation hint. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-306` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-307 — Add integration fixtures and sample `.qualitygate.yml`
+### QG-307 — Add integration fixtures and sample `.qualitygate.yml` — **DONE**
 
 **Depends on:** `QG-306`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create fixture projects with passing/failing gates. 
-- [ ] Document required scripts and sample config. 
-- [ ] Run integration tests on CI. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create fixture projects with passing/failing gates. 
+- [x] Document required scripts and sample config. 
+- [x] Run integration tests on CI. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-307` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
@@ -530,7 +591,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 3 (except independent UI planning)
 
-### QG-401 — Implement `qualitygate init`, `run`, `list`, `inspect`, `doctor`
+### QG-401 — Implement `qualitygate init`, `run`, `list`, `inspect`, `doctor` — **PARTIAL** (init, run, inspect exist; list and doctor are T-057)
 
 **Depends on:** `QG-307`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -543,7 +604,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-401` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-402 — Add React Ink progress, streaming logs, gate statuses, and summary
+### QG-402 — Add React Ink progress, streaming logs, gate statuses, and summary — **OPEN** (T-058)
 
 **Depends on:** `QG-401`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -556,35 +617,35 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-402` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-403 — Support non-TTY, JSON output, and stable CI exit codes
+### QG-403 — Support non-TTY, JSON output, and stable CI exit codes — **DONE**
 
 **Depends on:** `QG-402`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Detect non-TTY/CI and disable interactive UI. 
-- [ ] Support `--json`. 
-- [ ] Define exit codes 0 pass, 1 blocked, 2 infrastructure/config error, 130 cancelled. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Detect non-TTY/CI and disable interactive UI. 
+- [x] Support `--json`. 
+- [x] Define exit codes 0 pass, 1 blocked, 2 infrastructure/config error, 130 cancelled. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-403` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-404 — Add filesystem artifacts and a portable JSON reporter plugin
+### QG-404 — Add filesystem artifacts and a portable JSON reporter plugin — **DONE**
 
 **Depends on:** `QG-403`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Write atomic artifact directories per run. 
-- [ ] Serialize normalized JSON through reporter plugin. 
-- [ ] Test portability and no secret leakage. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Write atomic artifact directories per run. 
+- [x] Serialize normalized JSON through reporter plugin. 
+- [x] Test portability and no secret leakage. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-404` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-405 — Test clean installation and `npx`/`pnpm dlx` execution
+### QG-405 — Test clean installation and `npx`/`pnpm dlx` execution — **OPEN** (T-053/T-054)
 
 **Depends on:** `QG-404`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -602,21 +663,21 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 4 (except independent UI planning)
 
-### QG-501 — Implement MCP server using official TypeScript SDK
+### QG-501 — Implement MCP server using official TypeScript SDK — **DONE**
 
 **Depends on:** `QG-405`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Implement MCP stdio server via official SDK. 
-- [ ] Register tools with Zod schemas. 
-- [ ] Keep transport separate from runner. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Implement MCP stdio server via official SDK. 
+- [x] Register tools with Zod schemas. 
+- [x] Keep transport separate from runner. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-501` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-502 — Expose `list_gates`, `run_gates`, `get_run`, `get_findings`, `get_artifacts`
+### QG-502 — Expose `list_gates`, `run_gates`, `get_run`, `get_findings`, `get_artifacts` — **PARTIAL** (list_gates, run_gates, get_run exist; findings and artifacts are returned with the run)
 
 **Depends on:** `QG-501`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -628,21 +689,21 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-502` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-503 — Return structured decisions, not enormous raw logs
+### QG-503 — Return structured decisions, not enormous raw logs — **DONE**
 
 **Depends on:** `QG-502`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Return compact structured result and artifact references. 
-- [ ] Cap log size. 
-- [ ] Avoid embedding binary/screenshots in tool responses. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Return compact structured result and artifact references. 
+- [x] Cap log size. 
+- [x] Avoid embedding binary/screenshots in tool responses. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-503` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-504 — Enforce project scope, approved gates, and execution permissions
+### QG-504 — Enforce project scope, approved gates, and execution permissions — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-503`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -656,7 +717,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-504` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-505 — Provide verified examples for Claude Code, Cursor, and Codex
+### QG-505 — Provide verified examples for Claude Code, Cursor, and Codex — **REVIEW** (not verified)
 
 **Depends on:** `QG-504`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -670,17 +731,17 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-505` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-506 — Add integration tests and an AI-agent demo
+### QG-506 — Add integration tests and an AI-agent demo — **DONE**
 
 **Depends on:** `QG-505`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Automate stdio protocol tests with fake MCP client. 
-- [ ] Compare same run result with CLI. 
-- [ ] Demonstrate blocked and passing cases. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Automate stdio protocol tests with fake MCP client. 
+- [x] Compare same run result with CLI. 
+- [x] Demonstrate blocked and passing cases. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-506` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
@@ -689,7 +750,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 5 (except independent UI planning)
 
-### QG-601 — Define semantic design tokens, light/dark themes, spacing, typography
+### QG-601 — Define semantic design tokens, light/dark themes, spacing, typography — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-506`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -703,7 +764,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-601` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-602 — Configure React + Vite + Tailwind + shadcn/ui
+### QG-602 — Configure React + Vite + Tailwind + shadcn/ui — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-601`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -717,7 +778,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-602` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-603 — Build RunSummary, GateCard, FindingsTable, Timeline, ArtifactViewer
+### QG-603 — Build RunSummary, GateCard, FindingsTable, Timeline, ArtifactViewer — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-602`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -729,62 +790,62 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-603` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-604 — Implement HTML reporter plugin and static report export
+### QG-604 — Implement HTML reporter plugin and static report export — **DONE**
 
 **Depends on:** `QG-603`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Generate self-contained HTML report with embedded safe data. 
-- [ ] Sanitize untrusted text. 
-- [ ] Test offline opening. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Generate self-contained HTML report with embedded safe data. 
+- [x] Sanitize untrusted text. 
+- [x] Test offline opening. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-604` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-605 — Implement authenticated loopback local API + typed client
+### QG-605 — Implement authenticated loopback local API + typed client — **DONE**
 
 **Depends on:** `QG-604`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Bind local API to loopback. 
-- [ ] Implement pairing token/session, CORS and origin allowlist. 
-- [ ] Expose read-only endpoints before execution endpoints. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Bind local API to loopback. 
+- [x] Implement pairing token/session, CORS and origin allowlist. 
+- [x] Expose read-only endpoints before execution endpoints. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-605` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-606 — Stream live run updates via SSE or WebSocket
+### QG-606 — Stream live run updates via SSE or WebSocket — **DONE**
 
 **Depends on:** `QG-605`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Choose SSE for unidirectional updates. 
-- [ ] Define ordered event IDs and reconnection. 
-- [ ] Verify client catches up after disconnect. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Choose SSE for unidirectional updates. 
+- [x] Define ordered event IDs and reconnection. 
+- [x] Verify client catches up after disconnect. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-606` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-607 — Display policy decisions, evidence, logs, and run details
+### QG-607 — Display policy decisions, evidence, logs, and run details — **DONE**
 
 **Depends on:** `QG-606`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Connect real stored runs, filters, drill-down, logs and evidence. 
-- [ ] Display missing/blocked statuses explicitly. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Connect real stored runs, filters, drill-down, logs and evidence. 
+- [x] Display missing/blocked statuses explicitly. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-607` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-608 — Add accessibility, keyboard support, responsive design, E2E/visual tests
+### QG-608 — Add accessibility, keyboard support, responsive design, E2E/visual tests — **REVIEW** (not verified against the code in this pass)
 
 **Depends on:** `QG-607`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -802,49 +863,49 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P0  
 **Phase dependency:** Phase 6 (except independent UI planning)
 
-### QG-701 — Add GitHub Actions integration and blocking exit codes
+### QG-701 — Add GitHub Actions integration and blocking exit codes — **DONE**
 
 **Depends on:** `QG-608`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create reusable GitHub Actions workflow for install/run. 
-- [ ] Map decision to exit status. 
-- [ ] Avoid untrusted PR execution with secrets. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create reusable GitHub Actions workflow for install/run. 
+- [x] Map decision to exit status. 
+- [x] Avoid untrusted PR execution with secrets. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-701` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-702 — Upload JSON/HTML reports and evidence artifacts
+### QG-702 — Upload JSON/HTML reports and evidence artifacts — **DONE**
 
 **Depends on:** `QG-701`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Upload JSON/HTML/log artifacts with retention. 
-- [ ] Scrub secrets and enforce size bounds. 
-- [ ] Verify downloadable evidence. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Upload JSON/HTML/log artifacts with retention. 
+- [x] Scrub secrets and enforce size bounds. 
+- [x] Verify downloadable evidence. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-702` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-703 — Add PR check summaries and sample workflows
+### QG-703 — Add PR check summaries and sample workflows — **DONE**
 
 **Depends on:** `QG-702`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Generate concise GitHub step summary and optional PR comment/check. 
-- [ ] Prevent duplicate spam. 
-- [ ] Link to artifacts. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Generate concise GitHub step summary and optional PR comment/check. 
+- [x] Prevent duplicate spam. 
+- [x] Link to artifacts. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-703` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-704 — Configure release/version automation, package publishing, provenance
+### QG-704 — Configure release/version automation, package publishing, provenance — **OPEN** (T-053/T-054)
 
 **Depends on:** `QG-703`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -857,7 +918,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-704` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-705 — Add documentation: quickstart, plugin tutorial, configuration, security
+### QG-705 — Add documentation: quickstart, plugin tutorial, configuration, security — **PARTIAL** (README and docs exist; plugin tutorial is T-056)
 
 **Depends on:** `QG-704`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -870,7 +931,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-705` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-706 — Add demo video/GIF, example repository, badges, issue templates
+### QG-706 — Add demo video/GIF, example repository, badges, issue templates — **PARTIAL** (demo GIF and issue templates exist; badges and example repo are T-055)
 
 **Depends on:** `QG-705`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -883,7 +944,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-706` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-707 — Verify package install on clean macOS/Linux environments
+### QG-707 — Verify package install on clean macOS/Linux environments — **OPEN** (T-053/T-054)
 
 **Depends on:** `QG-706`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -896,7 +957,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-707` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-708 — Publish v0.1 beta, tag release, then rename repository if desired
+### QG-708 — Publish v0.1 beta, tag release, then rename repository if desired — **OPEN** (T-053/T-054)
 
 **Depends on:** `QG-707`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -915,7 +976,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P1  
 **Phase dependency:** Phase 7 (except independent UI planning)
 
-### QG-801 — Wrap shared web dashboard in Tauri with minimal duplicated UI
+### QG-801 — Wrap shared web dashboard in Tauri with minimal duplicated UI — **OPEN** (T-065)
 
 **Depends on:** `QG-708`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -929,7 +990,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-801` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-802 — Implement secure local runner connection and explicit permissions
+### QG-802 — Implement secure local runner connection and explicit permissions — **OPEN** (T-065)
 
 **Depends on:** `QG-801`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -942,7 +1003,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-802` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-803 — Add workspace selection, recent projects, and run history
+### QG-803 — Add workspace selection, recent projects, and run history — **OPEN** (T-065)
 
 **Depends on:** `QG-802`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -955,7 +1016,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-803` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-804 — Support desktop notifications and artifact opening
+### QG-804 — Support desktop notifications and artifact opening — **OPEN** (T-065)
 
 **Depends on:** `QG-803`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -968,7 +1029,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-804` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-805 — Add platform packaging, signing plan, and macOS/Windows smoke tests
+### QG-805 — Add platform packaging, signing plan, and macOS/Windows smoke tests — **OPEN** (T-065)
 
 **Depends on:** `QG-804`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -987,7 +1048,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P1  
 **Phase dependency:** Phase 8 (except independent UI planning)
 
-### QG-901 — Build Manifest V3 extension with React popup/devtools panel
+### QG-901 — Build Manifest V3 extension with React popup/devtools panel — **OPEN** (T-066)
 
 **Depends on:** `QG-805`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1001,7 +1062,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-901` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-902 — Detect current tab URL and request user consent before scans
+### QG-902 — Detect current tab URL and request user consent before scans — **OPEN** (T-066)
 
 **Depends on:** `QG-901`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1015,7 +1076,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-902` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-903 — Implement authenticated local bridge with origin validation and pairing
+### QG-903 — Implement authenticated local bridge with origin validation and pairing — **OPEN** (T-066)
 
 **Depends on:** `QG-902`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1029,7 +1090,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-903` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-904 — Launch Lighthouse/a11y gates for the current page through approved runner
+### QG-904 — Launch Lighthouse/a11y gates for the current page through approved runner — **OPEN** (T-066)
 
 **Depends on:** `QG-903`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1042,7 +1103,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-904` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-905 — Link browser findings and screenshots to QualityGate run IDs
+### QG-905 — Link browser findings and screenshots to QualityGate run IDs — **OPEN** (T-066)
 
 **Depends on:** `QG-904`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1056,7 +1117,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-905` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-906 — Add browser permissions review and store submission preparation
+### QG-906 — Add browser permissions review and store submission preparation — **OPEN** (T-066)
 
 **Depends on:** `QG-905`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1075,21 +1136,21 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P2  
 **Phase dependency:** Phase 9 (except independent UI planning)
 
-### QG-1001 — Add Playwright E2E plugin and JUnit evidence
+### QG-1001 — Add Playwright E2E plugin and JUnit evidence — **DONE**
 
 **Depends on:** `QG-906`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Integrate Playwright test runner and JUnit/JSON output. 
-- [ ] Capture traces/screenshots on failures. 
-- [ ] Support timeouts. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Integrate Playwright test runner and JUnit/JSON output. 
+- [x] Capture traces/screenshots on failures. 
+- [x] Support timeouts. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-1001` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1002 — Add visual regression baseline management and approval flow
+### QG-1002 — Add visual regression baseline management and approval flow — **OPEN** (T-027)
 
 **Depends on:** `QG-1001`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1103,7 +1164,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1002` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1003 — Add accessibility plugin (axe-core) and SARIF reporting
+### QG-1003 — Add accessibility plugin (axe-core) and SARIF reporting — **OPEN** (T-059)
 
 **Depends on:** `QG-1002`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1117,7 +1178,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1003` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1004 — Add security/dependency scanner adapters
+### QG-1004 — Add security/dependency scanner adapters — **OPEN** (T-060)
 
 **Depends on:** `QG-1003`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1131,20 +1192,20 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1004` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1005 — Add code complexity and maintainability gates
+### QG-1005 — Add code complexity and maintainability gates — **DONE**
 
 **Depends on:** `QG-1004`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Add complexity and duplication metrics from established analyzers. 
-- [ ] Use configurable thresholds and exclusions. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Add complexity and duplication metrics from established analyzers. 
+- [x] Use configurable thresholds and exclusions. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-1005` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1006 — Add SQLite history, comparisons, trends, and regression analysis
+### QG-1006 — Add SQLite history, comparisons, trends, and regression analysis — **OPEN** (T-061)
 
 **Depends on:** `QG-1005`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1157,7 +1218,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1006` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1007 — Add plugin authoring generator, compatibility matrix, and registry metadata
+### QG-1007 — Add plugin authoring generator, compatibility matrix, and registry metadata — **OPEN** (T-056)
 
 **Depends on:** `QG-1006`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1171,7 +1232,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1007` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1008 — Add stronger plugin isolation, signed manifests, and permission UX
+### QG-1008 — Add stronger plugin isolation, signed manifests, and permission UX — **OPEN** (T-062)
 
 **Depends on:** `QG-1007`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1184,7 +1245,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1008` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1009 — Add optional remote execution and GitHub/GitLab integrations
+### QG-1009 — Add optional remote execution and GitHub/GitLab integrations — **PARTIAL** (GitHub, GitLab and Bitbucket CI publishing exist; remote runner is T-063)
 
 **Depends on:** `QG-1008`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
@@ -1198,7 +1259,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1009` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1010 — Publish stable v1.0 SDK with migration guide and semver policy
+### QG-1010 — Publish stable v1.0 SDK with migration guide and semver policy — **OPEN** (T-064)
 
 **Depends on:** `QG-1009`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
