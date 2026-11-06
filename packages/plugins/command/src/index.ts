@@ -69,6 +69,12 @@ function markTimeout(data: GateData, error: string) {
 }
 /** File times can be coarser than the clock (1-2 s on some filesystems), so a file counts as fresh a little before the run started. */
 const FILE_TIME_SLACK_MS = 2000;
+/** Removes the values a secret scanner's report names from the gate output (a scanner without `--redact` prints them). An unreadable report names none. */
+function scrub(output: string, parser: ParserPlugin, raw: string): string {
+  let secrets: string[] = [];
+  try { secrets = parser.secrets!(raw); } catch { /* the parse step below reports the bad report */ }
+  return secrets.sort((a, b) => b.length - a.length).reduce((text, secret) => text.replaceAll(secret, '[redacted]'), output);
+}
 async function applyReport(spec: GateSpec, data: GateData, { cwd, parsers, startedAt }: { cwd: string; parsers: Record<string, ParserPlugin>; startedAt: number }) {
   const { format, path } = spec.report!;
   const parser = parsers[format];
@@ -80,10 +86,11 @@ async function applyReport(spec: GateSpec, data: GateData, { cwd, parsers, start
     return;
   }
   if (read.status === 'error') { data.error = read.error; return; }
+  if (parser.secrets) data.output = scrub(data.output, parser, read.raw);
   try {
     data.findings = parser.parse(read.raw, { gateId: spec.id, cwd });
     data.counts = parser.count?.(read.raw);
-    data.artifacts!.push(read.absolutePath);
+    if (!parser.secrets) data.artifacts!.push(read.absolutePath);
     if (data.exitCode === 0 && data.findings.some(finding => finding.severity === 'error')) data.error = `Gate ${spec.id} exited 0 but report contains failures`;
   } catch (cause) { data.error = `Invalid ${format} report: ${message(cause)}`; }
 }

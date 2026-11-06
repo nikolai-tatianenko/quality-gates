@@ -103,7 +103,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 
 ### Gate depth (QG-1003–1006)
 - [x] T-059: axe-core report parser (findings normalised to the shared `Finding` schema, no accessibility preset or built-in browser audit) and SARIF export for GitHub code scanning
-- [ ] T-060: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
+- [x] T-060: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
 - [ ] T-061: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
 
 ### Trust and scale (QG-1008–1010)

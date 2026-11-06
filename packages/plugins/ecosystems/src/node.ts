@@ -88,6 +88,10 @@ function withJunitReport(script: string, manager: Manager): Pick<DetectedGate, '
   return undefined;
 }
 
+const AUDIT_REPORT = '.qualitygate/node/audit.json';
+const OSV_REPORT = '.qualitygate/node/osv.json';
+const LOCKFILES: Record<Manager, string> = { npm: 'package-lock.json', pnpm: 'pnpm-lock.yaml', yarn: 'yarn.lock' };
+
 interface Layout { scripts: Scripts; manager: Manager; inWorkspace: Set<string> }
 
 /** The run command for a script: the root script, or every workspace package that defines it. */
@@ -113,6 +117,17 @@ function proposeExtras(layout: Layout, enabled: DetectedGate[]): DetectedGate[] 
     .map(name => ({ id: name.replaceAll(':', '-').toLowerCase().replace(/[^a-z0-9_-]/g, '-'), run: `${layout.manager} run ${name}`, skip: skipReason(name) }));
 }
 
+/** A dependency audit is listed but not enabled: it needs the network and fails on any known advisory. npm has its own audit; pnpm and yarn reports differ, so osv-scanner reads their lockfiles. */
+async function proposeAudit(directory: string, manager: Manager): Promise<DetectedGate[]> {
+  const lockfile = LOCKFILES[manager];
+  if (!await exists(join(directory, lockfile))) return [];
+  const reported = '> ' + (manager === 'npm' ? AUDIT_REPORT : OSV_REPORT);
+  if (manager === 'npm') return [{ id: 'audit', run: `mkdir -p .qualitygate/node && npm audit --json ${reported}`, report: { format: 'npm-audit', path: AUDIT_REPORT },
+    skip: 'dependency audit needs the network and blocks on any known advisory: enable it if it should block' }];
+  return [{ id: 'audit', run: `mkdir -p .qualitygate/node && osv-scanner scan source --format json -L ${lockfile} ${reported}`, report: { format: 'osv-scanner', path: OSV_REPORT },
+    skip: 'dependency audit needs osv-scanner v2 on PATH and blocks on any known advisory: enable it if it should block' }];
+}
+
 /** A vitest config without a test script still means there are tests to run. */
 async function proposeVitest(directory: string, layout: Layout): Promise<DetectedGate[]> {
   if (!(await readdir(directory)).some(name => /^vitest(\.[\w-]+)?\.config\.[cm]?[jt]s$/.test(name))) return [];
@@ -129,7 +144,7 @@ async function warnLargeRun(directory: string, gates: DetectedGate[]): Promise<D
   return gates.map(gate => gate.id === 'tests' ? { ...gate, timeoutMs: LARGE_RUN_TIMEOUT_MS, note } : gate);
 }
 
-/** Proposes lint, typecheck and test gates from package.json scripts, workspaces and vitest config. */
+/** Proposes lint, typecheck and test gates (and a disabled dependency audit) from package.json scripts, workspaces and vitest config. */
 export const node: EcosystemPlugin = { id: 'node', apiVersion: 1, kind: 'ecosystem', async detect(directory) {
   const manifest = await readJson(join(directory, 'package.json')) as Manifest | undefined;
   if (!manifest) return null;
@@ -138,5 +153,5 @@ export const node: EcosystemPlugin = { id: 'node', apiVersion: 1, kind: 'ecosyst
   const gates = proposeWanted(layout);
   if (!gates.some(gate => gate.id === 'tests')) gates.push(...await proposeVitest(directory, layout));
   const all = [...await warnLargeRun(directory, gates), ...proposeExtras(layout, gates)];
-  return all.length ? all : null;
+  return all.length ? [...all, ...await proposeAudit(directory, manager)] : null;
 } };
