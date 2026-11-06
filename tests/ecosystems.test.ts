@@ -38,7 +38,7 @@ test('node maps scripts to gates with the detected package manager', async () =>
     [{ 'package.json': JSON.stringify({ scripts: { lint: 'x' } }), 'package-lock.json': '' }, 'npm run lint'],
     [{ 'package.json': JSON.stringify({ scripts: { lint: 'x' } }) }, 'npm run lint'],
   ];
-  for (const [files, run] of cases) assert.deepEqual(await detect(node, files), [{ id: 'lint', run }]);
+  for (const [files, run] of cases) assert.deepEqual((await detect(node, files))?.filter(gate => gate.id !== 'audit'), [{ id: 'lint', run }]);
   assert.deepEqual(await detect(node, { 'package.json': JSON.stringify({ scripts: { test: 'a', 'test:ci': 'b', 'check-types': 'c' } }) }),
     [{ id: 'typecheck', run: 'npm run check-types' }, { id: 'tests', run: 'npm run test:ci', timeoutMs: 300000 }]);
 });
@@ -90,4 +90,18 @@ test('maestro needs a flows folder with an appId and prefers .maestro', async ()
   assert.equal(await detect(maestro, { 'flows/a.yaml': 'name: not maestro\n' }), null);
   assert.equal(await detect(maestro, { '.maestro/readme.md': 'appId: x' }), null);
   assert.equal(await detect(maestro, {}), null);
+});
+
+test('node proposes a dependency audit for the lockfile it finds, never enabled', async () => {
+  const manifest = JSON.stringify({ scripts: { test: 'node --test' } });
+  const npm = await detect(node, { 'package.json': manifest, 'package-lock.json': '{}' });
+  assert.deepEqual(npm?.filter(gate => gate.id === 'audit'), [{ id: 'audit', run: 'mkdir -p .qualitygate/node && npm audit --json > .qualitygate/node/audit.json',
+    report: { format: 'npm-audit', path: '.qualitygate/node/audit.json' }, skip: 'dependency audit needs the network and blocks on any known advisory: enable it if it should block' }]);
+  const pnpm = await detect(node, { 'package.json': manifest, 'pnpm-lock.yaml': '' });
+  assert.deepEqual(pnpm?.filter(gate => gate.id === 'audit'), [{ id: 'audit', run: 'mkdir -p .qualitygate/node && osv-scanner scan source --format json -L pnpm-lock.yaml > .qualitygate/node/osv.json',
+    report: { format: 'osv-scanner', path: '.qualitygate/node/osv.json' }, skip: 'dependency audit needs osv-scanner v2 on PATH and blocks on any known advisory: enable it if it should block' }]);
+  const yarn = await detect(node, { 'package.json': manifest, 'yarn.lock': '' });
+  assert.match(yarn!.find(gate => gate.id === 'audit')!.run, /-L yarn\.lock >/);
+  assert.equal((await detect(node, { 'package.json': manifest }))!.some(gate => gate.id === 'audit'), false);
+  assert.equal(await detect(node, { 'package.json': '{}', 'package-lock.json': '{}' }), null);
 });

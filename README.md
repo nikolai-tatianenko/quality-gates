@@ -148,7 +148,7 @@ outputDir: .qualitygate
 A command gate can also read a test report into findings (file, line, message) and keep files
 such as screenshots and traces as run evidence. The exit code still decides PASS/BLOCK; a report
 never turns a non-zero exit into PASS. Formats: `junit`, `nunit`, `playwright-json`, `eslint-json`,
-`axe-json`,
+`axe-json`, `npm-audit`, `osv-scanner`, `gitleaks`,
 `unity-log`:
 
 ```yaml
@@ -185,7 +185,7 @@ browser or an emulator (`test:e2e`, `test:ios`, Maestro flows in `.maestro/`, `m
 enabled** with the reason, written as a commented block at the end of `.qualitygate.yml`; copy it under `gates:` to
 enable it. A project with more than 300 test files gets a 30 minute timeout and a warning to use a faster subset
 (`--changed` with `inputs`). Plain `eslint`, `vitest` and `node --test` scripts are rewritten with a JSON/JUnit report
-(`.qualitygate/node/`) so findings arrive with file and line instead of a log; scripts with shell operators are left alone.
+(`.qualitygate/node/`) so findings arrive with file and line instead of a log; scripts with shell operators are left alone. When a lockfile is present, a dependency audit (`npm audit`, or `osv-scanner` for pnpm and yarn) is also listed as found but not enabled, because it needs the network and blocks on any known advisory.
 
 **One list of gates.** If the project already declares its gates, `qualitygate setup --from gates.json` (or an ES module
 exporting `gates`; a module is imported, so it runs with your permissions) reads them instead of detecting ecosystems:

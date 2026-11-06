@@ -40,7 +40,7 @@ const referenceRepos: { name: string; files: Record<string, string | object>; ga
     'pnpm-workspace.yaml': 'packages:\n  - packages/*\n',
     'packages/web/package.json': { name: 'web', scripts: { test: 'vitest run', typecheck: 'tsc --noEmit' } },
     'packages/api/package.json': { name: 'api', scripts: { test: 'node --test' } } } },
-  { name: 'Playwright project', ecosystems: ['node', 'playwright'], gates: ['node-tests', 'playwright-tests'], skipped: [], files: {
+  { name: 'Playwright project', ecosystems: ['node', 'playwright'], gates: ['node-tests', 'playwright-tests'], skipped: ['audit'], files: {
     'package.json': { scripts: { test: 'echo unit' } }, 'package-lock.json': '', 'playwright.config.ts': 'export default {};' } },
   { name: 'Maestro mobile app', ecosystems: ['node', 'maestro'], gates: ['lint'], skipped: ['e2e-mobile'], files: {
     'package.json': { scripts: { lint: 'eslint src' } }, 'maestro/login.yaml': 'appId: com.example.app\n---\n- launchApp\n' } },
@@ -69,9 +69,9 @@ test('a pnpm monorepo runs workspace scripts with pnpm -r and a root eslint scri
 test('npm workspaces use --workspaces; yarn workspaces without root scripts propose nothing', async () => {
   const npm = await detect({ 'package.json': { workspaces: ['packages/*', '!packages/legacy', 'tools'], scripts: {} }, 'package-lock.json': '',
     'packages/a/package.json': { scripts: { test: 'x' } }, 'packages/legacy/package.json': { scripts: { test: 'old' } }, 'tools/package.json': { scripts: { lint: 'y' } } });
-  assert.deepEqual(npm!.map(gate => gate.run), ['npm run lint --workspaces --if-present', 'npm run test --workspaces --if-present']);
+  assert.deepEqual(npm!.map(gate => gate.run), ['npm run lint --workspaces --if-present', 'npm run test --workspaces --if-present', 'mkdir -p .qualitygate/node && npm audit --json > .qualitygate/node/audit.json']);
   const object = await detect({ 'package.json': { workspaces: { packages: ['pkgs/**'] } }, 'package-lock.json': '', 'pkgs/a/package.json': { scripts: { lint: 'x' } }, 'pkgs/b/notes.txt': '' });
-  assert.deepEqual(object!.map(gate => gate.run), ['npm run lint --workspaces --if-present']);
+  assert.deepEqual(object!.map(gate => gate.run), ['npm run lint --workspaces --if-present', 'mkdir -p .qualitygate/node && npm audit --json > .qualitygate/node/audit.json']);
   assert.equal(await detect({ 'package.json': { workspaces: ['packages/*'] }, 'yarn.lock': '', 'packages/a/package.json': { scripts: { test: 'x' } } }), null);
   assert.equal(await detect({ 'package.json': { workspaces: ['missing/*'] } }), null);
 });
@@ -91,7 +91,7 @@ test('eslint, vitest and node --test scripts get a report; other shapes stay unt
 
 test('a vitest config without a test script still proposes tests with a JUnit report', async () => {
   const gates = (await detect({ 'package.json': { scripts: { lint: 'x' } }, 'vitest.config.ts': '', 'pnpm-lock.yaml': '' }))!;
-  assert.deepEqual(gates.map(gate => gate.id), ['lint', 'tests']);
+  assert.deepEqual(gates.map(gate => gate.id), ['lint', 'tests', 'audit']);
   assert.equal(gates[1]!.run, 'pnpm exec vitest run --reporter=default --reporter=junit --outputFile.junit=.qualitygate/node/junit.xml');
   assert.deepEqual(gates[1]!.report, { format: 'junit', path: '.qualitygate/node/junit.xml' });
   assert.equal(await detect({ 'package.json': { scripts: {} }, 'vite.config.ts': '' }), null);

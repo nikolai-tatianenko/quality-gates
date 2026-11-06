@@ -103,7 +103,8 @@ browser or an emulator (`test:e2e`, `test:ios`, Maestro flows in `.maestro/`, `m
 enabled** with the reason, written as a commented block at the end of `.qualitygate.yml`; copy it under `gates:` to
 enable it. A project with more than 300 test files gets a 30 minute timeout and a warning to use a faster subset
 (`--changed` with `inputs`). Plain `eslint`, `vitest` and `node --test` scripts are rewritten with a JSON/JUnit report
-(`.qualitygate/node/`) so findings arrive with file and line instead of a log; scripts with shell operators are left alone.
+(`.qualitygate/node/`) so findings arrive with file and line instead of a log; scripts with shell operators are left alone. With a lockfile, a dependency audit is listed as found but not enabled too: `npm audit --json` for
+`package-lock.json`, `osv-scanner` (v2) for `pnpm-lock.yaml` and `yarn.lock`. It needs the network and fails on any known advisory, so it is never on by default.
 
 **One list of gates.** If the project already declares its gates, `qualitygate setup --from gates.json` (or an ES module
 exporting `gates`; a module is imported, so it runs with your permissions) reads them instead of detecting ecosystems:
@@ -139,7 +140,7 @@ gates:
     artifacts: [test-results/**/*.png, test-results/**/trace.zip]
 ```
 
-- `report.format` is one of `junit`, `nunit`, `playwright-json`, `eslint-json`, `axe-json`, `unity-log`.
+- `report.format` is one of `junit`, `nunit`, `playwright-json`, `eslint-json`, `axe-json`, `npm-audit`, `osv-scanner`, `gitleaks`, `unity-log`.
   Failures become findings with file, line and message where the format provides them.
 - `axe-json` reads axe-core results (one object, or the list `@axe-core/cli` writes for several pages). Each
   violating node becomes a finding: severity from impact (critical and serious are errors, moderate and unknown
@@ -154,6 +155,34 @@ gates:
     report: { format: axe-json, path: axe.json }
   ```
 
+- Dependency and secret scanners are report parsers too: you provide the command that writes the JSON. Severity is
+  `critical` and `high` = error, `moderate` = warning, `low` and `info` = info. A truncated report, error output
+  (for example `npm audit` offline writes `{"error": ...}`) or a different shape is an error, never "no findings";
+  a scanner that exits non-zero without a readable report stays BLOCK.
+
+  ```yaml
+  - id: audit            # npm 7+; the exit code is non-zero when advisories are found
+    run: mkdir -p .qualitygate && npm audit --json > .qualitygate/audit.json
+    report: { format: npm-audit, path: .qualitygate/audit.json }
+  - id: osv              # osv-scanner v2; works for pnpm-lock.yaml, yarn.lock and other lockfiles
+    run: mkdir -p .qualitygate && osv-scanner scan source --format json -L pnpm-lock.yaml > .qualitygate/osv.json
+    report: { format: osv-scanner, path: .qualitygate/osv.json }
+  - id: secrets
+    run: gitleaks detect --redact --no-banner --report-format json --report-path .qualitygate/gitleaks.json
+    report: { format: gitleaks, path: .qualitygate/gitleaks.json }
+  ```
+
+  `npm-audit` reads `auditReportVersion: 2` (one finding per advisory; the GHSA id is the rule id and the advisory URL
+  the help link; packages only vulnerable through another package are reported where the advisory is). `pnpm audit`
+  and `yarn audit` write other formats: use `osv-scanner` for them. `osv-scanner` makes one finding per vulnerable
+  package and advisory (rule id = advisory id, aliases such as the CVE in the message, link to osv.dev, the lockfile
+  as file); the severity is the advisory's own rating, else the CVSS score osv-scanner computed (7 and up = error,
+  4 and up = warning), else a warning.
+  `gitleaks` findings carry rule, file and line only. The `Match` and `Secret` values are never copied into a finding,
+  an error or the saved report copy, and they are removed from the gate output before it is stored (replaced by
+  `[redacted]`). Still pass `--redact` to gitleaks: when there is no readable report, the output cannot be scrubbed, and
+  do not list the report file under `artifacts`, which would copy it into the run. Plugins and gate commands run
+  unsandboxed with your user rights, as everywhere else.
 - The command's exit code decides PASS/BLOCK. Non-zero exit and no report: BLOCK, the log is
   the evidence. Exit 0 and no report, an unreadable or unparsable report, or exit 0 with
   error findings in the report: execution `error` (exit code 2).

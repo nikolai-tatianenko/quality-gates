@@ -17,6 +17,8 @@ export interface ParserPlugin extends Manifest {
   kind: 'parser'; parse(raw: string, context: { gateId: string; cwd: string }): Finding[];
   /** Optional: how many tests passed, failed or were skipped; shown when a gate times out with a partial report. */
   count?(raw: string): Counts;
+  /** Optional: secret values the report contains (never put them in findings). The runner removes them from the gate output and does not keep the report as an artifact. */
+  secrets?(raw: string): string[];
 }
 /** Proposes gates for `qualitygate setup`; `null` or `[]` means the ecosystem is not present in `directory`. */
 export interface EcosystemPlugin extends Manifest {
