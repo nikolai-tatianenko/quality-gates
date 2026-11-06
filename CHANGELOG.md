@@ -2,7 +2,7 @@
 
 ## Unreleased — local workspace and analysis
 
-- Accessibility gate: the `axe-json` report format turns axe-core violations into findings (severity from impact, rule id, selector, help URL via the new optional `helpUrl`), and `qualitygate report --sarif` exports a run as SARIF 2.1.0 for GitHub code scanning.
+- axe-core report parser and SARIF export (not an accessibility preset: you supply the command that writes the axe JSON). The `axe-json` report format turns axe-core `violations` (not `incomplete`) into findings (severity from impact, rule id, selector from the page, help URL via the new optional `helpUrl`, which keeps only http(s) URLs); input without a `violations` array is an error, never "0 violations". `qualitygate report --sarif` exports a run as SARIF 2.1.0 for GitHub code scanning: gates that ended BLOCK, error or timeout without findings appear as results, `invocations[].executionSuccessful` follows the run, and file uris are relative (absolute or `../` paths get no location). With `--sarif --json` and no `--output` the SARIF is under the key `sarif`.
 - Verdict trust: a gate that runs out of time now has its own status, `TIMEOUT` (`execution: timeout`), and its own exit code `3`,
   instead of looking like a tool crash (`2`). When the gate's report can be read, the message keeps the partial counts
   ("passed 40, failed 0, stopped by timeout"; JUnit, NUnit and Playwright reports). Every run now carries a step registry (`steps`:

@@ -322,7 +322,7 @@ editor agent. Live-model/editor verification limits are listed below.
 | TS/JS analysis | ESLint/SonarJS complexity and code smells through the reusable analyzer |
 | Python analysis/tests | Ruff findings and your declared Python test commands |
 | Lighthouse | Performance, accessibility, SEO and best-practices scores on a 0–100 scale |
-| axe-core JSON | One finding per violating element with rule, impact and selector; export a run as SARIF 2.1.0 with `qualitygate report --sarif` |
+| axe-core JSON | Report parser, not an accessibility preset: one finding per violating element (`violations` only, not `incomplete`) with rule, impact and the selector from the page; `qualitygate report --sarif` exports a run as SARIF 2.1.0 |
 | SonarQube | The quality gate for the specific scanner analysis, not an old project result |
 | Agent review producer | Normalized confirmed/unresolved/rejected findings with methodology provenance |
 

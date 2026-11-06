@@ -71,11 +71,19 @@ test('axe-json turns each violating node into a finding with impact severity, ru
 test('axe-json accepts a list of page results, tolerates missing optional fields and rejects bad input', () => {
   const page = JSON.stringify([{ violations: [{ id: 'label', help: 'Form elements need labels', nodes: [{ target: ['input'] }] }] }, { violations: [] }]);
   assert.deepEqual(parse('axe-json', page), [{ gateId: 'g', severity: 'warning', ruleId: 'label', message: 'Form elements need labels (input)' }]);
-  assert.deepEqual(parse('axe-json', '{}'), []);
+  assert.deepEqual(parse('axe-json', '{"violations":[]}'), []);
+  assert.deepEqual(parse('axe-json', '[]'), []);
+  for (const raw of ['{}', '[{}]', '[{"violations":[]},{"passes":[]}]', 'null', '"text"', '{"violations":"none"}']) assert.throws(() => parse('axe-json', raw), Error, raw);
   assert.throws(() => parse('axe-json', 'not json'));
   assert.throws(() => parse('axe-json', '{"violations":[{"impact":"serious"}]}'));
 });
 test('axe-json falls back to the description, then the rule id, and copes with nodes without a target', () => {
   const raw = JSON.stringify({ violations: [{ id: 'a', description: 'Described', nodes: [{}] }, { id: 'b' }] });
   assert.deepEqual(parse('axe-json', raw).map(finding => finding.message), ['Described', 'b']);
+});
+test('axe-json drops a help URL that is not http(s) instead of rejecting the finding', () => {
+  for (const helpUrl of ['not a url', 'javascript:alert(1)', 'file:///etc/passwd']) {
+    assert.deepEqual(parse('axe-json', JSON.stringify({ violations: [violation({ helpUrl, nodes: [] })] })),
+      [{ gateId: 'g', severity: 'error', ruleId: 'color-contrast', message: 'Elements must have sufficient color contrast' }]);
+  }
 });
