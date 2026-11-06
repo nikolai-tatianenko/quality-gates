@@ -27,7 +27,7 @@ test('setup maps scripts to gates with the declared package manager and ignores 
     assert.deepEqual(result.changed, [result.configPath, join(dir, '.gitignore')]);
     assert.deepEqual(result.gitignore, ['.qualitygate/', '.qualitygate-ci/', '.qualitygate-review-sources/']);
     assert.match(await readFile(join(dir, '.gitignore'), 'utf8'), /^\.qualitygate\/\n\.qualitygate-ci\/\n/);
-    await assert.rejects(setupProject(result.configPath), /EEXIST/);
+    await assert.rejects(setupProject(result.configPath), /already exists/);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

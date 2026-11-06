@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { stringify } from 'yaml';
 import { z } from 'zod';
@@ -101,6 +101,7 @@ try {
     const result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache }) : await getRun(configPath, positional[0]);
     if (json) process.stdout.write(jsonReporter.render(result));
     else {
+      if (command === 'run') console.log(`Project root: ${dirname(resolve(configPath))}`);
       printRun(result);
     }
     process.exitCode = exitCode(result);
