@@ -28,7 +28,8 @@ function semaphore(limit: number) {
  * order does not matter: a gate's dependencies are looked up among all selected gates, not only those started so far.
  * Dependencies must be acyclic (the config schema rejects cycles).
  */
-export async function scheduleGates(specs: GateSpec[], limit: number, execute: (spec: GateSpec, index: number) => Promise<GateResult>): Promise<GateResult[]> {
+export async function scheduleGates(specs: GateSpec[], limit: number, execute: (spec: GateSpec, index: number) => Promise<GateResult>,
+  onSkipped?: (result: GateResult) => void): Promise<GateResult[]> {
   const slots = semaphore(limit);
   const selected = new Map(specs.map((spec, index) => [spec.id.toLowerCase(), { spec, index }]));
   const finished = new Map<string, Promise<GateResult>>();
@@ -37,7 +38,7 @@ export async function scheduleGates(specs: GateSpec[], limit: number, execute: (
       const { spec, index } = selected.get(id)!;
       const dependencies = await Promise.all((spec.dependsOn ?? []).map(name => name.toLowerCase()).filter(name => selected.has(name)).map(finish));
       const failed = dependencies.find(result => result.decision !== 'PASS' || result.execution !== 'completed');
-      if (failed) return dependencySkipped(spec, failed.id);
+      if (failed) { const skipped = dependencySkipped(spec, failed.id); onSkipped?.(skipped); return skipped; }
       await slots.acquire();
       try { return await execute(spec, index); } finally { slots.release(); }
     })());

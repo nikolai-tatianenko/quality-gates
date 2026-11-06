@@ -1,6 +1,10 @@
 import type { AuditData, Counts, DetectedGate, Finding, GateData, GateSpec, RunResult } from '../../protocol/src/index.js';
 export interface Manifest { id: string; apiVersion: 1 }
-export interface Context { signal: AbortSignal; defer(cleanup: () => void | Promise<void>): void }
+export interface Context {
+  signal: AbortSignal; defer(cleanup: () => void | Promise<void>): void;
+  /** Optional: shows a line of progress in the live terminal view. It is display only and never part of the result or the stored log. */
+  log?(line: string): void;
+}
 export interface AuditPlugin extends Manifest {
   kind: 'audit'; audit(url: string, context: Context): Promise<AuditData>;
 }

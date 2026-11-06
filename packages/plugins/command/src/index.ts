@@ -28,8 +28,8 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
     bytes += Math.min(chunk.length, available);
     if (chunk.length > available) result.truncated = true;
   };
-  child.stdout.on('data', chunk => append('stdout', chunk));
-  child.stderr.on('data', chunk => append('stderr', chunk));
+  child.stdout.on('data', chunk => { append('stdout', chunk); showLastLine(context, chunk); });
+  child.stderr.on('data', chunk => { append('stderr', chunk); showLastLine(context, chunk); });
   const stop = (error: string, timedOut = false) => { result.error ??= error; if (timedOut) result.timedOut = true; kill(); };
   const abort = () => stop('Interrupted');
   context.signal.addEventListener('abort', abort, { once: true });
@@ -45,11 +45,20 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   for (const stream of ['stdout', 'stderr', 'output'] as const) result[stream] = Buffer.concat(chunks[stream]).toString('utf8');
   return result;
 }
+/** Shows the newest complete line of a chunk in the live view (display only). */
+function showLastLine(context: Context, chunk: Buffer) {
+  if (!context.log) return;
+  const lines = chunk.toString('utf8').split(/[\r\n]+/);
+  lines.pop();
+  const last = lines.reverse().find(line => line.trim());
+  if (last) context.log(last);
+}
 /** Runs a command gate; an optional `report` is parsed into findings (exit code still decides PASS/BLOCK). */
 export function commandPlugin(cwd: string, parsers: Record<string, ParserPlugin> = {}): GatePlugin {
   return { id: 'command', apiVersion: 1, kind: 'gate', async run(spec, context) {
     const startedAt = Date.now() - FILE_TIME_SLACK_MS;
-    const captured = await captureCommand(cwd, spec, context);
+    const secretive = spec.report && parsers[spec.report.format]?.secrets;
+    const captured = await captureCommand(cwd, spec, secretive ? { ...context, log: undefined } : context);
     if (!spec.report && !spec.artifacts) return { exitCode: captured.exitCode, output: captured.output, error: captured.error, ...(captured.timedOut ? { timedOut: true } : {}) };
     const data: GateData = { exitCode: captured.exitCode, output: captured.output, error: captured.error, artifacts: [] };
     if (spec.report && (!captured.error || captured.timedOut)) await applyReport(spec, data, { cwd, parsers, startedAt });

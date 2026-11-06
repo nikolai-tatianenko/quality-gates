@@ -2,15 +2,15 @@ import { basename, join } from 'node:path';
 import { auditDataSchema, gateDataSchema, message, runResultSchema, stepStatus,
   type AuditResult, type GateResult, type GateSpec, type RunResult, type Step } from '../../protocol/src/index.js';
 import type { AuditPlugin, Context, GatePlugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
-interface Environment { signal: AbortSignal; storage: StoragePlugin; directory?: string }
+interface Environment { signal: AbortSignal; storage: StoragePlugin; directory?: string; log?: (line: string) => void }
 type Item = GateResult | AuditResult;
 /** Cleanup errors remain visible and do not prevent other cleanup handlers running. */
-async function lifecycle(item: Item, signal: AbortSignal, execute: (context: Context) => Promise<void>) {
+async function lifecycle(item: Item, signal: AbortSignal, execute: (context: Context) => Promise<void>, log?: (line: string) => void) {
   if (signal.aborted) {
     item.execution = 'skipped'; item.errors.push('Interrupted before check'); return;
   }
   const cleanups: (() => void | Promise<void>)[] = [];
-  try { await execute({ signal, defer: fn => cleanups.push(fn) }); }
+  try { await execute({ signal, defer: fn => cleanups.push(fn), log }); }
   catch (error) {
     item.execution = signal.aborted ? 'interrupted' : 'error'; item.errors.push(message(error));
     item.decision = 'BLOCK';
@@ -47,7 +47,7 @@ export async function executeGate(spec: GateSpec, index: number, env: Environmen
       if (data.rawReport !== undefined) item.reportPath = await env.storage.write(env.directory, `gate-${index + 1}-${spec.id}.json`, data.rawReport);
     }
     item.findings = item.findings.map(finding => ({ ...finding, evidencePath: item.reportPath ?? item.evidencePath }));
-  });
+  }, env.log);
   item.durationMs = Date.now() - started;
   return item;
 }

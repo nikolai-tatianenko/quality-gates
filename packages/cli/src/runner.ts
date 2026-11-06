@@ -2,7 +2,7 @@ import { readFile, realpath } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { parse } from 'yaml';
 import { configSchema, message, type Config, type RunResult } from '../../protocol/src/index.js';
-import { runWith } from '../../core/src/index.js';
+import { runWith, type ProgressEvent } from '../../core/src/index.js';
 import { recordRun, toHistoryRun } from '../../core/src/history.js';
 import { loadExternalPlugins } from '../../core/src/external.js';
 import type { GatePlugin } from '../../plugin-sdk/src/index.js';
@@ -26,7 +26,7 @@ export async function loadConfig(configPath: string): Promise<{ config: Config; 
   config.outputDir = resolve(directory, config.outputDir);
   return { config, directory };
 }
-export interface ExecuteFlags { changed?: boolean; cache?: boolean }
+export interface ExecuteFlags { changed?: boolean; cache?: boolean; onProgress?: (event: ProgressEvent) => void }
 /** Gate ids to run: `only`, narrowed to the gates affected by changed files when `changed` is set. */
 async function selectIds(config: Config, directory: string, only: string[] | undefined, changed: boolean | undefined) {
   const unknown = only?.filter(id => !config.gates.some(gate => gate.id === id));
@@ -60,7 +60,7 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
   const result = await runWith(config, {
     audit: lighthousePlugin(config.timeoutMs, config.chrome), gate: { ...command, run: (spec, context) => gates.get(spec.type)!.run(spec, context) },
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
-  }, { signal, only: ids, cached });
+  }, { signal, only: ids, cached, onProgress: flags.onProgress });
   if (flags.cache) await saveCache(config.outputDir, hashes, result);
   await remember(config, directory, result, hashes);
   return result;

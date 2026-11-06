@@ -369,6 +369,15 @@ when a changed file matches; gates without `inputs` always run) and `--cache` (a
 last passed is reported as `cached`). The terminal shows one line per gate with the path to its log; npm and pnpm
 warnings stay in the log.
 
+Live progress: in an interactive terminal `qualitygate run` redraws one row per gate in place (waiting, running with elapsed
+seconds and the last output line of the gate, then PASS/BLOCK), clears the rows when the run ends and prints a one-line
+summary before the usual text. It is used only when stdout is a TTY, `CI` is not set, `TERM` is not `dumb` and the output is
+not `--json`; `--no-live` or `QUALITYGATE_NO_LIVE=1` turns it off. Piped output, CI output, `--json` and exit codes are
+identical with and without it. Escape sequences in gate output are stripped before display, and the output of a gate whose
+report parser handles secrets (such as `gitleaks`) is not shown live. Ctrl+C still cancels the gates (exit 130) and restores
+the cursor. It uses plain ANSI escape codes rather than React Ink, which would add React 19.3 and about twenty runtime packages
+to a CLI that bundles with `packages: external`; the view shows the newest line only, not a scrolling log window.
+
 ### Run history and trends
 
 Every `run` (CLI, dashboard and MCP) also appends the finished run to a local SQLite database,

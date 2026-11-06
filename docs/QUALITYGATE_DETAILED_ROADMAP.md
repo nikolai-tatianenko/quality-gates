@@ -58,11 +58,10 @@ Create packages incrementally rather than scaffolding all at once.
 
 This roadmap was written before the build. Statuses below were checked against the code and `TODO.md`; open work is tracked there as T-0xx.
 
-Done: 36 · Partial: 6 · Superseded: 6 · Needs review: 8 · Open: 23
+Done: 37 · Partial: 6 · Superseded: 6 · Needs review: 8 · Open: 22
 
-**Open (23)**
+**Open (22)**
 
-- QG-402 Add React Ink progress, streaming logs, gate statuses, and summary — T-058
 - QG-405 Test clean installation and `npx`/`pnpm dlx` execution — T-053/T-054
 - QG-704 Configure release/version automation, package publishing, provenance — T-053/T-054
 - QG-707 Verify package install on clean macOS/Linux environments — T-053/T-054
@@ -604,16 +603,16 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-401` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-402 — Add React Ink progress, streaming logs, gate statuses, and summary — **OPEN** (T-058)
+### QG-402 — Add live progress, last log line, gate statuses, and summary — **DONE** (T-058; plain ANSI instead of React Ink)
 
 **Depends on:** `QG-401`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Build Ink components for run header, gate progress, streaming log window and final summary. 
-- [ ] Handle terminal resize and cancellation. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Build the gate progress rows, last log line per running gate and final summary (plain ANSI; Ink needs React >= 19.3 and about twenty runtime packages). A scrolling log window is not built.
+- [x] Handle terminal resize (width read on every redraw) and cancellation (SIGINT cancels gates, restores the cursor, exit 130).
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-402` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
