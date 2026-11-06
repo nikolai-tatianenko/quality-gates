@@ -150,3 +150,9 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 
 ### Suggested start
 T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic `report:` for eslint and junit. These are small changes in the `node` plugin and the runner, and they remove what made the trial result hard to trust.
+
+## Review follow-ups (scanners, history and live view)
+- [ ] T-086: Live view: erase rows with the real terminal height and width (resize and more gates than rows), assert exit 130 in the pty and SIGINT tests, route the history warning after the live rows are erased
+- [ ] T-087: npm audit parser: a package whose `via` entries are all strings must still produce a finding when the referenced package is missing from the report
+- [ ] T-088: SARIF: resolve file paths against the project root instead of the working directory, escape `#` and `?`, and report `skip:` gates as notes
+- [ ] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`

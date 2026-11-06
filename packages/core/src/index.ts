@@ -67,7 +67,8 @@ export async function runWith(configInput: Config, plugins: RunPlugins, options:
   catch (error) { result.errors.push(`Storage initialization: ${message(error)}`); }
   const environment = { signal, storage: selected.storage, directory };
   const cached = options.cached ?? {};
-  const report = options.onProgress ?? (() => undefined);
+  // Progress is display only: a failing view must never change a gate or the verdict.
+  const report = (event: ProgressEvent) => { try { options.onProgress?.(event); } catch { /* ignored */ } };
   const ended = (gate: GateResult) => { report({ kind: 'end', gate }); return gate; };
   report({ kind: 'plan', ids: selected.gateSpecs.map(spec => spec.id) });
   const gateResults = await scheduleGates(selected.gateSpecs, config.concurrency, async (spec, index) => {

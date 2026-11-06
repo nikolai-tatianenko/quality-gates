@@ -15,8 +15,8 @@ const NAMED = { critical: 'error', high: 'error', moderate: 'warning', medium: '
 const fromScore = (score: number) => score >= 7 ? 'error' : score >= 4 ? 'warning' : 'info';
 /** The advisory's own rating wins; otherwise the CVSS score osv-scanner computed for the group; otherwise a warning. */
 function severityOf(vuln: z.infer<typeof vulnerabilitySchema>, pkg: z.infer<typeof packageSchema>): Finding['severity'] {
-  const named = NAMED[vuln.database_specific?.severity?.toLowerCase() as keyof typeof NAMED];
-  if (named) return named;
+  const rating = vuln.database_specific?.severity?.toLowerCase();
+  if (rating && Object.hasOwn(NAMED, rating)) return NAMED[rating as keyof typeof NAMED];
   const score = Number(pkg.groups.find(group => group.ids?.includes(vuln.id))?.max_severity);
   return Number.isFinite(score) ? fromScore(score) : 'warning';
 }
