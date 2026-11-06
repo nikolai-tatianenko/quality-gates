@@ -14,13 +14,14 @@ import { execute, loadConfig } from './runner.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
 import { setupProject } from './setup.js';
-import { readReport, renderMarkdown, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
+import { readReport, renderMarkdown, renderSarif, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
 const args = process.argv.slice(2);
 const json = args.includes('--json');
 const write = args.includes('--write');
 const changed = args.includes('--changed');
 const cache = args.includes('--cache');
 const noGitignore = args.includes('--no-gitignore');
+const sarif = args.includes('--sarif');
 const controller = new AbortController();
 const interrupt = () => controller.abort();
 process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
@@ -33,7 +34,7 @@ try {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
-    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore') continue;
+    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
     if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin') {
       const value = args[++i];
@@ -60,6 +61,7 @@ try {
     if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate or --only`);
     if ((changed || cache) && command !== 'run') throw new Error(`${command} does not accept --changed or --cache`);
     if (noGitignore && command !== 'setup') throw new Error(`${command} does not accept --no-gitignore`);
+    if (sarif && command !== 'report') throw new Error(`${command} does not accept --sarif`);
     if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
     if (write && !['pr', 'status', 'comment', 'notify'].includes(command)) throw new Error(`${command} does not accept --write`);
   }
@@ -69,7 +71,7 @@ try {
       + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
-      + '       qualitygate report --input <run.json> [--output <report.md>] [--json]\n'
+      + '       qualitygate report --input <run.json> [--output <report.md|report.sarif>] [--sarif] [--json]\n'
       + '       qualitygate export --out <dir> [--input <run.json>] [--config <path>] [--json]\n'
       + '       qualitygate pr --provider <github|gitlab|bitbucket> --repository <owner/repo> --number <id> --head <sha> --input <run.json> [--write] [--json]\n'
       + '       qualitygate status --repository <owner/repo> --head <sha> --input <run.json> [--report-url <https-url>] [--write] [--json]\n'
@@ -109,7 +111,8 @@ try {
     if (positional.length) throw new Error(`${command} does not accept positional arguments`);
     const input = z.string().min(1).parse(values.get('--input'));
     if (command === 'report') {
-      const markdown = renderMarkdown(await readReport(input));
+      const report = await readReport(input);
+      const markdown = sarif ? renderSarif(report) : renderMarkdown(report);
       const output = values.get('--output');
       if (output) await writeFile(output, markdown);
       if (json) console.log(JSON.stringify({ schemaVersion: 1, ...(output ? { output: resolve(output) } : { markdown }) }));

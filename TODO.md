@@ -102,7 +102,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 - [ ] T-058 (backlog): React Ink progress view with streaming logs and a final summary; non-TTY and `--json` output must stay unchanged
 
 ### Gate depth (QG-1003–1006)
-- [ ] T-059: Accessibility gate (axe-core) with findings normalised to the shared `Finding` schema, and SARIF export for GitHub code scanning
+- [x] T-059: Accessibility gate (axe-core) with findings normalised to the shared `Finding` schema, and SARIF export for GitHub code scanning
 - [ ] T-060: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
 - [ ] T-061: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
 

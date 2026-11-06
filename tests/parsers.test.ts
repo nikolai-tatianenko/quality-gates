@@ -58,3 +58,24 @@ test('xml parsers reject malformed input', () => {
     assert.throws(() => parse(format, 'plain text'), /^Error: Invalid XML/);
   }
 });
+const violation = (extra = {}) => ({ id: 'color-contrast', impact: 'serious', help: 'Elements must have sufficient color contrast', helpUrl: 'https://dequeuniversity.com/rules/axe/4.10/color-contrast',
+  nodes: [{ target: ['.btn'] }, { target: ['#host', '.inner'] }], ...extra });
+test('axe-json turns each violating node into a finding with impact severity, rule, selector and help URL', () => {
+  const findings = parse('axe-json', JSON.stringify({ violations: [violation()], passes: [] }));
+  assert.deepEqual(findings[0], { gateId: 'g', severity: 'error', ruleId: 'color-contrast', message: 'Elements must have sufficient color contrast (.btn)',
+    helpUrl: 'https://dequeuniversity.com/rules/axe/4.10/color-contrast' });
+  assert.equal(findings[1]?.message, 'Elements must have sufficient color contrast (#host .inner)');
+  const severity = (impact: unknown) => parse('axe-json', JSON.stringify({ violations: [violation({ impact, nodes: [] })] }))[0]?.severity;
+  assert.deepEqual(['critical', 'serious', 'moderate', 'minor', null].map(severity), ['error', 'error', 'warning', 'info', 'warning']);
+});
+test('axe-json accepts a list of page results, tolerates missing optional fields and rejects bad input', () => {
+  const page = JSON.stringify([{ violations: [{ id: 'label', help: 'Form elements need labels', nodes: [{ target: ['input'] }] }] }, { violations: [] }]);
+  assert.deepEqual(parse('axe-json', page), [{ gateId: 'g', severity: 'warning', ruleId: 'label', message: 'Form elements need labels (input)' }]);
+  assert.deepEqual(parse('axe-json', '{}'), []);
+  assert.throws(() => parse('axe-json', 'not json'));
+  assert.throws(() => parse('axe-json', '{"violations":[{"impact":"serious"}]}'));
+});
+test('axe-json falls back to the description, then the rule id, and copes with nodes without a target', () => {
+  const raw = JSON.stringify({ violations: [{ id: 'a', description: 'Described', nodes: [{}] }, { id: 'b' }] });
+  assert.deepEqual(parse('axe-json', raw).map(finding => finding.message), ['Described', 'b']);
+});

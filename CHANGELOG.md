@@ -2,6 +2,7 @@
 
 ## Unreleased — local workspace and analysis
 
+- Accessibility gate: the `axe-json` report format turns axe-core violations into findings (severity from impact, rule id, selector, help URL via the new optional `helpUrl`), and `qualitygate report --sarif` exports a run as SARIF 2.1.0 for GitHub code scanning.
 - Verdict trust: a gate that runs out of time now has its own status, `TIMEOUT` (`execution: timeout`), and its own exit code `3`,
   instead of looking like a tool crash (`2`). When the gate's report can be read, the message keeps the partial counts
   ("passed 40, failed 0, stopped by timeout"; JUnit, NUnit and Playwright reports). Every run now carries a step registry (`steps`:

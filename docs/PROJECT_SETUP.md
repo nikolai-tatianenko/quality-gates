@@ -139,8 +139,18 @@ gates:
     artifacts: [test-results/**/*.png, test-results/**/trace.zip]
 ```
 
-- `report.format` is one of `junit`, `nunit`, `playwright-json`, `eslint-json`, `unity-log`.
+- `report.format` is one of `junit`, `nunit`, `playwright-json`, `eslint-json`, `axe-json`, `unity-log`.
   Failures become findings with file, line and message where the format provides them.
+- `axe-json` reads axe-core results (one object, or the list `@axe-core/cli` writes for several pages). Each
+  violating node becomes a finding: severity from impact (critical and serious are errors, moderate and unknown
+  are warnings, minor is info), the axe rule id, the selector in the message and the rule's help URL.
+
+  ```yaml
+  - id: a11y
+    run: pnpm exec axe http://localhost:3000 --save axe.json --exit
+    report: { format: axe-json, path: axe.json }
+  ```
+
 - The command's exit code decides PASS/BLOCK. Non-zero exit and no report: BLOCK, the log is
   the evidence. Exit 0 and no report, an unreadable or unparsable report, or exit 0 with
   error findings in the report: execution `error` (exit code 2).
