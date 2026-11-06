@@ -322,6 +322,7 @@ editor agent. Live-model/editor verification limits are listed below.
 | TS/JS analysis | ESLint/SonarJS complexity and code smells through the reusable analyzer |
 | Python analysis/tests | Ruff findings and your declared Python test commands |
 | Lighthouse | Performance, accessibility, SEO and best-practices scores on a 0–100 scale |
+| axe-core JSON | One finding per violating element with rule, impact and selector; export a run as SARIF 2.1.0 with `qualitygate report --sarif` |
 | SonarQube | The quality gate for the specific scanner analysis, not an old project result |
 | Agent review producer | Normalized confirmed/unresolved/rejected findings with methodology provenance |
 
@@ -421,7 +422,8 @@ provider, OS or deployment has been tested.
 | Git hooks | Real Husky in a disposable Git fixture; blocked/passing commits and local dry-run pushes |
 | Agents | Recorded Claude Code demo; generated configs and model adapters have contract tests |
 | Still unverified | Live Cursor/Codex sessions, live Ollama/vLLM inference, live SonarQube and all provider deployments |
-| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, richer history/diff policies |
+| Real-project trial | One pnpm monorepo with Node, Vitest and Playwright: setup found its gates, parallel runs, timeout exit code `3` and the step registry worked; truncated `node --test` reports in long runs are still being investigated |
+| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, run history and trends, plugin isolation and signing, Tauri desktop and Chrome extension clients |
 
 The repository checks itself with the same gate configuration. Runtime coverage
 includes the CLI, core, plugins, services, adapters and dashboard TS/TSX; the only
@@ -440,7 +442,7 @@ pnpm verify:analysis-package  # Independent analyzer tarball
 ```
 
 [Verification records](docs/VERIFICATION.md) · [Environment matrix](docs/ENVIRONMENTS.md) ·
-[Roadmap](TODO.md) · [Product vision](VISION.md).
+[Roadmap](TODO.md) · [Detailed roadmap and status](docs/QUALITYGATE_DETAILED_ROADMAP.md) · [Product vision](VISION.md).
 
 ## Security, contribution and license
 
