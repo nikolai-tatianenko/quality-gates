@@ -169,3 +169,9 @@ test('SIGINT on a real terminal (what Ctrl+C sends) cancels the gate, restores t
     assert.match(result, /interrupted/);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
+
+test('a progress view that throws never changes the verdict', async () => {
+  const config = configSchema.parse({ schemaVersion: 1, gates: [{ id: 'ok', type: 'command', run: 'true' }] });
+  const result = await runWith(config, { gate: commandPlugin(process.cwd()), storage, reporter }, { onProgress: () => { throw new Error('stdout closed'); } });
+  assert.equal(result.decision, 'PASS');
+});

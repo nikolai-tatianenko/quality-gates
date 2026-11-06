@@ -82,6 +82,9 @@ test('osv-scanner falls back to the group score, then to a warning, and copes wi
   const score = (max: string | undefined) => parse('osv-scanner', JSON.stringify({ results: [{ source: { path: 'a/yarn.lock' }, packages: [
     { package: { name: 'x', version: '1', ecosystem: 'npm' }, vulnerabilities: [{ id: 'OSV-1', details: 'First line\nsecond' }], groups: [{ ids: ['OSV-1'], ...(max ? { max_severity: max } : {}) }] }] }] }));
   assert.deepEqual(['9.8', '7', '5.5', '2.1', 'n/a', undefined].map(max => score(max)[0]?.severity), ['error', 'error', 'warning', 'info', 'warning', 'warning']);
+  const rated = (severity: string) => parse('osv-scanner', JSON.stringify({ results: [{ source: { path: 'a/yarn.lock' }, packages: [{ package: { name: 'x', version: '1' },
+    vulnerabilities: [{ id: 'OSV-1', database_specific: { severity } }] }] }] }))[0]!.severity;
+  assert.deepEqual(['constructor', '__proto__', 'toString', 'HIGH'].map(rated), ['warning', 'warning', 'warning', 'error']);
   assert.deepEqual(score('9.8')[0], { gateId: 'g', severity: 'error', ruleId: 'OSV-1', file: 'a/yarn.lock', message: 'x@1: First line', helpUrl: 'https://osv.dev/vulnerability/OSV-1' });
   const bare = parse('osv-scanner', JSON.stringify({ results: [{ source: { path: '/elsewhere/Gemfile.lock' }, packages: [{ package: { name: 'y', version: '2', ecosystem: 'RubyGems' }, vulnerabilities: [{ id: 'OSV-2' }] }] }] }));
   assert.deepEqual(bare, [{ gateId: 'g', severity: 'warning', ruleId: 'OSV-2', message: 'y@2: OSV-2', helpUrl: 'https://osv.dev/vulnerability/OSV-2' }]);
@@ -130,6 +133,27 @@ test('a gitleaks gate with exit 0 and a clean report passes; a missing, truncate
   assert.equal(missing.decision, 'BLOCK'); assert.match(missing.gates[0]!.errors.join(), /Report not found/);
   const crashed = await exec(dir, { run: 'exit 3', report: { format: 'gitleaks', path: 'nope.json' } });
   assert.equal(crashed.decision, 'BLOCK'); assert.equal(crashed.gates[0]!.exitCode, 3);
+}));
+test('a secret scanner fails closed: with no usable report the printed output is withheld, never stored', () => withDir(async dir => {
+  process.env.QG_TEST_LEAK = SECRET;
+  const printing = 'echo "Finding: $QG_TEST_LEAK"; echo "Secret: $QG_TEST_LEAK" >&2';
+  const report = (path: string) => ({ format: 'gitleaks', path });
+  const cases: [string, object][] = [
+    ['missing report', { run: `${printing}; exit 1`, report: report('nope.json') }],
+    ['missing report with exit 0', { run: printing, report: report('nope.json') }],
+    ['crashed', { run: `${printing}; exit 3`, report: report('nope.json') }],
+    ['truncated report', { run: `${printing}; printf '[{"RuleID":"aws' > gitleaks.json; exit 1`, report: report('gitleaks.json') }],
+    ['unreadable entries', { run: `${printing}; printf '[1,2]' > gitleaks.json; exit 1`, report: report('gitleaks.json') }],
+    ['timed out', { run: `${printing}; sleep 30`, timeoutMs: 400, report: report('gitleaks.json') }]];
+  for (const [name, gate] of cases) {
+    const result = await exec(dir, gate);
+    const saved = await everything(join(dir, 'out')) + JSON.stringify(result);
+    assert.ok(!saved.includes(SECRET), `${name}: the secret was stored`);
+    assert.match(result.gates[0]!.outputTail, /output withheld/, name);
+    assert.notEqual(result.decision, 'PASS', name);
+    await rm(join(dir, 'out'), { recursive: true, force: true });
+  }
+  delete process.env.QG_TEST_LEAK;
 }));
 test('an npm audit gate that crashed with an error object stays an error, and a clean report passes', () => withDir(async dir => {
   const offline = await exec(dir, { run: await prepared(dir, '{"error":{"code":"ENOTFOUND"}}'), report: { format: 'npm-audit', path: 'gitleaks.json' } });
