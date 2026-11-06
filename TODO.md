@@ -64,7 +64,7 @@ Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitb
 - [x] T-030: GitHub commit status / check run (`PASS`/`BLOCK`/`error`) with a link to the report, via `packages/ci`; needs `statuses: write`, same trusted-job rules as the description publisher (no fork PRs)
 - [x] T-031: Sticky PR comment as an alternative to editing the description (marker-based update, one comment per PR)
 - [x] T-032: Slack incoming-webhook notification on BLOCK or error (webhook URL from an env var, HTTPS only, message = gate summary + report link)
-- [ ] T-033 (backlog): run history and trend page (blocks per week, most frequent failing gates, flaky gates) once exports from several runs exist
+- [x] T-033: Trends from recorded runs (blocks per week, most frequent failing gates, flaky gates): `qualitygate trends` and a trends section in the exported static HTML report
 
 ## Plans and design notes still to write
 - [x] T-036: Short design note for T-028..T-032 (export format, tunnel read-only mode and token, status/comment permissions, Slack payload), then one plan; start with T-028 and T-030
@@ -104,7 +104,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 ### Gate depth (QG-1003–1006)
 - [x] T-059: axe-core report parser (findings normalised to the shared `Finding` schema, no accessibility preset or built-in browser audit) and SARIF export for GitHub code scanning
 - [x] T-060: Dependency and secret scanners as parser-backed gates (`npm audit`/`osv-scanner`, `gitleaks`) once T-020 lands
-- [ ] T-061: SQLite run history, comparison against the previous run and regression detection; feeds T-033 trend page
+- [x] T-061: SQLite run history (`node:sqlite`), `qualitygate history` with comparison against the previous run and regression detection; feeds T-033
 
 ### Trust and scale (QG-1008–1010)
 - [x] T-050: Review fixes: sticky comment trusts only bot-authored marker comments and tolerates unreadable metadata; `--write` requires `--head-repository` for `pr`, `status`, `comment` (template verifier covers all three); plugin names validated and real path kept inside `node_modules` before import
@@ -146,6 +146,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 ### 5. Testing the tool itself
 - [x] T-082: Self-test suite on 3–4 reference repositories (pnpm monorepo, Playwright, Maestro, Python) asserting that `setup` finds the expected gates
 - [x] T-083: Exit-code contract tests, one per code (0, 1, 2, 130 and the timeout code)
+- [ ] T-085: History follow-ups: schema versioning/migrations for `history.sqlite`, filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run, retention/pruning, and charts in the dashboard
 
 ### Suggested start
 T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic `report:` for eslint and junit. These are small changes in the `node` plugin and the runner, and they remove what made the trial result hard to trust.

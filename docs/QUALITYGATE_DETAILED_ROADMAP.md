@@ -1205,14 +1205,14 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1005` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1006 — Add SQLite history, comparisons, trends, and regression analysis — **OPEN** (T-061)
+### QG-1006 — Add SQLite history, comparisons, trends, and regression analysis — **PARTIAL** (T-061, T-033 done: SQLite store, `history`, `trends`, regression detection, HTML trends tables; schema migrations, history filters and charts are T-085)
 
 **Depends on:** `QG-1005`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Store run metadata in SQLite. 
-- [ ] Implement migration/versioning, history filters, baseline comparison and trend charts. 
+- [x] Store run metadata in SQLite. 
+- [ ] Implement migration/versioning, history filters, baseline comparison and trend charts (comparison with the previous run is done; the rest is T-085). 
 - [ ] Add focused automated tests for the new behavior and its primary failure case.
 - [ ] Document user-facing behavior, configuration and limitations where applicable.
 

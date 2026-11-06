@@ -2,6 +2,7 @@ import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { runResultSchema, type RunResult } from '../../protocol/src/index.js';
+import type { Trends } from '../../core/src/history.js';
 import { renderMarkdown } from './report.js';
 import { updateDescription, older } from './description.js';
 import { commentMarker, commentBody, reportUrlSchema, slackMessage, slackTarget, statusPayload, verdict } from './notify.js';
@@ -85,10 +86,10 @@ export async function publishDescription(input: unknown, reportPath: string, sig
   throw new Error('PR changed during publication; retry in a serialized publisher job');
 }
 /** Static HTML report plus the validated JSON, written locally; nothing is uploaded. */
-export async function exportReport(run: RunResult, outDir: string) {
+export async function exportReport(run: RunResult, outDir: string, trends?: Trends) {
   await mkdir(outDir, { recursive: true });
   const index = join(outDir, 'index.html');
-  await writeFile(index, renderHtml(run)); await writeFile(join(outDir, 'report.json'), JSON.stringify(run, null, 2) + '\n');
+  await writeFile(index, renderHtml(run, trends)); await writeFile(join(outDir, 'report.json'), JSON.stringify(run, null, 2) + '\n');
   return { index, report: join(outDir, 'report.json') };
 }
 

@@ -1,4 +1,5 @@
 import { runResultSchema, exitCode, coverageLine, type RunResult } from '../../protocol/src/index.js';
+import type { Trends } from '../../core/src/history.js';
 /** Run data and tool output are data: every value is escaped before it reaches the page. */
 export function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#39;');
@@ -15,8 +16,15 @@ function table(head: string[], rows: string[][]) {
   return `<div style="overflow-x:auto"><table><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 const cell = (value: string | number, cls = '') => `<td${cls ? ` class="${e(cls)}"` : ''}>${e(String(value))}</td>`;
+/** Recorded-run trends: runs and blocks per week, the most frequently failing gates and flaky gates. */
+function trendsHtml(trends: Trends): string {
+  const weeks = table(['Week starting', 'Runs', 'Blocked'], trends.weeks.map(w => [cell(w.week), cell(w.runs), cell(w.blocked, w.blocked ? 'BLOCK' : '')]));
+  const failing = trends.failingGates.length ? table(['Gate', 'Failures', 'Runs'], trends.failingGates.map(g => [cell(g.id), cell(g.failures, 'BLOCK'), cell(g.runs)])) : '<p>No failing gates.</p>';
+  const flaky = trends.flakyGates.length ? table(['Gate', 'PASS/BLOCK flips', 'Runs'], trends.flakyGates.map(g => [cell(g.id), cell(g.flips, 'warning'), cell(g.runs)])) : '<p>No flaky gates.</p>';
+  return `<h2>Trends (last ${trends.runs} recorded runs)</h2>${weeks}<h2>Most frequently failing gates</h2>${failing}<h2>Flaky gates</h2>${flaky}`;
+}
 /** One self-contained page: inline CSS, no scripts, no network resources. */
-export function renderHtml(input: RunResult): string {
+export function renderHtml(input: RunResult, trends?: Trends): string {
   const run = runResultSchema.parse(input);
   const title = run.execution === 'completed' ? run.decision : run.execution.toUpperCase();
   const steps = run.steps.length ? `<h2>Steps (${e(coverageLine(run))})</h2>${table(['Step', 'Kind', 'Status'],
@@ -38,6 +46,6 @@ export function renderHtml(input: RunResult): string {
 <title>QualityGate ${e(title)}</title><style>${css}</style></head><body><main>
 <h1>QualityGate: <span class="${run.decision}">${e(title)}</span></h1>
 <p>Run ${e(run.runId)} · finished ${e(run.finishedAt)} · decision ${run.decision}, execution ${run.execution}, exit ${exitCode(run)}</p>
-${steps}${gates}${audits}<h2>Findings (${run.findings.length})</h2>${findings}${details.length ? `<h2>Details</h2><ul>${details.join('')}</ul>` : ''}
+${steps}${gates}${audits}<h2>Findings (${run.findings.length})</h2>${findings}${details.length ? `<h2>Details</h2><ul>${details.join('')}</ul>` : ''}${trends ? trendsHtml(trends) : ''}
 <p><small>Static export. Output and evidence paths may contain sensitive project data.</small></p></main></body></html>\n`;
 }
