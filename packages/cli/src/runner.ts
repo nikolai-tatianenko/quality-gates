@@ -1,8 +1,9 @@
 import { readFile, realpath } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { parse } from 'yaml';
-import { configSchema, type Config, type RunResult } from '../../protocol/src/index.js';
+import { configSchema, message, type Config, type RunResult } from '../../protocol/src/index.js';
 import { runWith } from '../../core/src/index.js';
+import { recordRun, toHistoryRun } from '../../core/src/history.js';
 import { loadExternalPlugins } from '../../core/src/external.js';
 import type { GatePlugin } from '../../plugin-sdk/src/index.js';
 import { lighthousePlugin } from '../../plugins/lighthouse/src/index.js';
@@ -14,7 +15,7 @@ import { builtinParsers } from '../../plugins/parsers/src/index.js';
 import { builtinEcosystems } from '../../plugins/ecosystems/src/index.js';
 import { filesystemPlugin } from '../../plugins/storage-fs/src/index.js';
 import { jsonReporter } from '../../plugins/reporter-json/src/index.js';
-import { cachedGates, changedFiles, changedGateIds, saveCache } from './select.js';
+import { cachedGates, changedFiles, changedGateIds, inputHash, saveCache } from './select.js';
 /** Ids third-party plugins may not reuse. */
 export const builtinIds = [...Object.keys(builtinParsers), ...builtinEcosystems.map(plugin => plugin.id), 'command', 'eslint', 'sonarqube', 'review'];
 /** Parses the YAML config; outputDir and gate commands resolve relative to the config file. */
@@ -33,6 +34,14 @@ async function selectIds(config: Config, directory: string, only: string[] | und
   if (!changed) return only;
   const wanted = changedGateIds(config.gates, await changedFiles(directory));
   return only ? only.filter(id => wanted.includes(id)) : wanted;
+}
+/** Stores the finished run in the history database. It must never change the verdict or exit code, so a failure is only a warning. */
+async function remember(config: Config, directory: string, result: RunResult, known: Record<string, string>) {
+  try {
+    const hashes = { ...known };
+    for (const gate of config.gates) if (!(gate.id in hashes)) { const hash = await inputHash(directory, gate); if (hash) hashes[gate.id] = hash; }
+    await recordRun(config.outputDir, toHistoryRun(result, hashes));
+  } catch (error) { process.stderr.write(`QualityGate: warning: run history not saved (${message(error)})\n`); }
 }
 /** Executes every gate (or only `only`) from the config with the built-in plugins. */
 export async function execute(configPath: string, signal: AbortSignal, only?: string[], flags: ExecuteFlags = {}): Promise<RunResult> {
@@ -53,5 +62,6 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
   }, { signal, only: ids, cached });
   if (flags.cache) await saveCache(config.outputDir, hashes, result);
+  await remember(config, directory, result, hashes);
   return result;
 }

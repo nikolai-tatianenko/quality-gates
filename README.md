@@ -369,6 +369,32 @@ when a changed file matches; gates without `inputs` always run) and `--cache` (a
 last passed is reported as `cached`). The terminal shows one line per gate with the path to its log; npm and pnpm
 warnings stay in the log.
 
+### Run history and trends
+
+Every `run` (CLI, dashboard and MCP) also appends the finished run to a local SQLite database,
+`<outputDir>/history.sqlite` (default `.qualitygate/history.sqlite`), through Node's built-in `node:sqlite`
+(no dependency; Node 22 prints an "experimental" warning for it, which QualityGate suppresses). Each run stores its id,
+times, decision, execution, duration and, per gate, the status, duration and, for gates that declare `inputs`, the hash of
+their input files. Nothing is uploaded and old runs are not pruned; delete the file to start over.
+
+```sh
+qualitygate history [--limit 10] [--json]   # recent runs: id, time, decision, duration, gate counts, then a comparison
+qualitygate trends  [--limit 50] [--json]   # blocks per week, most frequently failing gates, flaky gates
+```
+
+`history` compares the newest run with the one before it: a **regression** is a gate that passed before and blocks now
+(`failed`, `timeout` or `error`), a **new failure** is any gate that blocks now and did not block before (a new gate
+included), **fixed** gates blocked before and pass now, and **newly slow** gates took at least twice as long and at least
+one second longer. Skipped and interrupted gates are not compared. Both commands exit `0` even when they report a
+regression; they never gate anything. A **flaky** gate flips between PASS and BLOCK at least twice within the last `--limit`
+runs without a change of its inputs hash (when no hash exists, because the gate declares no `inputs`, a flip cannot be
+explained and counts). `qualitygate export` adds the same trends to the static HTML report when history exists (last 50 runs).
+
+History never changes a verdict: if the database cannot be written, `run` prints `warning: run history not saved (...)` to
+stderr and keeps its result and exit code. A corrupt database does not break `run`; `history` and `trends` report it as an
+error (exit `2`) and `export` omits the trends with a warning. History is a local file, so it only reflects runs made on
+this machine and is not shared between CI jobs.
+
 ## How it fits alongside existing tools
 
 | Tool | Main role |
@@ -423,7 +449,7 @@ provider, OS or deployment has been tested.
 | Agents | Recorded Claude Code demo; generated configs and model adapters have contract tests |
 | Still unverified | Live Cursor/Codex sessions, live Ollama/vLLM inference, live SonarQube and all provider deployments |
 | Real-project trial | One pnpm monorepo with Node, Vitest and Playwright: setup found its gates, parallel runs, timeout exit code `3` and the step registry worked; truncated `node --test` reports in long runs are still being investigated |
-| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, run history and trends, plugin isolation and signing, Tauri desktop and Chrome extension clients |
+| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, a history UI in the dashboard, plugin isolation and signing, Tauri desktop and Chrome extension clients |
 
 The repository checks itself with the same gate configuration. Runtime coverage
 includes the CLI, core, plugins, services, adapters and dashboard TS/TSX; the only

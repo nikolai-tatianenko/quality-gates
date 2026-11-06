@@ -42,7 +42,7 @@ test('MCP rejects overlapping runs while keeping read tools available', async ()
     assert.equal(second.isError, true); assert.match(JSON.stringify(second.content), /already active/);
     controller.abort(); await rejected;
     const result = await saved(dir); assert.equal(result.gates.length, 1);
-    assert.equal((await readdir(join(dir, 'out'))).length, 1);
+    assert.equal((await readdir(join(dir, 'out'))).filter(name => name !== 'history.sqlite').length, 1, 'one run directory (the history database sits beside it)');
   } finally { controller.abort(); await client.close(); await rm(dir, { recursive: true, force: true }); }
 });
 test('MCP cancellation stops an active child process and preserves an interrupted report', async () => {

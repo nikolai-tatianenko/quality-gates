@@ -14,6 +14,8 @@ import { execute, loadConfig } from './runner.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
 import { setupProject } from './setup.js';
+import { historyCommand, trendsCommand } from './history.js';
+import { readTrends } from '../../core/src/history.js';
 import { readReport, renderMarkdown, renderSarif, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
 const args = process.argv.slice(2);
 const json = args.includes('--json');
@@ -30,7 +32,7 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
@@ -49,7 +51,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], sources: ['--config'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'],
     report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -70,6 +72,8 @@ try {
       + '       qualitygate setup [--config <path>] [--from <gates.json|gates.mjs>] [--plugin <package>...] [--no-gitignore] [--json]\n'
       + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
+      + '       qualitygate history [--limit <n>] [--config <path>] [--json]\n'
+      + '       qualitygate trends [--limit <n>] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
       + '       qualitygate report --input <run.json> [--output <report.md|report.sarif>] [--sarif] [--json]\n'
       + '         (--json prints a JSON object instead of the report: {output} with --output, otherwise {markdown}, or {sarif} with --sarif)\n'
@@ -99,6 +103,10 @@ try {
       ...(result.gitignore.length ? [`Added to .gitignore: ${result.gitignore.join(' ')}`] : []),
       `Files changed: ${result.changed.join(', ')}`,
       'Check that the test script exits (not watch mode), then run: qualitygate run'].join('\n'));
+  } else if (command === 'history' || command === 'trends') {
+    if (positional.length) throw new Error(`${command} does not accept positional arguments`);
+    const limit = z.coerce.number().int().min(1).max(1000).parse(values.get('--limit') ?? (command === 'history' ? 10 : 50));
+    console.log(await (command === 'history' ? historyCommand : trendsCommand)(configPath, limit, json));
   } else if (command === 'run' || command === 'inspect') {
     if ((command === 'run' && positional.length) || positional.length > 1) throw new Error(`${command}: unexpected arguments`);
     const result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache }) : await getRun(configPath, positional[0]);
@@ -138,7 +146,9 @@ try {
     if (positional.length) throw new Error('export does not accept positional arguments');
     const out = z.string().min(1).parse(values.get('--out'));
     const input = values.get('--input');
-    const result = await exportReport(input ? await readReport(input) : await getRun(configPath), resolve(out));
+    const outputDir = await loadConfig(configPath).then(loaded => loaded.config.outputDir, () => undefined);
+    const history = outputDir && await readTrends(outputDir, 50, text => console.error(`QualityGate: warning: ${text}`));
+    const result = await exportReport(input ? await readReport(input) : await getRun(configPath), resolve(out), history || undefined);
     console.log(json ? JSON.stringify({ schemaVersion: 1, ...result }) : `Exported ${result.index}`);
   } else if (command === 'sources') {
     const [action, id, file] = positional;

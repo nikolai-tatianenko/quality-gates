@@ -32,6 +32,9 @@ flowchart TD
 - **plugins:** trusted tool execution, report parsing and durable evidence.
 - **review-sources:** inert Git downloads, explicit updates and frozen restore;
   pinned methodology reads for MCP. Review execution remains a configured producer.
+- **history:** `core/src/history.ts` appends each finished run to `<outputDir>/history.sqlite`
+  (`node:sqlite`) and derives comparisons and trends; the CLI `history`/`trends` commands and the exported HTML
+  report read it. A write failure is a stderr warning and never changes the verdict or exit code.
 - **ci:** bounded Markdown rendering, manual/automatic description sections and
   explicit provider writes. Publication is separate from gates and MCP.
 - **service:** shared list/run/inspect behavior; one active mutation per instance,
