@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { configSchema, message, runResultSchema, type Config, type RunResult } from '../../protocol/src/index.js';
+import { configSchema, message, runResultSchema, type Config, type GateResult, type RunResult } from '../../protocol/src/index.js';
 import type { AuditPlugin, GatePlugin, Plugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
 import { executeGate, executeAudit, executionStatus, saveReport, buildSteps } from './execution.js';
 import { scheduleGates, cachedGate } from './schedule.js';
@@ -32,7 +32,15 @@ function selectPlugins(config: Config, plugins: RunPlugins, only?: string[]) {
     gate: gateSpecs.length ? registry.get(plugins.gate?.id ?? 'gate', 'gate') : undefined,
     storage: registry.get(plugins.storage.id, 'storage'), reporter: registry.get(plugins.reporter.id, 'reporter') };
 }
+/** What a run reports while it works, for the live terminal view. `plan` comes first; every gate then ends exactly once. */
+export type ProgressEvent =
+  | { kind: 'plan'; ids: string[] }
+  | { kind: 'start'; id: string }
+  | { kind: 'log'; id: string; line: string }
+  | { kind: 'end'; gate: GateResult };
 export interface RunOptions {
+  /** Called synchronously for each progress event; display only, it cannot change the result. */
+  onProgress?: (event: ProgressEvent) => void;
   signal?: AbortSignal;
   /** Run only these gate IDs; URL audits are skipped. */
   only?: string[];
@@ -59,8 +67,15 @@ export async function runWith(configInput: Config, plugins: RunPlugins, options:
   catch (error) { result.errors.push(`Storage initialization: ${message(error)}`); }
   const environment = { signal, storage: selected.storage, directory };
   const cached = options.cached ?? {};
-  const gateResults = await scheduleGates(selected.gateSpecs, config.concurrency, async (spec, index) =>
-    spec.id in cached ? cachedGate(spec, cached[spec.id]!) : executeGate(spec, index, environment, selected.gate!));
+  const report = options.onProgress ?? (() => undefined);
+  const ended = (gate: GateResult) => { report({ kind: 'end', gate }); return gate; };
+  report({ kind: 'plan', ids: selected.gateSpecs.map(spec => spec.id) });
+  const gateResults = await scheduleGates(selected.gateSpecs, config.concurrency, async (spec, index) => {
+    if (spec.id in cached) return ended(cachedGate(spec, cached[spec.id]!));
+    report({ kind: 'start', id: spec.id });
+    const log = (line: string) => report({ kind: 'log', id: spec.id, line });
+    return ended(await executeGate(spec, index, { ...environment, log }, selected.gate!));
+  }, ended);
   for (const item of gateResults) { result.gates.push(item); result.findings.push(...item.findings); }
   for (const [index, url] of selected.urls.entries()) {
     const item = await executeAudit(url, index, environment, selected.audit!);

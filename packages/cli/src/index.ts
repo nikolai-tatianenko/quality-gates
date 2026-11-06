@@ -13,6 +13,7 @@ import { connectTools } from '../../model-client/src/mcp-host.js';
 import { execute, loadConfig } from './runner.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
+import { liveView, liveEnabled } from './live.js';
 import { setupProject } from './setup.js';
 import { historyCommand, trendsCommand } from './history.js';
 import { readTrends } from '../../core/src/history.js';
@@ -23,6 +24,7 @@ const write = args.includes('--write');
 const changed = args.includes('--changed');
 const cache = args.includes('--cache');
 const noGitignore = args.includes('--no-gitignore');
+const noLive = args.includes('--no-live');
 const sarif = args.includes('--sarif');
 const controller = new AbortController();
 const interrupt = () => controller.abort();
@@ -36,7 +38,7 @@ try {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
-    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif') continue;
+    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
     if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin') {
       const value = args[++i];
@@ -62,6 +64,7 @@ try {
     for (const key of values.keys()) if (!validFlags[command]!.includes(key)) throw new Error(`${command} does not accept ${key}`);
     if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate or --only`);
     if ((changed || cache) && command !== 'run') throw new Error(`${command} does not accept --changed or --cache`);
+    if (noLive && command !== 'run') throw new Error(`${command} does not accept --no-live`);
     if (noGitignore && command !== 'setup') throw new Error(`${command} does not accept --no-gitignore`);
     if (sarif && command !== 'report') throw new Error(`${command} does not accept --sarif`);
     if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
@@ -70,7 +73,7 @@ try {
   if (help || args.length === 0) {
     const help = 'Usage: qualitygate init [URL...] [--config <path>] [--json]\n'
       + '       qualitygate setup [--config <path>] [--from <gates.json|gates.mjs>] [--plugin <package>...] [--no-gitignore] [--json]\n'
-      + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--json]\n'
+      + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--no-live] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate history [--limit <n>] [--config <path>] [--json]\n'
       + '       qualitygate trends [--limit <n>] [--config <path>] [--json]\n'
@@ -109,7 +112,12 @@ try {
     console.log(await (command === 'history' ? historyCommand : trendsCommand)(configPath, limit, json));
   } else if (command === 'run' || command === 'inspect') {
     if ((command === 'run' && positional.length) || positional.length > 1) throw new Error(`${command}: unexpected arguments`);
-    const result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache }) : await getRun(configPath, positional[0]);
+    const view = command === 'run' && liveEnabled(process.stdout, process.env, { noLive, json }) ? liveView(process.stdout) : undefined;
+    let result;
+    try {
+      result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache, onProgress: view?.onProgress }) : await getRun(configPath, positional[0]);
+      view?.stop(result);
+    } finally { view?.stop(); }
     if (json) process.stdout.write(jsonReporter.render(result));
     else {
       if (command === 'run') console.log(`Project root: ${dirname(resolve(configPath))}`);
