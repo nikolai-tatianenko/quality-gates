@@ -148,6 +148,7 @@ outputDir: .qualitygate
 A command gate can also read a test report into findings (file, line, message) and keep files
 such as screenshots and traces as run evidence. The exit code still decides PASS/BLOCK; a report
 never turns a non-zero exit into PASS. Formats: `junit`, `nunit`, `playwright-json`, `eslint-json`,
+`axe-json`,
 `unity-log`:
 
 ```yaml

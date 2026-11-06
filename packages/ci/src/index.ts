@@ -6,7 +6,8 @@ import { renderMarkdown } from './report.js';
 import { updateDescription, older } from './description.js';
 import { commentMarker, commentBody, reportUrlSchema, slackMessage, slackTarget, statusPayload, verdict } from './notify.js';
 import { renderHtml } from './html.js';
-export { renderMarkdown, updateDescription, renderHtml };
+import { renderSarif } from './sarif.js';
+export { renderMarkdown, renderSarif, updateDescription, renderHtml };
 export const forgeOptionsSchema = z.object({
   provider: z.enum(['github', 'gitlab', 'bitbucket']), repository: z.string().regex(/^[A-Za-z0-9_.-]+(?:\/[A-Za-z0-9_.-]+)*$/).refine(value => value.split('/').every(part => part !== '.' && part !== '..')),
   number: z.coerce.number().int().positive(), head: z.string().regex(/^(?:[a-f0-9]{40}|[a-f0-9]{64})$/),

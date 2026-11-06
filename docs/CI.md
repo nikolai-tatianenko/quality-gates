@@ -77,6 +77,17 @@ quality metrics passed. Markdown summaries are bounded (60 KB locally, 16 KB in 
 PR); the complete JSON and raw evidence remain in CI artifacts. Tool-provided text
 is escaped to prevent marker/HTML injection and literal mentions.
 
+## SARIF for GitHub code scanning
+
+```sh
+pnpm exec qualitygate report --input result.json --sarif --output qualitygate.sarif
+```
+
+`--sarif` renders the run's findings as SARIF 2.1.0 (rule id or gate id as `ruleId`, `error`/`warning`/`note`
+levels, a location when the finding has a file, with the region when it has a line) instead of Markdown. Upload it with
+`github/codeql-action/upload-sarif`. Findings without a file, such as accessibility violations that
+only have a selector, carry no location; code scanning may not display those, so keep the Markdown report too.
+
 ## Preview and update a description
 
 ```sh

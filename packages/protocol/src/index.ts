@@ -120,6 +120,8 @@ export const findingSchema = z.object({
   message: z.string().min(1), file: z.string().optional(),
   line: z.number().int().positive().optional(), column: z.number().int().positive().optional(),
   ruleId: z.string().optional(), evidencePath: z.string().optional(),
+  /** Documentation for the rule, when the tool provides one (axe-core `helpUrl`). */
+  helpUrl: z.string().url().optional(),
 }).strict();
 /** Test counts a report parser could read; on a timeout they show how far the run got. */
 export const countsSchema = z.object({ passed: z.number().int().min(0), failed: z.number().int().min(0), skipped: z.number().int().min(0) }).strict();
