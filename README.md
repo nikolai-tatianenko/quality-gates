@@ -170,8 +170,8 @@ gates:
 
 Or let QualityGate write that file. `setup` asks every built-in ecosystem plugin what it finds and
 merges the proposals: **node** (`lint`, `typecheck` / `type-check`, `test:ci` / `test` scripts, with
-pnpm/yarn/npm from `packageManager` or the lockfile), **python** (`ruff check .`,
-`pytest --junitxml`, `mypy .` when the project mentions it), **unity** (`unity-compile` and
+pnpm/yarn/npm from `packageManager` or the lockfile; `tsc --noEmit` for a TypeScript project without a typecheck script), **python** (`ruff check .`,
+`pytest --junitxml`, `mypy .` when the project mentions it), **php** (from `composer.json`: Pint, PHP-CS-Fixer or PHPCS; PHPStan or Psalm; PHPUnit or Pest with a JUnit report; Composer scripts as a fallback; `composer audit` listed but not enabled), **unity** (`unity-compile` and
 `unity-tests` through Unity batch mode; macOS Hub path, `UNITY` overrides the editor), **playwright**
 (JSON report plus screenshots, videos and traces as evidence) and **maestro**
 (`maestro test --format junit`). When two ecosystems propose the same gate id, both are prefixed
