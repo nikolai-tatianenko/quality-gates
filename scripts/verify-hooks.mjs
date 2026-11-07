@@ -8,6 +8,8 @@ const exec = promisify(execFile); const root = resolve('.');
 const directory = await mkdtemp(join(tmpdir(), 'qualitygate-husky-'));
 const env = { ...Object.fromEntries(Object.entries(process.env).filter(([key]) => !key.startsWith('GIT_'))),
   HUSKY: '1', XDG_CONFIG_HOME: join(directory, '.config'), GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1' };
+// Gates run in parallel, so the order they append to executed.txt is not defined.
+const executed = async () => (await readFile(join(directory, 'executed.txt'), 'utf8')).split('\n').filter(Boolean).sort();
 const command = (file, args) => exec(file, args, { cwd: directory, env, timeout: 120000, maxBuffer: 2_000_000 });
 const originalHooks = await exec('git', ['config', '--local', '--get', 'core.hooksPath'], { cwd: root }).then(result => result.stdout).catch(() => '');
 try {
@@ -27,13 +29,13 @@ try {
   await writeFile(join(directory, 'README.md'), 'Husky fixture\n'); await command('git', ['add', 'README.md']);
   await writeFile(join(directory, 'blocked'), '1');
   await assert.rejects(command('git', ['commit', '-m', 'must be blocked']), error => error.code === 1);
-  assert.equal(await readFile(join(directory, 'executed.txt'), 'utf8'), 'lint\ntypecheck\n', 'Fast hook skips the tests gate');
+  assert.deepEqual(await executed(), ['lint', 'typecheck'], 'Fast hook skips the tests gate');
   await rm(join(directory, 'blocked')); await command('git', ['commit', '-m', 'passes the hook']);
   assert.equal((await command('git', ['rev-list', '--count', 'HEAD'])).stdout.trim(), '1');
   const remote = join(directory, 'local-remote.git'); await command('git', ['init', '--bare', remote]);
   await writeFile(join(directory, 'executed.txt'), '');
   await command('git', ['push', '--dry-run', remote, 'HEAD:refs/heads/main']);
-  assert.equal(await readFile(join(directory, 'executed.txt'), 'utf8'), 'lint\ntypecheck\ntests\n');
+  assert.deepEqual(await executed(), ['lint', 'tests', 'typecheck']);
   await writeFile(join(directory, 'blocked'), '1');
   await assert.rejects(command('git', ['push', '--dry-run', remote, 'HEAD:refs/heads/main']), error => error.code === 1);
   await assert.rejects(command('git', ['--git-dir', remote, 'rev-parse', '--verify', 'refs/heads/main']), 'Dry-run must not create a remote branch');
