@@ -31,7 +31,7 @@ async function chromeChildren(pid: number): Promise<number[]> {
     return row && Number(row[2]) === pid && /--remote-debugging-port/.test(row[3]!) ? [Number(row[1])] : [];
   });
 }
-async function audit(name: string, urls: string[], patch = {}, options: { env?: Record<string, string>; interrupt?: boolean; text?: boolean } = {}) {
+async function audit(name: string, urls: string[], patch = {}, options: { env?: Record<string, string>; interrupt?: boolean; text?: boolean; stderr?: RegExp } = {}) {
   const path = join(directory, `${name}.yml`);
   const config = configSchema.parse({ schemaVersion: 1, urls, thresholds, outputDir: name,
     chrome: { noSandbox: process.env.QUALITYGATE_CHROME_NO_SANDBOX === '1' }, ...patch });
@@ -95,7 +95,7 @@ async function audit(name: string, urls: string[], patch = {}, options: { env?: 
     }
   }
   if (samplingError) throw samplingError;
-  assert.equal(stderr, '', `${name} stderr`);
+  if (options.stderr) assert.match(stderr, options.stderr, `${name} stderr`); else assert.equal(stderr, '', `${name} stderr`);
   if (options.text) return { code, text: stdout, result: undefined };
   let result: RunResult;
   try { result = runResultSchema.parse(JSON.parse(stdout)); }
@@ -125,7 +125,7 @@ try {
   const interrupted = await audit('interrupt', [`${url}/hang`, url], {}, { interrupt: true });
   assert.equal(interrupted.code, 130); assert.equal(interrupted.result!.results[1]!.execution, 'skipped');
   const occupied = join(directory, 'occupied'); await writeFile(occupied, 'not a directory');
-  const writeFailure = await audit('write-error', [url], { outputDir: occupied });
+  const writeFailure = await audit('write-error', [url], { outputDir: occupied }, { stderr: /run history not saved/ });
   assert.equal(writeFailure.code, 2); assert.match(writeFailure.result!.errors.join(), /Storage initialization/);
   assert.equal(writeFailure.result!.results[0]!.execution, 'completed');
   const plain = await audit('plain', [url], {}, { text: true, env: { CHROME_PATH: '/qualitygate-no-such-chrome' } });
