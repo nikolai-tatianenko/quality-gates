@@ -1163,31 +1163,31 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-1002` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1003 — Add accessibility plugin (axe-core) and SARIF reporting — **OPEN** (T-059)
+### QG-1003 — Add accessibility plugin (axe-core) and SARIF reporting — **DONE** (T-059)
 
 **Depends on:** `QG-1002`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Add axe-core browser audit plugin. 
-- [ ] Normalize WCAG findings. 
-- [ ] Export SARIF with stable rule IDs. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Add axe-core browser audit plugin. 
+- [x] Normalize WCAG findings. 
+- [x] Export SARIF with stable rule IDs. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-1003` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-1004 — Add security/dependency scanner adapters — **OPEN** (T-060)
+### QG-1004 — Add security/dependency scanner adapters — **DONE** (T-060)
 
 **Depends on:** `QG-1003`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Implement adapters for dependency scanners. 
-- [ ] Normalize CVE/severity. 
-- [ ] Document false positives and update cadence. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Implement adapters for dependency scanners. 
+- [x] Normalize CVE/severity. 
+- [x] Document false positives and update cadence. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-1004` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 

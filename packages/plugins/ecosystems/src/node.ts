@@ -21,7 +21,7 @@ const TEST_FILE = /\.(test|spec)\.[cm]?[jt]sx?$/;
 const PLAIN_COMMAND = /^[^&|;<>$`()]+$/;
 
 type Scripts = Record<string, string>;
-interface Manifest { scripts?: Scripts; packageManager?: unknown; workspaces?: unknown }
+interface Manifest { scripts?: Scripts; packageManager?: unknown; workspaces?: unknown; dependencies?: Record<string, string>; devDependencies?: Record<string, string> }
 
 /** Why a `test:*` script is listed but not enabled, from its name. */
 export function skipReason(name: string): string {
@@ -152,6 +152,9 @@ export const node: EcosystemPlugin = { id: 'node', apiVersion: 1, kind: 'ecosyst
   const layout: Layout = { scripts: manifest.scripts ?? {}, manager, inWorkspace: await workspaceScripts(directory, manifest) };
   const gates = proposeWanted(layout);
   if (!gates.some(gate => gate.id === 'tests')) gates.push(...await proposeVitest(directory, layout));
+  // A TypeScript project without a typecheck script still gets one.
+  if (!gates.some(gate => gate.id === 'typecheck') && 'typescript' in { ...manifest.dependencies, ...manifest.devDependencies } && await exists(join(directory, 'tsconfig.json')))
+    gates.push({ id: 'typecheck', run: `${execPrefix(manager)} tsc --noEmit` });
   const all = [...await warnLargeRun(directory, gates), ...proposeExtras(layout, gates)];
   return all.length ? [...all, ...await proposeAudit(directory, manager)] : null;
 } };

@@ -8,6 +8,7 @@ import type { DetectedGate } from '../packages/protocol/src/index.js';
 import { builtinEcosystems } from '../packages/plugins/ecosystems/src/index.js';
 import { node } from '../packages/plugins/ecosystems/src/node.js';
 import { python } from '../packages/plugins/ecosystems/src/python.js';
+import { php } from '../packages/plugins/ecosystems/src/php.js';
 import { playwright } from '../packages/plugins/ecosystems/src/playwright.js';
 import { maestro } from '../packages/plugins/ecosystems/src/maestro.js';
 import { execPrefix } from '../packages/plugins/ecosystems/src/shared.js';
@@ -27,7 +28,7 @@ async function detect(plugin: { detect(dir: string): Promise<DetectedGate[] | nu
 }
 
 test('built-in ecosystems are registered in setup order', () => {
-  assert.deepEqual(builtinEcosystems.map(plugin => plugin.id), ['node', 'python', 'unity', 'playwright', 'maestro']);
+  assert.deepEqual(builtinEcosystems.map(plugin => plugin.id), ['node', 'python', 'php', 'unity', 'playwright', 'maestro']);
   assert.ok(builtinEcosystems.every(plugin => plugin.kind === 'ecosystem' && plugin.apiVersion === 1));
 });
 
@@ -104,4 +105,36 @@ test('node proposes a dependency audit for the lockfile it finds, never enabled'
   assert.match(yarn!.find(gate => gate.id === 'audit')!.run, /-L yarn\.lock >/);
   assert.equal((await detect(node, { 'package.json': manifest }))!.some(gate => gate.id === 'audit'), false);
   assert.equal(await detect(node, { 'package.json': '{}', 'package-lock.json': '{}' }), null);
+});
+
+const audit = { id: 'audit', run: 'composer audit', skip: 'dependency audit needs the network and blocks on any known advisory: enable it if it should block' };
+const phpunit = { id: 'tests', run: 'mkdir -p .qualitygate/php && vendor/bin/phpunit --log-junit .qualitygate/php/junit.xml', timeoutMs: 300000,
+  report: { format: 'junit', path: '.qualitygate/php/junit.xml' } };
+
+test('php proposes style, static analysis and a junit test run from the installed packages', async () => {
+  const composer = (dev: Record<string, string>, scripts = {}) => ({ 'composer.json': JSON.stringify({ 'require-dev': dev, scripts }), 'vendor/autoload.php': '' });
+  assert.deepEqual(await detect(php, composer({ 'laravel/pint': '1', 'phpstan/phpstan': '1', 'phpunit/phpunit': '10' })),
+    [{ id: 'lint', run: 'vendor/bin/pint --test' }, { id: 'typecheck', run: 'vendor/bin/phpstan analyse --no-progress' }, phpunit, audit]);
+  const others = await detect(php, composer({ 'friendsofphp/php-cs-fixer': '3', 'vimeo/psalm': '5', 'pestphp/pest': '2' }));
+  assert.deepEqual(others!.map(gate => gate.run), ['vendor/bin/php-cs-fixer fix --dry-run --diff', 'vendor/bin/psalm --no-progress',
+    'mkdir -p .qualitygate/php && vendor/bin/pest --log-junit .qualitygate/php/junit.xml', 'composer audit']);
+  assert.equal((await detect(php, composer({ 'squizlabs/php_codesniffer': '3' })))![0]!.run, 'vendor/bin/phpcs');
+  assert.deepEqual(await detect(php, composer({}, { lint: 'x', analyse: 'x', test: 'x' })),
+    [{ id: 'lint', run: 'composer run lint' }, { id: 'typecheck', run: 'composer run analyse' }, { id: 'tests', run: 'composer run test', timeoutMs: 300000 }, audit]);
+});
+
+test('php explains a missing vendor folder and ignores projects with nothing to run', async () => {
+  const gates = await detect(php, { 'composer.json': JSON.stringify({ 'require-dev': { 'phpunit/phpunit': '10' } }) });
+  assert.match(gates![0]!.note!, /composer install/);
+  assert.equal(await detect(php, { 'composer.json': JSON.stringify({ name: 'x/y' }) }), null);
+  assert.equal(await detect(php, { 'package.json': '{}' }), null);
+});
+
+test('node adds tsc --noEmit for a TypeScript project without a typecheck script', async () => {
+  const pkg = (extra: object) => JSON.stringify({ scripts: { lint: 'x' }, devDependencies: { typescript: '5' }, ...extra });
+  const gates = await detect(node, { 'package.json': pkg({}), 'tsconfig.json': '{}', 'pnpm-lock.yaml': '' });
+  assert.deepEqual(gates!.find(gate => gate.id === 'typecheck'), { id: 'typecheck', run: 'pnpm exec tsc --noEmit' });
+  assert.equal((await detect(node, { 'package.json': pkg({}) }))!.some(gate => gate.id === 'typecheck'), false);
+  const scripted = await detect(node, { 'package.json': pkg({ scripts: { typecheck: 'tsc' } }), 'tsconfig.json': '{}' });
+  assert.equal(scripted!.find(gate => gate.id === 'typecheck')!.run, 'npm run typecheck');
 });
