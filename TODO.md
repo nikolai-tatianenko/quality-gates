@@ -99,7 +99,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 
 ### CLI (QG-401, QG-402)
 - [ ] T-057: Add `qualitygate list` (gates and last result) and `qualitygate doctor` (Node, Chrome, tools on PATH, config validity); `inspect` already exists
-- [x] T-058: Live progress view for interactive terminals (gate statuses, last log line per running gate, summary); non-TTY, CI and `--json` output unchanged. Built with plain ANSI codes, not React Ink (Ink 8 needs React >= 19.3 and brings about 20 runtime packages; the repo pins React 19.2 for dev only)
+- [x] T-058: Live progress view for interactive terminals (gate statuses, last log line per running gate, summary); non-TTY, CI and `--json` output unchanged. `run` uses plain ANSI codes; the interactive `qualitygate ui` (Ink 7.1.1 on React 19.2.0, own workspace package, bundled into `dist/qualitygate-ui.mjs`) runs and fixes gates with the same runner. Gates may declare `fix`; `qualitygate fix` re-runs them and prints before/after
 
 ### Gate depth (QG-1003–1006)
 - [x] T-059: axe-core report parser (findings normalised to the shared `Finding` schema, no accessibility preset or built-in browser audit) and SARIF export for GitHub code scanning
