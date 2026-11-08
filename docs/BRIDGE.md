@@ -1,9 +1,10 @@
 # Local bridge (QG-802 / QG-903)
 
 `qualitygate bridge` starts an authenticated HTTP API on `127.0.0.1` so a client other than the terminal can list the
-gates a project approved, run some of them, follow the run and read its results. It exists for the planned Chrome
-extension (T-066) and Tauri desktop shell (T-065) and works for any local client that can send an `Origin` header. Those
-clients are **not built yet**; only the bridge is. Nothing here has been tested against a real extension, a Tauri
+gates a project approved, run some of them, follow the run and read its results. It exists for the Chrome
+extension ([CHROME_EXTENSION.md](CHROME_EXTENSION.md), T-066) and the planned Tauri desktop shell (T-065) and works for
+any local client that can send an `Origin` header. The extension is built and was exercised against this bridge in real
+Chrome (`pnpm smoke:extension`); the Tauri shell is **not built**, and nothing here has been tested against a Tauri
 webview or the Chrome Web Store.
 
 It reuses `QualityGateService`, the same runner the MCP server and the dashboard use, so a run started through the
@@ -93,9 +94,9 @@ an arbitrary page would distort trends.
 
 ## Limits of this work
 
-- Only the server side exists. The extension (QG-901/902/904-906) and the Tauri shell (QG-801/803-805) do not.
+- The Chrome extension exists (QG-901/902/904-906, partly; see CHROME_EXTENSION.md). The Tauri shell (QG-801/803-805) does not.
 - A scan opens the page with the local Chrome through the configured Lighthouse gate, from the user's machine and
-  network; it can reach any host that machine can reach. The extension must show the URL and ask for consent first (QG-902).
+  network; it can reach any host that machine can reach. The extension shows the URL and asks for consent first (QG-902); other clients must do the same.
 - Plain HTTP on loopback; any other local program of the same user can try to connect, but needs a valid Origin and a token
   that only an origin that paired holds. The bridge does not defend against malware running as the same user, who can read
   the project directory anyway.
