@@ -1,4 +1,4 @@
-import { mkdir, cp, writeFile, readFile } from 'node:fs/promises';
+import { mkdir, cp, writeFile, readFile, rm } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { spawn } from 'node:child_process';
 import assert from 'node:assert/strict';
@@ -6,6 +6,8 @@ import puppeteer from 'puppeteer-core';
 import { getChromePath } from 'chrome-launcher';
 
 const directory = resolve('.qualitygate/dashboard-smoke');
+// Start without history: the charts depend on it, and an old local run would make this pass where a clean CI checkout fails.
+await rm(join(directory, 'runs'), { recursive: true, force: true });
 await mkdir(directory, { recursive: true });
 for (const file of ['calculator.py', 'test_calculator.py']) await cp(`examples/python-project/${file}`, join(directory, file));
 const source = await readFile(join(directory, 'calculator.py'), 'utf8');
@@ -34,7 +36,9 @@ async function verifyContrast(page) {
       const linear = rgb.map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
       return linear[0] * .2126 + linear[1] * .7152 + linear[2] * .0722;
     };
-    return ['.muted', '.metrics small', '.run-checks', '.theme-switcher button[aria-pressed="true"]', '.pill', 'footer', '.lead-decision small', '.changes dt', '.risks small', '.section-description'].map(selector => {
+    // `.changes` and `.risks` only exist once a second run or a blocking gate gives them something to say.
+    const optional = new Set(['.changes dt', '.risks small']);
+    return ['.muted', '.metrics small', '.run-checks', '.theme-switcher button[aria-pressed="true"]', '.pill', 'footer', '.lead-decision small', '.changes dt', '.risks small', '.section-description'].filter(selector => !optional.has(selector) || document.querySelector(selector)).map(selector => {
       const element = document.querySelector(selector); let surface = element;
       while (getComputedStyle(surface).backgroundColor === 'rgba(0, 0, 0, 0)') surface = surface.parentElement;
       const foreground = luminance(getComputedStyle(element).color); const background = luminance(getComputedStyle(surface).backgroundColor);
@@ -44,10 +48,11 @@ async function verifyContrast(page) {
   for (const { selector, ratio } of results) assert.ok(ratio >= 4.5, `${selector}: text contrast ${ratio.toFixed(2)} is below 4.5`);
 }
 /** Team view: lead summary, charts, history, engineer view with file:line and reproduce command, keyboard copy and Markdown export. */
-async function verifyTeamView(page, decision) {
+/** `charts` is how many are drawn: time to green only gets a chart once a BLOCK has recovered to PASS. */
+async function verifyTeamView(page, decision, charts) {
   // The summary and the charts come from one response but are not painted in the same frame on a slow runner.
-  await page.waitForFunction(expected => document.querySelector('[data-test-id="lead-decision"]')?.textContent.includes(expected)
-    && document.querySelectorAll('svg[role="img"]').length >= 3, { timeout: 30000 }, decision);
+  await page.waitForFunction((expected, expectedCharts) => document.querySelector('[data-test-id="lead-decision"]')?.textContent.includes(expected)
+    && document.querySelectorAll('svg[role="img"]').length === expectedCharts, { timeout: 30000 }, decision, charts);
   const view = await page.evaluate(() => ({
     charts: [...document.querySelectorAll('svg[role="img"]')].map(svg => svg.querySelector('title')?.textContent ?? ''),
     rows: document.querySelectorAll('[data-test-id="history-table"] tbody tr').length,
@@ -56,7 +61,8 @@ async function verifyTeamView(page, decision) {
     markdown: document.querySelector('[data-test-id="markdown-preview"]')?.value ?? '',
     gatesWithSecretOutput: document.body.innerText.includes('outputTail'),
   }));
-  assert.ok(view.charts.length >= 3 && view.charts.every(title => title.length > 10), `charts have accessible names: ${JSON.stringify(view.charts)}`);
+  assert.equal(view.charts.length, charts, `${charts} charts are drawn: ${JSON.stringify(view.charts)}`);
+  assert.ok(view.charts.every(title => title.length > 10), `charts have accessible names: ${JSON.stringify(view.charts)}`);
   assert.ok(view.rows >= 1, 'history table has rows'); assert.equal(view.unnamed, 0, 'every control has an accessible name');
   assert.match(view.markdown, new RegExp(`^## QualityGate: ${decision}`));
   if (decision === 'BLOCK') {
@@ -90,7 +96,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('.run-checks').disabled);
   await page.click('.run-checks');
   await page.waitForFunction(() => document.body.innerText.includes('F401'));
-  await verifyTeamView(page, 'BLOCK');
+  await verifyTeamView(page, 'BLOCK', 2);
   await capture(page, 'block.png');
   await verifyContrast(page);
   await page.click('[aria-label="Use dark theme"]');
@@ -109,7 +115,7 @@ try {
   await writeFile(join(directory, 'calculator.py'), source);
   await page.click('.run-checks');
   await page.waitForFunction(() => document.body.innerText.includes('All configured gates passed.'));
-  await verifyTeamView(page, 'PASS');
+  await verifyTeamView(page, 'PASS', 3);
   await capture(page, 'pass.png');
   await page.setViewport({ width: 390, height: 844 });
   await capture(page, 'mobile.png');
