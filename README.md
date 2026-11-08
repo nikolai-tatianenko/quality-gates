@@ -413,8 +413,62 @@ summary before the usual text. It is used only when stdout is a TTY, `CI` is not
 not `--json`; `--no-live` or `QUALITYGATE_NO_LIVE=1` turns it off. Piped output, CI output, `--json` and exit codes are
 identical with and without it. Escape sequences in gate output are stripped before display, and the output of a gate whose
 report parser handles secrets (such as `gitleaks`) is not shown live. Ctrl+C still cancels the gates (exit 130) and restores
-the cursor. It uses plain ANSI escape codes rather than React Ink, which would add React 19.3 and about twenty runtime packages
-to a CLI that bundles with `packages: external`; the view shows the newest line only, not a scrolling log window.
+the cursor. `qualitygate run` keeps this plain ANSI view (no UI framework is loaded for it); it shows the newest line only, not a
+scrolling log window. The separate interactive screen, `qualitygate ui`, is built with Ink 7 (see below).
+
+### Interactive UI and fix
+
+A gate can declare how to repair what it reports. `fix` is a shell command, run in the project directory with the same trust as `run`:
+
+```yaml
+gates:
+  - id: lint
+    run: pnpm exec eslint . --format json --output-file .qualitygate/node/eslint.json
+    report: { format: eslint-json, path: .qualitygate/node/eslint.json }
+    fix: pnpm exec eslint . --fix
+```
+
+`qualitygate setup` proposes `fix` where it is standard and safe: a plain `eslint` lint script (`<exec> eslint <same args> --fix`), `ruff check --fix .`
+for Python, and `vendor/bin/pint`, `vendor/bin/php-cs-fixer fix` or `vendor/bin/phpcbf` for the PHP style tool that is installed. Nothing else
+gets a fix; formatters and generators are yours to declare.
+
+```bash
+qualitygate fix                          # fix the gates that blocked in the last run (else every gate that has a fix), then run them again
+qualitygate fix --gate lint --allow-dirty --json
+```
+
+`fix` runs the selected gates' fix commands one after another (with the gate's `timeoutMs`, process-group cleanup and Ctrl+C = exit 130, exactly
+like `run`), then runs **exactly those gates again with the normal runner**. The fix never decides anything: the re-run is the verdict, and
+exit codes are the usual 0, 1, 2, 3 and 130. The output shows each gate as `before -> after` (the decision in the last stored run, or
+`not run before`), whether the fix command itself failed, and `git diff --stat` of what changed. In a git repository with uncommitted changes
+it refuses to start, because fixes rewrite files and their edits could not be told apart from yours; commit or stash, or pass `--allow-dirty` (the
+diff stat then includes your own changes). Outside a git repository it runs with a warning and shows no diff. The `fix` field exists only in your
+config file: the MCP server and the local bridge accept gate ids only and cannot supply or trigger a fix command.
+
+```bash
+qualitygate ui [--config <path>]
+```
+
+`ui` is an interactive terminal screen (React Ink 7) that runs the same runner as `qualitygate run`, so verdicts and exit codes are identical.
+It shows the project root, the overall decision with its exit code, and one row per gate with its live state (waiting, running with elapsed
+seconds and the last output line, PASS, BLOCK, error, timeout, interrupted, skipped).
+
+| Key | Action |
+| --- | --- |
+| `r` | run all gates |
+| up / down, `enter` | move; `enter` runs the selected gate |
+| `f` | fix the selected gate, or every blocked gate that has a `fix` when none is selected; asks `Fix rewrites files in your working tree. y/n` first |
+| `d` | details of the selected gate: reproduce command, result, findings (file:line, message) and the output tail of a blocked gate |
+| `t` | trends from the run history: blocked share per week as a sparkline, most failing and flaky gates |
+| `esc` | clear the selection or close a panel |
+| `q` | quit with the last run's exit code (130 if a job was still running) |
+| Ctrl+C | cancel the running job and exit 130 |
+
+The output of a gate whose report parser can expose secrets (such as `gitleaks`), or whose report format is not a built-in parser, is never
+shown in the details panel. The screen refuses to start without a terminal on stdin and stdout, in CI (`CI` set) or with `TERM=dumb`: it prints one line
+and exits 2 instead of waiting. A fix started from the screen refuses a dirty working tree the same way `fix` does (there is no `--allow-dirty` key). Ink and
+React are bundled into `dist/qualitygate-ui.mjs`, which the CLI imports only for `ui`, so the package gains no extra runtime dependency; if that file is
+missing, `ui` says so and exits 2.
 
 ### Local bridge for other clients
 
@@ -484,6 +538,7 @@ quality policy available to people and agents through the same execution path.
 | Language | TypeScript 5.9.3 | Strict contracts and implementation |
 | Workspace | pnpm 11.28.9 | Monorepo, frozen installs and dependency policy |
 | Frontend | React / React DOM 19.2.0, CSS/SVG | Local dashboard with semantic theme tokens |
+| Terminal UI | Ink 7.1.1 on React 19.2.0 | `qualitygate ui` (bundled into `dist/qualitygate-ui.mjs`) |
 | Local routing | Vercel Portless 0.12.0 | Named `.localhost` URL, loopback proxy |
 | Build | esbuild 0.25.10, tsx 4.20.6 | Bundles and source execution |
 | Validation | Zod 3.25.76, YAML 2.8.1 | Versioned config/results |
