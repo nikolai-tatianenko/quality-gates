@@ -265,6 +265,8 @@ importers:
         specifier: 8.46.1
         version: 8.46.1(eslint@9.37.0(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
 
+  packages/bridge: {}
+
   packages/ci: {}
 
   packages/cli: {}
