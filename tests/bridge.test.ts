@@ -1,3 +1,4 @@
+import { Jobs } from '../packages/bridge/src/jobs.js';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { request } from 'node:http';
@@ -417,4 +418,14 @@ test('the team view is shaped from the recorded runs and never carries gate outp
     const degraded = (await app.call('GET', '/v1/team', { token })).body;
     assert.match(degraded.warnings[0], /Run history is unreadable/); assert.equal(degraded.current.decision, 'BLOCK');
   });
+});
+
+test('a failed job tells the client nothing about the cause; the detail goes to the server log', async () => {
+  const logged: unknown[] = [];
+  const jobs = new Jobs(error => logged.push(error));
+  const job = jobs.start('run', ['ok'], () => Promise.reject(new Error('ENOENT /Users/someone/project/secret-path')));
+  await job.done;
+  assert.deepEqual(jobs.view(job).error, 'The run failed. See the bridge log for details.');
+  assert.equal(JSON.stringify(jobs.view(job)).includes('secret-path'), false);
+  assert.equal(logged.length, 1);
 });
