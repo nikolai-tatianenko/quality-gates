@@ -58,7 +58,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
     report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -84,6 +84,7 @@ try {
       + '       qualitygate setup [--config <path>] [--from <gates.json|gates.mjs>] [--plugin <package>...] [--no-gitignore] [--json]\n'
       + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--no-live] [--json]\n'
       + '       qualitygate fix [--config <path>] [--gate <id>...] [--allow-dirty] [--json]\n'
+      + '       qualitygate ui [--config <path>]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate history [--limit <n>] [--config <path>] [--json]\n'
       + '       qualitygate trends [--limit <n>] [--config <path>] [--json]\n'
@@ -146,6 +147,10 @@ try {
       printRun(result.run);
     }
     process.exitCode = exitCode(result.run);
+  } else if (command === 'ui') {
+    if (positional.length) throw new Error('ui takes only --config');
+    const { runUi } = await import('./ui.js');
+    process.exitCode = await runUi(configPath, controller);
   } else if (['report', 'pr', 'status', 'comment', 'notify'].includes(command ?? '')) {
     if (positional.length) throw new Error(`${command} does not accept positional arguments`);
     const input = z.string().min(1).parse(values.get('--input'));
