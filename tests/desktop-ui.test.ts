@@ -176,10 +176,10 @@ test('the Tauri transport matches replies to requests by id, forwards events and
 
 test('the Tauri transport reports host errors, send failures and silence, and tolerates a missing dialog', async () => {
   const { tauri } = fakeTauri(line => (line.method === 'bad' ? { id: line.id, ok: false, error: 'Invalid arguments.' } : line.method === 'odd' ? { id: line.id, ok: false } : undefined));
-  const transport = tauriTransport(tauri, 30);
+  const transport = tauriTransport(tauri, 5000);
   await assert.rejects(transport.request('bad'), /Invalid arguments\./);
   await assert.rejects(transport.request('odd'), /Request failed\./);
-  await assert.rejects(transport.request('silent'), /did not answer in time/);
+  await assert.rejects(tauriTransport(tauri, 30).request('silent'), /did not answer in time/);
   const failing: TauriGlobal = { ...tauri, core: { invoke: async () => { throw new Error('ipc down'); } } };
   await assert.rejects(tauriTransport(failing).request('state'), /ipc down/);
   const stringy: TauriGlobal = { ...tauri, core: { invoke: async () => Promise.reject('refused') } };
