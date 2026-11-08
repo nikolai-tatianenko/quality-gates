@@ -14,7 +14,7 @@ export const python: EcosystemPlugin = { id: 'python', apiVersion: 1, kind: 'eco
   const manifests = await Promise.all([...requirements, 'pyproject.toml', 'setup.cfg'].map(name => text(join(directory, name))));
   const mypy = names.includes('mypy.ini') || manifests.some(content => /\bmypy\b/.test(content));
   const gates: DetectedGate[] = [
-    { id: 'lint', run: 'ruff check .' },
+    { id: 'lint', run: 'ruff check .', fix: 'ruff check --fix .' },
     { id: 'tests', run: `pytest --junitxml=${REPORT}`, timeoutMs: 300000, report: { format: 'junit', path: REPORT } },
   ];
   return mypy ? [...gates, { id: 'typecheck', run: 'mypy .' }] : gates;

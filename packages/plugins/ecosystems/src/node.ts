@@ -71,10 +71,13 @@ export async function countTestFiles(directory: string, limit = LARGE_RUN_FILES 
 }
 
 /** `eslint .` becomes an eslint-json report; the exit code still decides, the report adds file and line to findings. */
-function withEslintReport(script: string, manager: Manager): Pick<DetectedGate, 'run' | 'report'> | undefined {
+function withEslintReport(script: string, manager: Manager): Pick<DetectedGate, 'run' | 'report' | 'fix'> | undefined {
   const match = /^\s*eslint(\s+.*)?$/.exec(script);
   if (!match || !PLAIN_COMMAND.test(script) || /\s(-f|--format|-o|--output-file)\b/.test(script)) return undefined;
-  return { run: `${execPrefix(manager)} eslint${match[1] ?? ' .'} --format json --output-file ${ESLINT_REPORT}`, report: { format: 'eslint-json', path: ESLINT_REPORT } };
+  const args = match[1] ?? ' .';
+  // A script that already passes --fix repairs files on every run; there is nothing more for a separate fix command to add.
+  const fix = /\s--fix\b/.test(args) ? undefined : `${execPrefix(manager)} eslint${args} --fix`;
+  return { run: `${execPrefix(manager)} eslint${args} --format json --output-file ${ESLINT_REPORT}`, report: { format: 'eslint-json', path: ESLINT_REPORT }, ...(fix ? { fix } : {}) };
 }
 
 /** `vitest` and `node --test` get a JUnit report next to their normal console output. */
@@ -105,8 +108,8 @@ function proposeWanted(layout: Layout): DetectedGate[] {
   return wanted.flatMap(({ id, scripts: names, timeoutMs }): DetectedGate[] => {
     const name = names.find(candidate => scriptCommand(layout, candidate));
     if (!name) return [];
-    const reported = name in layout.scripts && id !== 'typecheck' ? (id === 'lint' ? withEslintReport : withJunitReport)(layout.scripts[name]!, layout.manager) : undefined;
-    return [{ id, run: reported?.run ?? scriptCommand(layout, name)!, ...(reported?.report ? { report: reported.report } : {}), ...(timeoutMs ? { timeoutMs } : {}) }];
+    const reported: Partial<Pick<DetectedGate, 'run' | 'report' | 'fix'>> | undefined = name in layout.scripts && id !== 'typecheck' ? (id === 'lint' ? withEslintReport : withJunitReport)(layout.scripts[name]!, layout.manager) : undefined;
+    return [{ id, run: reported?.run ?? scriptCommand(layout, name)!, ...(reported?.report ? { report: reported.report } : {}), ...(reported?.fix ? { fix: reported.fix } : {}), ...(timeoutMs ? { timeoutMs } : {}) }];
   });
 }
 

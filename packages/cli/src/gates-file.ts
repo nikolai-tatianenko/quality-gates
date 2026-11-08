@@ -24,7 +24,7 @@ function toGate(entry: Entry): DetectedGate {
   const run = text(entry['run']) ?? text(command);
   if (!id || !run) throw new Error('every gate needs an id (or name) and a run (or command)');
   return detectedGateSchema.parse({ id: gateId(id), run, ...(typeof entry['timeoutMs'] === 'number' ? { timeoutMs: entry['timeoutMs'] } : {}),
-    ...(entry['report'] ? { report: entry['report'] } : {}), ...(entry['artifacts'] ? { artifacts: entry['artifacts'] } : {}) });
+    ...(entry['report'] ? { report: entry['report'] } : {}), ...(entry['artifacts'] ? { artifacts: entry['artifacts'] } : {}), ...(text(entry['fix']) ? { fix: text(entry['fix']) } : {}) });
 }
 
 /**
