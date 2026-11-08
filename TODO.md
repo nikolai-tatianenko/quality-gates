@@ -146,7 +146,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 ### 5. Testing the tool itself
 - [x] T-082: Self-test suite on 3–4 reference repositories (pnpm monorepo, Playwright, Maestro, Python) asserting that `setup` finds the expected gates
 - [x] T-083: Exit-code contract tests, one per code (0, 1, 2, 130 and the timeout code)
-- [ ] T-085: History follow-ups: schema versioning/migrations for `history.sqlite`, filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run, retention/pruning, and charts in the dashboard
+- [ ] T-085: History follow-ups: schema versioning/migrations for `history.sqlite`, filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run, retention/pruning (trend charts and a history table in the dashboard team view are already done)
 
 ### Suggested start
 T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic `report:` for eslint and junit. These are small changes in the `node` plugin and the runner, and they remove what made the trial result hard to trust.
