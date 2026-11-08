@@ -75,6 +75,7 @@ All responses are JSON unless noted. `auth` means a bearer token is required.
 | `GET /v1/runs/:runId/artifacts/:name` | yes | one listed file, as an attachment |
 | `GET /v1/history?limit=20` | yes | recent runs and the comparison of the newest with the previous one |
 | `GET /v1/trends?limit=50` | yes | blocks per week, failing and flaky gates |
+| `GET /v1/team?limit=50` | yes | team view: decision, changes since the last run, top 3 risks, time to green, blocking gates with file:line findings and a reproduce command, and `markdown`; no gate output; an unreadable history is a `warnings` entry, not an error |
 
 Only one run or scan is active at a time; a second request gets `409`. The `decision` and `exitCode` of a job and of
 `GET /v1/runs/...` are the stored run's own (0 PASS, 1 BLOCK, 2 error, 3 timeout, 130 interrupted); the bridge cannot

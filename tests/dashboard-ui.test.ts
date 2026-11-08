@@ -53,6 +53,7 @@ test('React dashboard handles empty findings, absent evidence, API errors and un
     const loading: (() => void)[] = [];
     const saved = { ...blocked, execution: 'completed', decision: mode === 'pass' ? 'PASS' : 'BLOCK', findings: [], errors: [], gates: [], results: [], reportPath: undefined };
     const fetch = mock.method(globalThis, 'fetch', async (path: string, init: RequestInit) => {
+      if (path === '/api/team') return response(null);
       if (mode === 'load-error') return response({ error: 'Cannot load project' }, 500);
       if (mode === 'unmount' || mode === 'unmount-error') return new Promise<Response>((resolve, reject) => {
         loading.push(() => mode === 'unmount-error' ? reject(Error('late error')) : resolve(response(path === '/api/project' ? project : null)));

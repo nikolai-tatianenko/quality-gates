@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { RunResult } from '../../protocol/src/index.js';
 import { ThemeSwitcher } from './theme.js';
 import { Icon } from './Icon.js';
+import { TeamView, type Team } from './Team.js';
 interface Project { configPath: string; gates: { id: string; type: string; run: string }[]; urls: string[]; readOnly?: boolean }
 export async function request<T>(path: string, method = 'GET'): Promise<T> {
   const response = await fetch(path, { method, ...(method === 'POST' ? { headers: { 'X-QualityGate-Request': '1' } } : {}) });
@@ -14,7 +15,14 @@ export function App() {
   const [run, setRun] = useState<RunResult | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState('');
+  const [team, setTeam] = useState<Team>();
+  const [teamError, setTeamError] = useState('');
+  async function loadTeam() {
+    try { setTeam(await request<Team>('/api/team')); setTeamError(''); }
+    catch (error) { setTeamError(error instanceof Error ? error.message : String(error)); }
+  }
   useEffect(() => {
+    void loadTeam();
     let mounted = true;
     void Promise.all([request<Project>('/api/project'), request<RunResult | null>('/api/run')])
       .then(([project, run]) => { if (mounted) { setProject(project); setRun(run); } })
@@ -25,7 +33,7 @@ export function App() {
     setRunning(true); setError('');
     try { setRun(await request<RunResult>('/api/run', 'POST')); }
     catch (error) { setError(error instanceof Error ? error.message : String(error)); }
-    finally { setRunning(false); }
+    finally { setRunning(false); void loadTeam(); }
   }
   async function cancel() {
     try { await request('/api/cancel', 'POST'); }
@@ -35,6 +43,8 @@ export function App() {
     <aside><a className="brand" href="#overview" aria-label="QualityGate home"><span className="logo"><Icon name="shield"/></span><span className="brand-name">QualityGate<span className="brand-caption">Developer workspace</span></span></a>
       <span className="nav-label">Workspace</span><nav className="sidebar-nav" aria-label="Workspace">
         <a className="nav active" href="#overview" aria-current="page"><Icon name="overview"/>Overview</a>
+        <a className="nav" href="#team"><Icon name="team"/>Team</a>
+        <a className="nav" href="#engineer"><Icon name="terminal"/>Engineer</a>
         <a className="nav" href="#checks"><Icon name="checks"/>Checks</a>
         <a className="nav" href="#findings"><Icon name="findings"/>Findings <span className="nav-count">{run?.findings.length ?? 0}</span></a>
       </nav>
@@ -48,7 +58,8 @@ export function App() {
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <Metrics project={project} run={run}/>
-      <nav className="section-nav" aria-label="Report sections"><a href="#checks">Checks <span>{project ? project.gates.length + project.urls.length : '—'}</span></a><a href="#findings">Findings <span>{run?.findings.length ?? 0}</span></a></nav>
+      <nav className="section-nav" aria-label="Report sections"><a href="#team">Summary</a><a href="#trends">Trends</a><a href="#history">History</a><a href="#engineer">Engineer</a><a href="#checks">Checks <span>{project ? project.gates.length + project.urls.length : '—'}</span></a><a href="#findings">Findings <span>{run?.findings.length ?? 0}</span></a></nav>
+      <TeamView team={team} error={teamError}/>
       <Checks project={project} run={run} running={running}/>
       <section className="panel" id="findings"><div className="section-title"><div><h2>Findings & evidence</h2><p className="section-description">The reasons behind your latest verdict.</p></div><span>{run ? run.runId.slice(0, 8) : 'AWAITING FIRST RUN'}</span></div>
         {!run && <div className="empty"><span className="empty-icon"><Icon name="findings"/></span>No findings yet.<p>Run the project’s gates to see findings and saved evidence here.</p></div>}
