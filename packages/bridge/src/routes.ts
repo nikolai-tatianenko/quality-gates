@@ -2,7 +2,7 @@ import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { message, type RunResult } from '../../protocol/src/index.js';
-import { getRun, readRun } from '../../service/src/index.js';
+import { getRun, readRun, teamView } from '../../service/src/index.js';
 import { loadConfig } from '../../cli/src/runner.js';
 import { compareRuns, readRuns, trends } from '../../core/src/history.js';
 import { HttpError, parse, parseJson, type Route } from './http.js';
@@ -36,6 +36,7 @@ function isScannable(value: string): boolean {
 /** Reads project data fresh on each request, so a config edited while the bridge runs is honoured. */
 class Project {
   constructor(private deps: RouteDeps) {}
+  get configPath() { return this.deps.configPath; }
   config = async () => (await loadConfig(this.deps.configPath)).config;
   outputDir = async () => (await this.config()).outputDir;
   async run(id: string): Promise<RunResult> {
@@ -115,6 +116,7 @@ function resultRoutes(project: Project): Route[] {
       const strip = (run: (typeof runs)[number]) => ({ ...run, gates: run.gates.map(({ id, status, durationMs }) => ({ id, status, durationMs })) });
       return [200, { runs: runs.slice(0, limit).map(strip), comparison: runs.length > 1 ? compareRuns(runs[0]!, runs[1]!) : null }];
     } },
+    { method: 'GET', path: ['v1', 'team'], auth: true, handle: async c => [200, await teamView(project.configPath, parse(limitQuery(50, 200), query(c)))] },
     { method: 'GET', path: ['v1', 'trends'], auth: true, handle: async c => [200, trends(await project.history(parse(limitQuery(50, 1000), query(c))))] },
   ];
 }

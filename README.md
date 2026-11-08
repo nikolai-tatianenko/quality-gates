@@ -70,7 +70,9 @@ saved browser preferences and mobile layouts.
 
 These are real Chrome captures of the local Python fixture. An unused import causes
 BLOCK; removing it produces PASS. The overview cards show actual run data, not
-synthetic charts. [Dashboard setup and verification](packages/dashboard/README.md).
+synthetic charts. The same page has a team view (summary for leads, trends from
+`history.sqlite`, run history, engineer view with a reproduce command, Markdown export for
+stand-ups and PR descriptions). [Dashboard setup and verification](packages/dashboard/README.md).
 
 ## Try it locally
 
