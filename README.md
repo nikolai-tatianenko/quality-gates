@@ -7,7 +7,7 @@ one **PASS / BLOCK decision**, actionable findings and saved evidence.
 
 [Quickstart](#try-it-locally) · [Install in your project](#add-to-an-existing-project) ·
 [CI](#run-in-ci) · [Husky](#attach-to-git-with-husky) · [Agents](#connect-an-agent) ·
-[Architecture](docs/ARCHITECTURE.md) · [Verification](docs/VERIFICATION.md)
+[For teams](docs/FOR-TEAMS.md) · [Architecture](docs/ARCHITECTURE.md) · [Verification](docs/VERIFICATION.md)
 
 ![Claude Code receives BLOCK, reads the failed check, fixes the code and gets PASS](docs/demo/qualitygate-claude-code.gif)
 
@@ -47,9 +47,45 @@ flowchart LR
     Evidence --> Feedback["Developer / agent feedback<br/>CI status / PR report"]
 ```
 
-Checks run sequentially. Execution status and policy decision are separate; errors
+Independent checks run in parallel by default (`concurrency: 4`). Execution status and policy decision are separate; errors
 have their own exit code and preserve earlier results. Interfaces share the runner
 and run schema. See [package boundaries and lifecycle](docs/ARCHITECTURE.md).
+
+### Clients, bridge and history
+
+Besides the terminal, CI and MCP, three local clients reach the same runner through the authenticated bridge
+(`qualitygate bridge`, 127.0.0.1 only). Every run appends to the local history that the dashboard reads.
+
+| Client | Status | Reaches the runner through |
+| --- | --- | --- |
+| Bridge (`qualitygate bridge`) | Working, tested; live provider/OS matrix not covered | itself: pairing code, bearer token, Origin/Host checks, approved gate ids only ([BRIDGE.md](docs/BRIDGE.md)) |
+| Dashboard with team view and history | Working, verified in real Chrome (`pnpm smoke:dashboard`); local only | the service in process; reads `history.sqlite` |
+| Chrome extension (popup) | Working unpacked, verified in real Chrome (`pnpm smoke:extension`); not on the Web Store; no DevTools panel | the bridge |
+| Desktop prototype | TypeScript host tested; **Rust/Tauri shell never built**, no signed package | the bridge and the dashboard server |
+
+```mermaid
+sequenceDiagram
+    actor Dev as Engineer
+    participant Client as CLI / extension / desktop
+    participant Bridge as bridge (127.0.0.1)
+    participant Runner as runner
+    participant Gates as gates from .qualitygate.yml
+    participant History as history.sqlite
+    participant Dash as dashboard
+    Dev->>Client: run gates, or scan this page
+    Client->>Bridge: gate ids or an http(s) URL, with token
+    Bridge->>Runner: run only approved gates
+    Runner->>Gates: lint, tests, scanners, Lighthouse
+    Gates-->>Runner: exit codes, reports, logs
+    Runner->>Runner: PASS / BLOCK, exit 0, 1, 2, 3 or 130
+    Runner->>History: append the finished run (CLI, dashboard, MCP, bridge gate runs)
+    History-->>Dash: trends, history, team view
+    Runner-->>Bridge: stored run, unchanged
+    Bridge-->>Client: verdict and findings, never gate logs
+```
+
+The CLI and MCP call the runner directly; only the extension, desktop and other local clients go through the bridge. URL
+scans started through the bridge are not written to history. Role-based guide: [QualityGate for teams](docs/FOR-TEAMS.md).
 
 ## The dashboard
 
@@ -480,9 +516,10 @@ provider, OS or deployment has been tested.
 | Portless | Named-origin HTTP routing, CSRF checks, real browser execution and proxy shutdown |
 | Git hooks | Real Husky in a disposable Git fixture; blocked/passing commits and local dry-run pushes |
 | Agents | Recorded Claude Code demo; generated configs and model adapters have contract tests |
+| Bridge, team view, extension, desktop host | Bridge and API tests, dashboard team view in real Chrome (`pnpm smoke:dashboard`), extension against the real bridge in real Chrome (`pnpm smoke:extension`), desktop host and launcher tested against the real bridge. Not verified: a real toolbar click granting `activeTab`, screen readers, Safari/Firefox, GitHub Code Scanning upload, live branch protection |
 | Still unverified | Live Cursor/Codex sessions, live Ollama/vLLM inference, live SonarQube and all provider deployments |
 | Real-project trial | One pnpm monorepo with Node, Vitest and Playwright: setup found its gates, parallel runs, timeout exit code `3` and the step registry worked; truncated `node --test` reports in long runs are still being investigated |
-| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, a history UI in the dashboard, plugin isolation and signing, a built and signed Tauri desktop client (the TypeScript side exists and is tested, the Rust shell is unbuilt, see docs/DESKTOP.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
+| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, history pruning, filters and a chosen baseline run (T-085), plugin isolation and signing, a compiled and signed Tauri desktop client (the TypeScript side exists and is tested, the Rust shell is unbuilt, see docs/DESKTOP.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
 
 The repository checks itself with the same gate configuration. Runtime coverage
 includes the CLI, core, plugins, services, adapters and dashboard TS/TSX; the only
