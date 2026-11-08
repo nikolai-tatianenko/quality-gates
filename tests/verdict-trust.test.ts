@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFile, spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -66,8 +67,12 @@ test('the CLI exits with each documented code', async () => {
     assert.equal(result.code, 3); assert.match(result.stdout, /^BLOCK \(timeout\)$/m);
   });
   await inProject({ gates: [{ id: 'ok', run: 'true' }] }, {}, async dir => assert.equal((await cli(dir, ['run', '--gate', 'nope'])).code, 2));
-  await inProject({ gates: [{ id: 'hang', run: 'sleep 30' }] }, {}, async dir => {
-    const result = await cli(dir, ['run'], child => setTimeout(() => child.kill('SIGINT'), 1500));
+  await inProject({ gates: [{ id: 'hang', run: 'touch started; sleep 30' }] }, {}, async dir => {
+    // The gate creates the marker only once the CLI is loaded and running, so SIGINT never races tsx start-up under load.
+    const result = await cli(dir, ['run'], child => {
+      const poll = setInterval(() => { if (existsSync(join(dir, 'started'))) { clearInterval(poll); child.kill('SIGINT'); } }, 50);
+      child.once('close', () => clearInterval(poll));
+    });
     assert.equal(result.code, 130);
   });
 });
