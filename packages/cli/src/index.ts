@@ -15,6 +15,8 @@ import { syncSources, restoreSources, checkSources, listSources, readMethodology
 import { printRun } from './output.js';
 import { liveView, liveEnabled } from './live.js';
 import { setupProject } from './setup.js';
+import { serveBridge, revokeAll } from '../../bridge/src/index.js';
+import { DEFAULT_PORT } from '../../bridge/src/serve.js';
 import { historyCommand, trendsCommand } from './history.js';
 import { readTrends } from '../../core/src/history.js';
 import { readReport, renderMarkdown, renderSarif, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
@@ -26,25 +28,26 @@ const cache = args.includes('--cache');
 const noGitignore = args.includes('--no-gitignore');
 const noLive = args.includes('--no-live');
 const sarif = args.includes('--sarif');
+const revoke = args.includes('--revoke-all');
 const controller = new AbortController();
 const interrupt = () => controller.abort();
 process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
 try {
   let command: string | undefined;
   const values = new Map<string, string>();
-  const positional: string[] = []; const only: string[] = []; const plugins: string[] = [];
+  const positional: string[] = []; const only: string[] = []; const plugins: string[] = []; const origins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit', '--port'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
-    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live') continue;
+    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live' || arg === '--revoke-all') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
-    if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin') {
+    if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin' || arg === '--origin') {
       const value = args[++i];
-      const repeatable = arg === '--gate' || arg === '--only' || arg === '--plugin';
+      const repeatable = arg === '--gate' || arg === '--only' || arg === '--plugin' || arg === '--origin';
       if (!value || value.startsWith('-') || (!repeatable && values.has(arg))) throw new Error(`Expected one ${arg} <value>`);
-      if (arg === '--gate' || arg === '--only') only.push(value); else if (arg === '--plugin') plugins.push(value); else values.set(arg, value);
+      if (arg === '--gate' || arg === '--only') only.push(value); else if (arg === '--plugin') plugins.push(value); else if (arg === '--origin') origins.push(value); else values.set(arg, value);
       continue;
     }
     if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
@@ -53,7 +56,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
     report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -68,6 +71,9 @@ try {
     if (noGitignore && command !== 'setup') throw new Error(`${command} does not accept --no-gitignore`);
     if (sarif && command !== 'report') throw new Error(`${command} does not accept --sarif`);
     if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
+    if (revoke && command !== 'bridge') throw new Error(`${command} does not accept --revoke-all`);
+    if (values.has('--port') && command !== 'bridge') throw new Error(`${command} does not accept --port`);
+    if (origins.length && command !== 'bridge') throw new Error(`${command} does not accept --origin`);
     if (write && !['pr', 'status', 'comment', 'notify'].includes(command)) throw new Error(`${command} does not accept --write`);
   }
   if (help || args.length === 0) {
@@ -78,6 +84,7 @@ try {
       + '       qualitygate history [--limit <n>] [--config <path>] [--json]\n'
       + '       qualitygate trends [--limit <n>] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
+      + '       qualitygate bridge [--port <n>] [--origin <origin>...] [--config <path>] | qualitygate bridge --revoke-all\n'
       + '       qualitygate report --input <run.json> [--output <report.md|report.sarif>] [--sarif] [--json]\n'
       + '         (--json prints a JSON object instead of the report: {output} with --output, otherwise {markdown}, or {sarif} with --sarif)\n'
       + '       qualitygate export --out <dir> [--input <run.json>] [--config <path>] [--json]\n'
@@ -174,6 +181,16 @@ try {
     const { serve } = await import('../../mcp/src/index.js');
     await serve(configPath, controller.signal);
     if (controller.signal.aborted) process.exitCode = 130;
+  } else if (command === 'bridge') {
+    if (positional.length) throw new Error('bridge does not accept positional arguments');
+    if (revoke) {
+      const count = await revokeAll(configPath);
+      console.log(json ? JSON.stringify({ schemaVersion: 1, revoked: count }) : `Revoked ${count} bridge token(s)`);
+    } else {
+      const port = z.coerce.number().int().min(0).max(65535).parse(values.get('--port') ?? DEFAULT_PORT);
+      await serveBridge({ configPath, port, origins, out: text => process.stdout.write(text), err: text => process.stderr.write(text) }, controller.signal);
+      if (controller.signal.aborted) process.exitCode = 130;
+    }
   } else if (command === 'connect') {
     if (positional.length) throw new Error('connect does not accept positional arguments');
     const client = z.enum(clients).parse(values.get('--client'));
