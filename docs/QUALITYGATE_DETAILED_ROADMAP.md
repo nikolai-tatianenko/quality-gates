@@ -599,13 +599,13 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-401` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-402 — Add live progress, last log line, gate statuses, and summary — **DONE** (T-058; plain ANSI instead of React Ink)
+### QG-402 — Add live progress, last log line, gate statuses, and summary — **DONE** (T-058; `run` uses plain ANSI, `qualitygate ui` uses Ink 7)
 
 **Depends on:** `QG-401`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [x] Build the gate progress rows, last log line per running gate and final summary (plain ANSI; Ink needs React >= 19.3 and about twenty runtime packages). A scrolling log window is not built.
+- [x] Build the gate progress rows, last log line per running gate and final summary (plain ANSI for `run`). `qualitygate ui` (Ink 7.1.1, `packages/ink-ui`) adds the interactive table, details, fix and trends views. A scrolling log window is not built.
 - [x] Handle terminal resize (width read on every redraw) and cancellation (SIGINT cancels gates, restores the cursor, exit 130).
 - [x] Add focused automated tests for the new behavior and its primary failure case.
 - [x] Document user-facing behavior, configuration and limitations where applicable.

@@ -128,6 +128,29 @@ gates:
 match a file reported by `git status`; `--cache` reports a gate as `cached` when the hash of its command and input files equals the
 hash of its last passing run (stored in `<outputDir>/cache.json`). Unselected gates show as `not-run` in the step registry.
 
+### Fix commands
+
+A command gate can declare `fix`, a shell command that repairs what the gate reports. It runs only through `qualitygate fix` (and the `f` key of
+`qualitygate ui`), in the project directory, with the gate's `timeoutMs`, and with the same trust as `run` because it comes from your own config.
+The gate is then run again by the normal runner and that result is the verdict; a fix never changes a decision or an exit code by itself.
+
+```yaml
+gates:
+  - id: lint
+    run: pnpm exec eslint . --format json --output-file .qualitygate/node/eslint.json
+    report: { format: eslint-json, path: .qualitygate/node/eslint.json }
+    fix: pnpm exec eslint . --fix
+```
+
+- `fix` is accepted only on `command` gates and on gate lists read with `setup --from` (`fix` key).
+- `qualitygate setup` proposes it for a plain `eslint` lint script (not when the script already contains `--fix`), `ruff check --fix .`, and the PHP style
+  tools `vendor/bin/pint`, `vendor/bin/php-cs-fixer fix` and `vendor/bin/phpcbf`.
+- `qualitygate fix [--gate <id>]... [--config <path>] [--allow-dirty] [--json]` picks the gates that blocked in the last run and have a `fix`, or
+  every gate with a `fix` when none blocked; `--gate` names them explicitly (an unknown gate, or one without `fix`, is an error).
+- It refuses to run in a git repository with uncommitted changes (the run output folder is ignored) unless `--allow-dirty`; outside git it warns and prints no diff.
+- `--json` prints `{ schemaVersion, gates: [{ id, fix, fixExitCode, fixError?, before?, after? }], diffStat?, warnings, run }`, where `run` is the usual run result.
+- The MCP server and the bridge never accept a fix command or trigger a fix.
+
 ### Test reports and artifacts
 
 A command gate can add `report` and `artifacts`:
