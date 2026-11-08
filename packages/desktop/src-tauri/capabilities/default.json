@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "The launcher page only. The dashboard shown after a project is opened is a remote page and gets no capability.",
+  "windows": ["main"],
+  "permissions": ["core:default", "dialog:allow-open"]
+}
