@@ -11,3 +11,7 @@ __pycache__/
 qualitygate.sources.lock.json.*.tmp
 .qualitygate-ci/
 .packages/
+
+# Tauri desktop shell build output (packages/desktop)
+packages/desktop/src-tauri/target/
+packages/desktop/src-tauri/gen/

@@ -1,0 +1,28 @@
+@import '../../../dashboard/src/tokens.css';
+html { background: var(--background); }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--background); color: var(--foreground); font: 14px/1.5 system-ui, sans-serif; }
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px; display: grid; gap: 20px; }
+header { display: flex; align-items: baseline; justify-content: space-between; }
+h1 { margin: 0; font-size: 20px; }
+h2 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted-foreground); }
+section { display: grid; gap: 10px; }
+.muted, small { color: var(--muted-foreground); }
+.error-text { color: var(--destructive); }
+code { font: 12px ui-monospace, Menlo, monospace; word-break: break-all; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.list li { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+label { display: grid; gap: 4px; font-weight: 500; }
+input[type="text"] { padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--background); color: inherit; font: inherit; }
+.consent { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; }
+button { min-height: 36px; padding: 8px 14px; border: 1px solid transparent; border-radius: 6px; background: var(--primary); color: var(--primary-foreground); font: inherit; font-weight: 550; cursor: pointer; }
+button.secondary { background: var(--background); color: var(--foreground); border-color: var(--border); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.notice { padding: 8px 10px; border-radius: 6px; border: 1px solid var(--border); margin: 0; }
+.notice.error { background: var(--destructive-background); color: var(--destructive); }
+.notice.info { background: var(--info-background); color: var(--info); }
+.pass { color: var(--success); } .block { color: var(--destructive); }
+.dialog { position: fixed; inset: 0; margin: auto; width: min(560px, calc(100% - 32px)); height: fit-content; padding: 20px; border: 1px solid var(--border); border-radius: 10px; background: var(--background); box-shadow: 0 20px 60px rgba(0,0,0,.35); display: grid; gap: 12px; }
+.dialog h2 { text-transform: none; letter-spacing: 0; font-size: 16px; color: var(--foreground); }

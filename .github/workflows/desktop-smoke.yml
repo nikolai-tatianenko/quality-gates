@@ -1,0 +1,46 @@
+# Manual only: builds the Tauri desktop shell on macOS and Windows. It is not triggered by push or pull_request,
+# uses no secrets and signs nothing. The shell has never been built by the author, so a first run may fail on
+# the Rust side (see docs/DESKTOP.md). Signing and notarization are described in docs/DESKTOP_SIGNING.md.
+name: Desktop smoke build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  HUSKY: '0'
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Desktop unit and integration tests
+        run: node --experimental-test-module-mocks --import tsx --test "tests/desktop-*.test.ts"
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo install tauri-cli --version "^2" --locked
+      - name: Generate platform icons from the placeholder
+        working-directory: packages/desktop/src-tauri
+        run: cargo tauri icon icons/icon.png
+      - name: Build an unsigned debug bundle
+        working-directory: packages/desktop/src-tauri
+        run: cargo tauri build --debug
+      - name: List the bundles
+        shell: bash
+        run: |
+          find packages/desktop/src-tauri/target/debug/bundle -maxdepth 2 | sort
+          test -n "$(find packages/desktop/src-tauri/target/debug/bundle -mindepth 2 -maxdepth 2 | head -1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: qualitygate-desktop-${{ matrix.os }}-unsigned
+          path: packages/desktop/src-tauri/target/debug/bundle
+          retention-days: 3
