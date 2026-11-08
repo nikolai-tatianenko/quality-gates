@@ -45,7 +45,9 @@ async function verifyContrast(page) {
 }
 /** Team view: lead summary, charts, history, engineer view with file:line and reproduce command, keyboard copy and Markdown export. */
 async function verifyTeamView(page, decision) {
-  await page.waitForFunction(expected => document.querySelector('[data-test-id="lead-decision"]')?.textContent.includes(expected), {}, decision);
+  // The summary and the charts come from one response but are not painted in the same frame on a slow runner.
+  await page.waitForFunction(expected => document.querySelector('[data-test-id="lead-decision"]')?.textContent.includes(expected)
+    && document.querySelectorAll('svg[role="img"]').length >= 3, { timeout: 30000 }, decision);
   const view = await page.evaluate(() => ({
     charts: [...document.querySelectorAll('svg[role="img"]')].map(svg => svg.querySelector('title')?.textContent ?? ''),
     rows: document.querySelectorAll('[data-test-id="history-table"] tbody tr').length,
@@ -54,7 +56,7 @@ async function verifyTeamView(page, decision) {
     markdown: document.querySelector('[data-test-id="markdown-preview"]')?.value ?? '',
     gatesWithSecretOutput: document.body.innerText.includes('outputTail'),
   }));
-  assert.ok(view.charts.length >= 3 && view.charts.every(title => title.length > 10), 'charts have accessible names');
+  assert.ok(view.charts.length >= 3 && view.charts.every(title => title.length > 10), `charts have accessible names: ${JSON.stringify(view.charts)}`);
   assert.ok(view.rows >= 1, 'history table has rows'); assert.equal(view.unnamed, 0, 'every control has an accessible name');
   assert.match(view.markdown, new RegExp(`^## QualityGate: ${decision}`));
   if (decision === 'BLOCK') {

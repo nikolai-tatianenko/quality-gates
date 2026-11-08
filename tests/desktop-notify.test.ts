@@ -118,6 +118,12 @@ test('a report folder outside the project or shaped like an application bundle i
   }
 });
 
+test('a report path that is a file is refused, so the file manager never launches it', async () => {
+  const { dir, config } = await project('script.sh');
+  await writeFile(join(dir, 'script.sh'), '#!/bin/sh\n');
+  await assert.rejects(resolveFolder(config, 'reports'), /not a directory/);
+});
+
 test('a run folder that is a symlink is refused even when it points inside the report folder', async () => {
   const { dir, config } = await project();
   await mkdir(join(dir, 'out', RUN_ID), { recursive: true });
@@ -137,7 +143,8 @@ test('the file manager is started with one directory argument and no shell', asy
     return child;
   }) as unknown as typeof spawn;
   await openDirectory('/tmp/out', 'darwin', fakeSpawn);
-  assert.deepEqual(calls[0], ['open', ['/tmp/out'], { stdio: 'ignore', detached: true, shell: false }]);
+  // -R reveals the folder in Finder: whatever LaunchServices thinks it is, it is shown and never launched.
+  assert.deepEqual(calls[0], ['open', ['-R', '/tmp/out'], { stdio: 'ignore', detached: true, shell: false }]);
   await assert.rejects(openDirectory('C:\\out', 'win32', fakeSpawn), /could not be started: no explorer/);
   await flush();
 });

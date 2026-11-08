@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { lstat, realpath } from 'node:fs/promises';
+import { lstat, realpath, stat } from 'node:fs/promises';
 import { dirname, join, resolve, sep } from 'node:path';
 import { loadConfig } from '../../cli/src/runner.js';
 
@@ -17,6 +17,7 @@ export async function resolveFolder(configPath: string, kind: FolderKind, runId?
   const { config } = await loadConfig(configPath);
   let reports: string;
   try { reports = await realpath(config.outputDir); } catch { throw new Error('No reports exist yet. Run the gates first.'); }
+  if (!(await stat(reports)).isDirectory()) throw new Error('The report folder is not a directory.');
   const root = await realpath(dirname(resolve(configPath)));
   if (!reports.startsWith(root + sep)) throw new Error('The report folder is outside the project.');
   if (reports.slice(root.length).split(sep).some(part => BUNDLE.test(part))) throw new Error('Refusing to open an application bundle.');
@@ -29,13 +30,14 @@ export async function resolveFolder(configPath: string, kind: FolderKind, runId?
   return real;
 }
 
-/** The file manager command of a platform. Always called with one directory argument, never through a shell. */
+/** The file manager command of a platform. Always called with one directory path, never through a shell. */
 export const openerFor = (platform: NodeJS.Platform): string => (platform === 'darwin' ? 'open' : platform === 'win32' ? 'explorer.exe' : 'xdg-open');
 
 /** Shows a directory in the file manager. Files are never opened, so nothing is executed. Resolves once the process started. */
 export function openDirectory(path: string, platform: NodeJS.Platform = process.platform, spawnFn: typeof spawn = spawn): Promise<void> {
   return new Promise((resolve, reject) => {
-    const child = spawnFn(openerFor(platform), [path], { stdio: 'ignore', detached: true, shell: false });
+    // On macOS `open -R` only reveals the folder in Finder; a plain `open` would launch an application bundle.
+    const child = spawnFn(openerFor(platform), platform === 'darwin' ? ['-R', path] : [path], { stdio: 'ignore', detached: true, shell: false });
     child.once('error', error => reject(new Error(`The file manager could not be started: ${error.message}`)));
     child.once('spawn', () => { child.unref(); resolve(); });
   });
