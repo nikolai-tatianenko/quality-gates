@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { exitCode, message, type RunResult } from '../../protocol/src/index.js';
+import { exitCode, type RunResult } from '../../protocol/src/index.js';
 import { HttpError } from './http.js';
 
 export type JobStatus = 'running' | 'cancelling' | 'finished' | 'cancelled' | 'error';
@@ -37,7 +37,7 @@ export class Jobs {
   private failed(job: Job, error: unknown): Outcome {
     if (job.cancelRequested) return { status: 'cancelled', exitCode: 130 };
     this.onError?.(error);
-    return { status: 'error', exitCode: 2, error: message(error) };
+    return { status: 'error', exitCode: 2, error: 'The run failed. See the bridge log for details.' };
   }
   find(id: string): Job {
     const job = this.jobs.get(id);

@@ -1,20 +1,25 @@
 import { spawn } from 'node:child_process';
 import { lstat, realpath } from 'node:fs/promises';
-import { join, sep } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { loadConfig } from '../../cli/src/runner.js';
 
 export type FolderKind = 'reports' | 'run';
+/** Folders the file manager would launch instead of show. */
+const BUNDLE = /\.(app|pkg|bundle|framework|prefpane|command|workflow|action|saver|kext|plugin|xpc)$/i;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * The folder to show for a project: the report folder (`outputDir` of the approved config) or one run's evidence folder
- * inside it. Only existing real directories are returned. A run id must be a UUID and its folder must not be a link
+ * inside it, which must itself lie inside the project and must not be an application bundle. Only existing real directories are returned. A run id must be a UUID and its folder must not be a link
  * leading outside the report folder, so a crafted id or a planted symlink cannot point the file manager elsewhere.
  */
 export async function resolveFolder(configPath: string, kind: FolderKind, runId?: string): Promise<string> {
   const { config } = await loadConfig(configPath);
   let reports: string;
   try { reports = await realpath(config.outputDir); } catch { throw new Error('No reports exist yet. Run the gates first.'); }
+  const root = await realpath(dirname(resolve(configPath)));
+  if (!reports.startsWith(root + sep)) throw new Error('The report folder is outside the project.');
+  if (reports.slice(root.length).split(sep).some(part => BUNDLE.test(part))) throw new Error('Refusing to open an application bundle.');
   if (kind === 'reports') return reports;
   if (!runId || !UUID.test(runId)) throw new Error('Invalid run id.');
   const folder = join(reports, runId);

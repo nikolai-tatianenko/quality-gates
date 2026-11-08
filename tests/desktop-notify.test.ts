@@ -107,6 +107,17 @@ test('only the report folder and a real run folder inside it can be opened', asy
   await assert.rejects(resolveFolder(config, 'run', '44444444-4444-4444-8444-444444444444'), /no evidence folder/);
 });
 
+test('a report folder outside the project or shaped like an application bundle is refused', async () => {
+  const outside = await project('../elsewhere');
+  await mkdir(join(outside.dir, '..', 'elsewhere'), { recursive: true });
+  await assert.rejects(resolveFolder(outside.config, 'reports'), /outside the project/);
+  for (const name of ['Evil.app', 'nested/Setup.PKG']) {
+    const bundle = await project(name);
+    await mkdir(join(bundle.dir, name), { recursive: true });
+    await assert.rejects(resolveFolder(bundle.config, 'reports'), /application bundle/, name);
+  }
+});
+
 test('a run folder that is a symlink is refused even when it points inside the report folder', async () => {
   const { dir, config } = await project();
   await mkdir(join(dir, 'out', RUN_ID), { recursive: true });
