@@ -4,7 +4,8 @@
     "packages/**/*.{ts,tsx}"
   ],
   "exclude": [
-    "packages/plugin-sdk/src/index.ts"
+    "packages/plugin-sdk/src/index.ts",
+    "packages/chrome-extension/src/types.ts"
   ],
   "reporter": [
     "text",

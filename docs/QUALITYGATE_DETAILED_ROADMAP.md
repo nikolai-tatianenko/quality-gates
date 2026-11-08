@@ -1047,86 +1047,86 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P1  
 **Phase dependency:** Phase 8 (except independent UI planning)
 
-### QG-901 — Build Manifest V3 extension with React popup/devtools panel — **OPEN** (T-066)
+### QG-901 — Build Manifest V3 extension with React popup/devtools panel — **DONE (popup; no DevTools panel)** (T-066)
 
 **Depends on:** `QG-805`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create MV3 extension popup and optional DevTools panel. 
-- [ ] Minimize permissions. 
-- [ ] Reuse shared client and design tokens. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Create MV3 extension popup and optional DevTools panel. *(Popup only; the optional panel is not built.)*
+- [x] Minimize permissions. *(`activeTab`, `storage`.)*
+- [x] Reuse shared client and design tokens. *(Dashboard tokens in `tokens.css`; a typed client for the bridge's own endpoints.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/extension-*.test.ts, `pnpm smoke:extension`.)*
+- [x] Document user-facing behavior, configuration and limitations where applicable. *(docs/CHROME_EXTENSION.md)*
 
 **Acceptance criteria:** `QG-901` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-902 — Detect current tab URL and request user consent before scans — **OPEN** (T-066)
+### QG-902 — Detect current tab URL and request user consent before scans — **DONE (activeTab grant by real icon click unverified)** (T-066)
 
 **Depends on:** `QG-901`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Read activeTab only after user action. 
-- [ ] Confirm target URL and scope. 
-- [ ] Reject unsupported schemes and sensitive pages. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Read activeTab only after user action. *(No other tab permission exists; the grant itself comes from Chrome when the icon is clicked and could not be automated, so it is unverified.)*
+- [x] Confirm target URL and scope. *(Full address and origin shown, consent per scan.)*
+- [x] Reject unsupported schemes and sensitive pages. *(Non-http(s), credentials, Web Store.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-902` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-903 — Implement authenticated local bridge with origin validation and pairing — **DONE (bridge only; no extension to pair yet)** (T-066)
+### QG-903 — Implement authenticated local bridge with origin validation and pairing — **DONE** (T-066)
 
 **Depends on:** `QG-902`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
 - [x] Pair extension with local server using short-lived token. *(One-time code, 10 minutes; origin-pinned tokens.)*
-- [x] Validate origins, requests and host permissions. *(Origin, Host, body and path validation on the bridge; the extension's own host permissions belong to QG-901/906 and are not done.)*
+- [x] Validate origins, requests and host permissions. *(Origin, Host, body and path validation on the bridge; the extension requests no host permissions, QG-906.)*
 - [x] Never expose shell.
-- [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/bridge.test.ts; not tested against a real extension.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/bridge.test.ts; the extension pairs with it in `pnpm smoke:extension` in real Chrome.)*
 - [x] Document user-facing behavior, configuration and limitations where applicable. *(docs/BRIDGE.md)*
 
 **Acceptance criteria:** `QG-903` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-904 — Launch Lighthouse/a11y gates for the current page through approved runner — **OPEN** (T-066)
+### QG-904 — Launch Lighthouse/a11y gates for the current page through approved runner — **DONE** (T-066)
 
 **Depends on:** `QG-903`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Submit current URL to approved Lighthouse/a11y plugin. 
-- [ ] Handle localhost, auth-required pages and unreachable targets. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Submit current URL to approved Lighthouse/a11y plugin. *(Through `POST /v1/scans`, the project's configured thresholds.)*
+- [x] Handle localhost, auth-required pages and unreachable targets. *(Localhost allowed with a note; the popup states Lighthouse runs without the browser session; an unreachable target is an errored scan shown as BLOCK exit 2 with its error.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-904` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-905 — Link browser findings and screenshots to QualityGate run IDs — **OPEN** (T-066)
+### QG-905 — Link browser findings and screenshots to QualityGate run IDs — **PARTIAL (no screenshots or diff thumbnails)** (T-066)
 
 **Depends on:** `QG-904`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Associate browser audit with project/run ID. 
-- [ ] Show evidence links and diff thumbnails. 
-- [ ] Avoid uploading page content by default. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Associate browser audit with project/run ID. *(Run id, findings and artifact names from the stored run.)*
+- [ ] Show evidence links and diff thumbnails. *(Artifact names and a dashboard link only; no thumbnails, no per-run dashboard route.)*
+- [x] Avoid uploading page content by default. *(Only the address is sent, to loopback.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-905` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-906 — Add browser permissions review and store submission preparation — **OPEN** (T-066)
+### QG-906 — Add browser permissions review and store submission preparation — **PARTIAL (review and checklist done; no store package or submission)** (T-066)
 
 **Depends on:** `QG-905`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Review MV3 permissions and CSP. 
-- [ ] Prepare privacy statement and Chrome Web Store package. 
-- [ ] Run security smoke tests. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Review MV3 permissions and CSP. *(docs/CHROME_EXTENSION_PERMISSIONS.md, pinned by a test.)*
+- [ ] Prepare privacy statement and Chrome Web Store package. *(Statement drafted; no hosted policy URL, no zip, no listing assets: docs/CHROME_STORE_CHECKLIST.md.)*
+- [x] Run security smoke tests. *(A web page cannot read the bridge; revoked token and refused origin; built folder has no eval or remote code.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-906` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 

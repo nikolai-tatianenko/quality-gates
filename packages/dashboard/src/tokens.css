@@ -1,0 +1,32 @@
+:root {
+  color-scheme: light dark;
+  --background: light-dark(#ffffff, #111113);
+  --foreground: light-dark(#18181b, #fafafa);
+  --card: light-dark(#ffffff, #161618);
+  --card-foreground: var(--foreground);
+  --primary: light-dark(#18181b, #fafafa);
+  --primary-foreground: light-dark(#fafafa, #18181b);
+  --muted: light-dark(#f4f4f5, #202023);
+  --muted-foreground: light-dark(#6b6b74, #aaaab4);
+  --accent: light-dark(#ededf0, #252528);
+  --border: light-dark(#e4e4e7, #2b2b30);
+  --ring: light-dark(#71717a, #a1a1aa);
+  --sidebar: light-dark(#f7f7f8, #09090b);
+  --success: light-dark(#15803d, #86efac);
+  --success-background: light-dark(#f0fdf4, #16291e);
+  --destructive: light-dark(#b91c1c, #fca5a5);
+  --destructive-background: light-dark(#fef2f2, #321c22);
+  --warning: light-dark(#854d0e, #fde68a);
+  --warning-background: light-dark(#fffbeb, #30291a);
+  --info: light-dark(#1d4ed8, #93c5fd);
+  --info-background: light-dark(#eff6ff, #19263a);
+  --radius: 10px;
+  --shadow: 0 1px 2px light-dark(#00000005, #00000018);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  color: var(--foreground);
+  background: var(--sidebar);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }

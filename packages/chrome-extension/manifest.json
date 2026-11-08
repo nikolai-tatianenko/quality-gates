@@ -1,0 +1,13 @@
+{
+  "manifest_version": 3,
+  "name": "QualityGate",
+  "version": "0.1.0",
+  "description": "Run your project's QualityGate Lighthouse and accessibility checks on the page you are looking at, through a local bridge on your own machine.",
+  "minimum_chrome_version": "114",
+  "action": { "default_title": "QualityGate", "default_popup": "popup.html" },
+  "permissions": ["activeTab", "storage"],
+  "content_security_policy": {
+    "extension_pages": "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src http://127.0.0.1:*; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+  },
+  "icons": { "16": "icon-16.png", "48": "icon-48.png", "128": "icon-128.png" }
+}

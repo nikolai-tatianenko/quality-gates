@@ -114,7 +114,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 
 ### Extra clients (QG-801–906) — only if there is demand after adoption
 - [ ] T-065 (backlog): Tauri desktop wrapper around the existing dashboard (workspace picker, recent projects, notifications, signing plan). Done so far: the authenticated local bridge it will use (QG-802 server side, docs/BRIDGE.md); no Tauri code, no Rust toolchain verified
-- [ ] T-066 (backlog): Manifest V3 Chrome extension that scans the current tab through an authenticated local bridge with explicit consent. Done so far: the bridge with pairing, origin validation and URL scan (QG-903, docs/BRIDGE.md); no extension code
+- [ ] T-066 (in progress): Manifest V3 Chrome extension that scans the current tab through an authenticated local bridge with explicit consent. Done: popup with pairing, consent per scan, scan, cancel, resume, results, revoked-token and bridge-down handling, permissions review, tests, real-Chrome smoke (`pnpm smoke:extension`, docs/CHROME_EXTENSION.md). Not done: DevTools panel, screenshot/diff thumbnails and a dashboard run deep link (QG-905 remainder), the real toolbar click granting `activeTab` (unverified), Web Store package and submission (docs/CHROME_STORE_CHECKLIST.md)
 
 ## Deferred review minors (from the whole-branch review)
 - [x] T-067: Validate the Unity version from `ProjectVersion.txt` (`^[0-9A-Za-z.]+$`) before it is put into the generated gate command; stop the tunnel when Ctrl+C arrives before it is ready and reject `api.trycloudflare.com` as a share URL; add the gate `run` strings and config path to the shared-dashboard warning
