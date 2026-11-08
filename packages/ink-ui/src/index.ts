@@ -17,7 +17,7 @@ export async function startUi(configPath: string, signal: AbortSignal, io: UiIo,
   const onAbort = () => session.stop(130);
   signal.addEventListener('abort', onAbort, { once: true });
   if (signal.aborted) onAbort();
-  const instance = render(createElement(App, { session }), { stdin: io.stdin, stdout: io.stdout, exitOnCtrlC: false, patchConsole: false });
+  const instance = render(createElement(App, { session }), { stdin: io.stdin, stdout: io.stdout, exitOnCtrlC: false, patchConsole: false, interactive: true });
   try {
     const code = await session.finished;
     instance.unmount();
