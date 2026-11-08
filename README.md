@@ -386,6 +386,13 @@ to a CLI that bundles with `packages: external`; the view shows the newest line 
 authenticated API on 127.0.0.1: pair once with a code printed in the terminal, then list gates, run the ones you pick,
 follow or cancel the run, read findings, artifacts, history and trends, or scan a URL with your Lighthouse thresholds.
 Verdicts and exit codes are those of the stored run; gate logs never leave the machine. [Details and API](docs/BRIDGE.md).
+
+### Chrome extension
+
+`packages/chrome-extension` is a Manifest V3 popup that pairs with the bridge, asks consent for the active tab's address and
+runs the project's Lighthouse thresholds on it. Permissions are `activeTab` and `storage` only. Load `packages/chrome-extension/dist`
+unpacked after `pnpm build`; verified in real Chrome with `pnpm smoke:extension`, not published to the Chrome Web Store.
+[Usage and limits](docs/CHROME_EXTENSION.md), [permissions review](docs/CHROME_EXTENSION_PERMISSIONS.md), [store checklist](docs/CHROME_STORE_CHECKLIST.md).
 The extension and desktop clients are not built yet.
 
 ### Run history and trends
@@ -468,7 +475,7 @@ provider, OS or deployment has been tested.
 | Agents | Recorded Claude Code demo; generated configs and model adapters have contract tests |
 | Still unverified | Live Cursor/Codex sessions, live Ollama/vLLM inference, live SonarQube and all provider deployments |
 | Real-project trial | One pnpm monorepo with Node, Vitest and Playwright: setup found its gates, parallel runs, timeout exit code `3` and the step registry worked; truncated `node --test` reports in long runs are still being investigated |
-| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, a history UI in the dashboard, plugin isolation and signing, Tauri desktop and Chrome extension clients (the local bridge they need exists, see docs/BRIDGE.md) |
+| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, a history UI in the dashboard, plugin isolation and signing, the Tauri desktop client (the local bridge it needs exists, see docs/BRIDGE.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
 
 The repository checks itself with the same gate configuration. Runtime coverage
 includes the CLI, core, plugins, services, adapters and dashboard TS/TSX; the only

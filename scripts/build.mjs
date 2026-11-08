@@ -6,3 +6,4 @@ await chmod('dist/qualitygate.mjs', 0o755);
 await build({entryPoints: ['packages/plugins/lighthouse/src/worker.ts'], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: 'dist/lighthouse-worker.mjs'});
 await import('../packages/code-analysis/build.mjs');
 await import('../packages/dashboard/build.mjs');
+await import("../packages/chrome-extension/build.mjs");
