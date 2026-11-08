@@ -398,3 +398,23 @@ test('old finished jobs are dropped but running ones stay', async () => {
     assert.equal((await app.call('GET', `/v1/jobs/${ids.at(-1)}`, { token })).status, 200);
   });
 });
+
+test('the team view is shaped from the recorded runs and never carries gate output', async () => {
+  await using({ gates: [{ id: 'ok', run: 'true' }, { id: 'bad', run: 'echo TOKEN=hunter2; false' }] }, async app => {
+    const token = await app.pair();
+    assert.equal((await app.call('GET', '/v1/team')).status, 401, 'a token is required');
+    const empty = (await app.call('GET', '/v1/team', { token })).body;
+    assert.equal(empty.current, null); assert.deepEqual(empty.runs, []);
+    for (const gates of [['ok'], ['ok', 'bad']]) await app.finished(token, (await app.call('POST', '/v1/runs', { token, body: { gates } })).body.jobId);
+    const team = (await app.call('GET', '/v1/team?limit=5', { token })).body;
+    assert.equal(team.current.decision, 'BLOCK'); assert.equal(team.current.exitCode, 1);
+    assert.deepEqual(team.blockingGates, ['bad']); assert.deepEqual(team.changes.regressions, []); assert.deepEqual(team.changes.newFailures, ['bad']);
+    assert.equal(team.engineer[0].reproduce, 'qualitygate run --gate bad');
+    assert.equal(team.runs.length, 2); assert.match(team.markdown, /^## QualityGate: BLOCK/);
+    assert.ok(!JSON.stringify(team).includes('hunter2'), 'gate output stays out of the team view');
+    assert.equal((await app.call('GET', '/v1/team?limit=0', { token })).status, 400);
+    await writeFile(join(app.out, 'history.sqlite'), 'not a database');
+    const degraded = (await app.call('GET', '/v1/team', { token })).body;
+    assert.match(degraded.warnings[0], /Run history is unreadable/); assert.equal(degraded.current.decision, 'BLOCK');
+  });
+});

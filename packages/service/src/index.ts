@@ -1,8 +1,10 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { z } from 'zod';
-import { runResultSchema, type RunResult } from '../../protocol/src/index.js';
+import { message, runResultSchema, type RunResult } from '../../protocol/src/index.js';
 import { execute, loadConfig } from '../../cli/src/runner.js';
+import { readRuns } from '../../core/src/history.js';
+import { buildTeamReport, teamMarkdown, type TeamReport } from '../../core/src/team.js';
 export const runArgsSchema = z.object({ gates: z.array(z.string().min(1)).min(1).optional() }).strict();
 export const getRunArgsSchema = z.object({ runId: z.string().optional() }).strict();
 export function summarize(run: RunResult) {
@@ -28,6 +30,18 @@ export async function getRun(configPath: string, runId?: string): Promise<RunRes
   }
   if (!newest) throw new Error('No runs found');
   return readRun(config.outputDir, newest.id);
+}
+/**
+ * The team view of a project: history, trends, the latest run's blocking gates and a Markdown summary of it.
+ * Reads only; an unreadable history database is reported in `warnings` instead of failing the whole view.
+ */
+export async function teamView(configPath: string, limit = 50): Promise<TeamReport & { markdown: string }> {
+  const { config } = await loadConfig(configPath);
+  const warnings: string[] = [];
+  const runs = await readRuns(config.outputDir, limit).catch(error => { warnings.push(`Run history is unreadable (${message(error)}); trends and comparisons are omitted`); return []; });
+  const latest = await getRun(configPath).catch(error => { if (message(error) !== 'No runs found') throw error; return null; });
+  const report = buildTeamReport({ runs, latest, configName: basename(configPath), warnings });
+  return { ...report, markdown: teamMarkdown(report) };
 }
 /** One mutation at a time per service. Read tools remain available during execution. */
 export class QualityGateService {

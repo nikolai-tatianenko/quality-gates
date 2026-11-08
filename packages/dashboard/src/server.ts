@@ -2,7 +2,7 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { QualityGateService } from '../../service/src/index.js';
+import { QualityGateService, teamView } from '../../service/src/index.js';
 import { message } from '../../protocol/src/index.js';
 import { portlessOrigin, dashboardHost } from './address.js';
 
@@ -64,6 +64,7 @@ export function createDashboard(configPath: string, assets = resolve('packages/d
   }
   async function read(path: string, res: ServerResponse) {
     if (path === '/api/project') { json(res, 200, { configPath: resolve(configPath), ...await service.list(), ...(shareToken ? { readOnly: true } : {}) }); return true; }
+    if (path === '/api/team') { json(res, 200, await teamView(configPath)); return true; }
     if (path !== '/api/run') return false;
     try { json(res, 200, await service.get()); }
     catch (error) {

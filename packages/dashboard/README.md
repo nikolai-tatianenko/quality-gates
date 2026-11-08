@@ -81,3 +81,24 @@ needs the random per-start token (it becomes an HttpOnly cookie and is stripped 
 address bar). **Anyone with the link can read logs, findings, file paths and evidence**
 of the project; send it only to people you trust. Ctrl+C (or the tunnel dying) closes the
 tunnel and the dashboard. For a static copy with no live server use `qualitygate export`.
+
+## Team view
+
+Below the overview cards the dashboard shows what a team needs, all derived from `history.sqlite` and the latest stored run
+(`GET /api/team`; the bridge serves the same JSON at `GET /v1/team` behind its pairing token):
+
+- **Summary for leads**: current decision and exit code, what changed since the previous run (regressions, new failures,
+  fixed, slower), top 3 risks (regressions, blocking, flaky, often failing, slower), gates that block, median time to green.
+- **Trends**: runs per week with the blocked share, run duration, time to green (inline SVG, blocked bars hatched so colour is
+  not the only signal), most frequently failing and flaky gates.
+- **Run history**: table of recorded runs, newest first, with the gates that started to block.
+- **Engineer view**: each blocking gate with `file:line` findings and a copyable `qualitygate run --gate <id>` command.
+- **Export**: copy or download the summary as Markdown for stand-ups and PR descriptions.
+
+Gate output (`outputTail`), raw reports and evidence paths are never read by this view, so a secret scanner's output cannot
+appear in it or in the Markdown. Verdicts are copied from the stored run, never recomputed. Keyboard: every control is a
+native button, link or `details`; the history table scrolls in a focusable region. Charts have text names and the table holds
+the same numbers. The web page is served by `pnpm dashboard`, not by the bridge; the bridge exposes the data to other clients.
+Verified in real Chrome by `pnpm smoke:dashboard` (desktop and 320px layouts, no overflow, copy by keyboard). Clipboard
+success depends on the browser; failure is announced and the Markdown preview can be selected by hand. A screen reader pass
+and Safari/Firefox were not tested.

@@ -2,6 +2,8 @@
 
 ## Unreleased — local workspace and analysis
 
+- Team view in the dashboard and `GET /v1/team` on the bridge: summary for leads, trends, run history, engineer view, Markdown export.
+
 - Local bridge (QG-802, QG-903): `qualitygate bridge` serves an authenticated API on 127.0.0.1 for the planned browser extension and desktop shell: one-time pairing code printed in the terminal, bearer tokens pinned to the pairing origin (expiry, revocation, `bridge --revoke-all`, SHA-256 hashes in a 0600 file), Host and exact Origin allow list (extension id, Tauri, loopback dashboard), exact-origin CORS, rate limit and 4 KiB body limit. Endpoints list the approved gates, run selected gates, report and cancel a job (one at a time), return runs, findings, listed artifacts, history and trends, and scan a URL with the configured Lighthouse thresholds (`QualityGateService.scan`, not recorded in the history). Verdicts and exit codes are the stored run's; gate logs, raw reports and absolute paths are never returned. See docs/BRIDGE.md. The extension and desktop clients themselves are not built.
 
 - Live progress view: in an interactive terminal `qualitygate run` shows each gate's status, elapsed time and last output line, updating in place, then a one-line summary. Off when stdout is not a TTY, when `CI` is set, with `--json`, with `--no-live` or `QUALITYGATE_NO_LIVE=1`; piped output, `--json` and exit codes are unchanged. Plain ANSI codes instead of React Ink (Ink 8 requires React >= 19.3 and about twenty runtime packages). Plugins may call the new optional `context.log(line)` to show progress; gate output of secret-scanning parsers is never shown live.

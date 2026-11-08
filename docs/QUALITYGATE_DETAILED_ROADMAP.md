@@ -1002,7 +1002,7 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-802` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-803 — Add workspace selection, recent projects, and run history — **OPEN** (T-065)
+### QG-803 — Add workspace selection, recent projects, and run history — **PARTIAL: run history and team view in the web dashboard; no workspace picker, no desktop client** (T-065)
 
 **Depends on:** `QG-802`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.

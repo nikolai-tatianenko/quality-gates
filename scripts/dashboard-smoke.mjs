@@ -34,7 +34,7 @@ async function verifyContrast(page) {
       const linear = rgb.map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4);
       return linear[0] * .2126 + linear[1] * .7152 + linear[2] * .0722;
     };
-    return ['.muted', '.metrics small', '.run-checks', '.theme-switcher button[aria-pressed="true"]', '.pill', 'footer'].map(selector => {
+    return ['.muted', '.metrics small', '.run-checks', '.theme-switcher button[aria-pressed="true"]', '.pill', 'footer', '.lead-decision small', '.changes dt', '.risks small', '.section-description'].map(selector => {
       const element = document.querySelector(selector); let surface = element;
       while (getComputedStyle(surface).backgroundColor === 'rgba(0, 0, 0, 0)') surface = surface.parentElement;
       const foreground = luminance(getComputedStyle(element).color); const background = luminance(getComputedStyle(surface).backgroundColor);
@@ -42,6 +42,29 @@ async function verifyContrast(page) {
     });
   });
   for (const { selector, ratio } of results) assert.ok(ratio >= 4.5, `${selector}: text contrast ${ratio.toFixed(2)} is below 4.5`);
+}
+/** Team view: lead summary, charts, history, engineer view with file:line and reproduce command, keyboard copy and Markdown export. */
+async function verifyTeamView(page, decision) {
+  await page.waitForFunction(expected => document.querySelector('[data-test-id="lead-decision"]')?.textContent.includes(expected), {}, decision);
+  const view = await page.evaluate(() => ({
+    charts: [...document.querySelectorAll('svg[role="img"]')].map(svg => svg.querySelector('title')?.textContent ?? ''),
+    rows: document.querySelectorAll('[data-test-id="history-table"] tbody tr').length,
+    engineer: document.querySelector('#engineer')?.textContent ?? '', reproduce: document.querySelector('[data-test-id="reproduce-command"]')?.textContent ?? '',
+    unnamed: [...document.querySelectorAll('button, a[href], textarea, meter, [role="region"]')].filter(e => !(e.getAttribute('aria-label') || e.getAttribute('aria-labelledby') || e.textContent.trim())).length,
+    markdown: document.querySelector('[data-test-id="markdown-preview"]')?.value ?? '',
+    gatesWithSecretOutput: document.body.innerText.includes('outputTail'),
+  }));
+  assert.ok(view.charts.length >= 3 && view.charts.every(title => title.length > 10), 'charts have accessible names');
+  assert.ok(view.rows >= 1, 'history table has rows'); assert.equal(view.unnamed, 0, 'every control has an accessible name');
+  assert.match(view.markdown, new RegExp(`^## QualityGate: ${decision}`));
+  if (decision === 'BLOCK') {
+    assert.match(view.engineer, /calculator\.py:\d+/, 'engineer view shows file:line');
+    assert.equal(view.reproduce, 'qualitygate run --config project.json --gate python-analysis');
+    await page.focus('[data-test-id="copy-reproduce-python-analysis"]');
+    assert.equal(await page.evaluate(() => document.activeElement?.dataset.testId), 'copy-reproduce-python-analysis', 'copy button is keyboard focusable');
+    await page.keyboard.press('Enter');
+    await page.waitForFunction(() => /Cop(ied|y failed)/.test(document.querySelector('[data-test-id="copy-reproduce-python-analysis"]').parentElement.textContent));
+  } else assert.match(view.engineer, /Nothing blocks the latest run/);
 }
 let browser;
 try {
@@ -65,6 +88,7 @@ try {
   await page.waitForFunction(() => !document.querySelector('.run-checks').disabled);
   await page.click('.run-checks');
   await page.waitForFunction(() => document.body.innerText.includes('F401'));
+  await verifyTeamView(page, 'BLOCK');
   await capture(page, 'block.png');
   await verifyContrast(page);
   await page.click('[aria-label="Use dark theme"]');
@@ -83,6 +107,7 @@ try {
   await writeFile(join(directory, 'calculator.py'), source);
   await page.click('.run-checks');
   await page.waitForFunction(() => document.body.innerText.includes('All configured gates passed.'));
+  await verifyTeamView(page, 'PASS');
   await capture(page, 'pass.png');
   await page.setViewport({ width: 390, height: 844 });
   await capture(page, 'mobile.png');
