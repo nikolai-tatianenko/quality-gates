@@ -989,16 +989,16 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-801` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-802 — Implement secure local runner connection and explicit permissions — **OPEN** (T-065)
+### QG-802 — Implement secure local runner connection and explicit permissions — **PARTIAL: bridge done, no desktop client** (T-065)
 
 **Depends on:** `QG-801`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Implement explicit workspace grant and authenticated local runner connection. 
-- [ ] Deny arbitrary shell commands from webview. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Implement explicit workspace grant and authenticated local runner connection. *(Server side: `qualitygate bridge` serves one project chosen at startup; the Tauri client does not exist.)*
+- [x] Deny arbitrary shell commands from webview. *(The bridge accepts no command or path, only gate ids from the config.)*
+- [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/bridge.test.ts; no webview test.)*
+- [x] Document user-facing behavior, configuration and limitations where applicable. *(docs/BRIDGE.md)*
 
 **Acceptance criteria:** `QG-802` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
@@ -1075,17 +1075,17 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-902` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-903 — Implement authenticated local bridge with origin validation and pairing — **OPEN** (T-066)
+### QG-903 — Implement authenticated local bridge with origin validation and pairing — **DONE (bridge only; no extension to pair yet)** (T-066)
 
 **Depends on:** `QG-902`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Pair extension with local server using short-lived token. 
-- [ ] Validate origins, requests and host permissions. 
-- [ ] Never expose shell. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Pair extension with local server using short-lived token. *(One-time code, 10 minutes; origin-pinned tokens.)*
+- [x] Validate origins, requests and host permissions. *(Origin, Host, body and path validation on the bridge; the extension's own host permissions belong to QG-901/906 and are not done.)*
+- [x] Never expose shell.
+- [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/bridge.test.ts; not tested against a real extension.)*
+- [x] Document user-facing behavior, configuration and limitations where applicable. *(docs/BRIDGE.md)*
 
 **Acceptance criteria:** `QG-903` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 

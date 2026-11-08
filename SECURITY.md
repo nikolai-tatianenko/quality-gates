@@ -78,6 +78,22 @@ validated; `X-Forwarded-*` headers are not trusted. The wrapper does not enable
 LAN/tunnel sharing, install certificates, edit hosts files or reuse a global proxy.
 Changing the proxy port uses `PORTLESS_PORT`; stop the wrapper to close both servers.
 
+## Local bridge
+
+`qualitygate bridge` (see [docs/BRIDGE.md](docs/BRIDGE.md)) is the one local interface meant for clients other than
+the terminal (a planned browser extension and desktop shell). It binds only to 127.0.0.1 and checks `Host` against the
+bound port (DNS rebinding) and `Origin` against an allow list: `chrome-extension://<id>`, the Tauri origins and
+`http://127.0.0.1:4173`; extra origins are exact and limited to those shapes. Nothing can run without a bearer token. A
+token is obtained by typing a one-time, ten-minute pairing code that is printed only in the terminal (five wrong guesses
+burn it), is pinned to the origin that paired, expires after 30 days and can be revoked. Only SHA-256 hashes are stored,
+in a `0600` file under `outputDir` (not enforced on Windows). Requests are rate limited and capped at 4 KiB, CORS answers
+the exact origin, and the API accepts no command, path or configuration: a run names gates that already exist in
+`.qualitygate.yml`, a scan names an `http(s)` URL without credentials. Gate logs (including secret scanner output), raw
+gate reports and absolute paths are never returned. The bridge is not a sandbox: the approved gates still run as your
+user, and software running as you can read the project directory and token file. Do not forward the port. The scan
+endpoint makes your local Chrome load the given URL, so the client must obtain consent first. This is implemented and
+tested on the server side only; no extension or desktop client exists yet, and nothing was tested on Windows.
+
 The code-analysis package scans TS/JS with fixed ESLint/SonarJS rules and Python
 with Ruff's isolated configuration. It does not execute scanned Python code or
 apply fixes. Ruff is a trusted executable from PATH (or an explicit API path), run

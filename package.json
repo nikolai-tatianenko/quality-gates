@@ -64,6 +64,7 @@
     "docs/CODE_QUALITY.md",
     "docs/SECURITY_REVIEW.md",
     "docs/CI.md",
+    "docs/BRIDGE.md",
     "examples/ci",
     "examples/security-review/.qualitygate.yml",
     "examples/security-review/qualitygate.sources.lock.json",

@@ -26,7 +26,7 @@ export async function loadConfig(configPath: string): Promise<{ config: Config; 
   config.outputDir = resolve(directory, config.outputDir);
   return { config, directory };
 }
-export interface ExecuteFlags { changed?: boolean; cache?: boolean; onProgress?: (event: ProgressEvent) => void }
+export interface ExecuteFlags { changed?: boolean; cache?: boolean; /** Audit only this URL with the configured thresholds; no gates run and the run is not recorded in the history. */ scanUrl?: string; onProgress?: (event: ProgressEvent) => void }
 /** Gate ids to run: `only`, narrowed to the gates affected by changed files when `changed` is set. */
 async function selectIds(config: Config, directory: string, only: string[] | undefined, changed: boolean | undefined) {
   const unknown = only?.filter(id => !config.gates.some(gate => gate.id === id));
@@ -46,6 +46,10 @@ async function remember(config: Config, directory: string, result: RunResult, kn
 /** Executes every gate (or only `only`) from the config with the built-in plugins. */
 export async function execute(configPath: string, signal: AbortSignal, only?: string[], flags: ExecuteFlags = {}): Promise<RunResult> {
   const { config, directory } = await loadConfig(configPath);
+  if (flags.scanUrl) {
+    if (!config.thresholds) throw new Error('No Lighthouse thresholds are configured; add urls and thresholds to scan a page');
+    config.gates = []; config.plugins = []; config.urls = [flags.scanUrl];
+  }
   const external = await loadExternalPlugins(directory, config.plugins ?? [], builtinIds);
   const command = commandPlugin(directory, { ...builtinParsers, ...external.parsers });
   const eslint = eslintPlugin(directory);
@@ -62,6 +66,6 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
   }, { signal, only: ids, cached, onProgress: flags.onProgress });
   if (flags.cache) await saveCache(config.outputDir, hashes, result);
-  await remember(config, directory, result, hashes);
+  if (!flags.scanUrl) await remember(config, directory, result, hashes);
   return result;
 }

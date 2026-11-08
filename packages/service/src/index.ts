@@ -44,12 +44,20 @@ export class QualityGateService {
   async run(args: unknown = {}, signal?: AbortSignal): Promise<RunResult> {
     this.assertOpen();
     const { gates } = runArgsSchema.parse(args);
+    return this.exclusive(signal, controller => execute(this.configPath, controller, gates));
+  }
+  /** Audits one URL with the configured Lighthouse thresholds. The scan is not recorded in the run history. */
+  async scan(url: string, signal?: AbortSignal): Promise<RunResult> {
+    this.assertOpen();
+    return this.exclusive(signal, controller => execute(this.configPath, controller, undefined, { scanUrl: url }));
+  }
+  private async exclusive(signal: AbortSignal | undefined, start: (signal: AbortSignal) => Promise<RunResult>): Promise<RunResult> {
     signal?.throwIfAborted();
     if (this.active) throw new Error('A quality gate run is already active; retry after it completes');
     const controller = new AbortController();
     const abort = () => controller.abort(signal?.reason);
     signal?.addEventListener('abort', abort, { once: true });
-    const promise = execute(this.configPath, controller.signal, gates);
+    const promise = start(controller.signal);
     const active = { controller, promise };
     this.active = active;
     try { return summarize(await promise); }
