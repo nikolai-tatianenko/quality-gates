@@ -51,7 +51,7 @@ test('node is absent without package.json or matching scripts and rejects invali
 });
 
 test('python proposes ruff, pytest with a junit report and mypy only when it is mentioned', async () => {
-  const base = [{ id: 'lint', run: 'ruff check .' }, { id: 'tests', run: 'pytest --junitxml=.qualitygate/python/pytest.xml',
+  const base = [{ id: 'lint', run: 'ruff check .', fix: 'ruff check --fix .' }, { id: 'tests', run: 'pytest --junitxml=.qualitygate/python/pytest.xml',
     timeoutMs: 300000, report: { format: 'junit', path: '.qualitygate/python/pytest.xml' } }];
   assert.deepEqual(await detect(python, { 'pyproject.toml': '[project]\nname = "x"\n' }), base);
   assert.deepEqual(await detect(python, { 'requirements-dev.txt': 'pytest\n' }), base);
@@ -114,11 +114,13 @@ const phpunit = { id: 'tests', run: 'mkdir -p .qualitygate/php && vendor/bin/php
 test('php proposes style, static analysis and a junit test run from the installed packages', async () => {
   const composer = (dev: Record<string, string>, scripts = {}) => ({ 'composer.json': JSON.stringify({ 'require-dev': dev, scripts }), 'vendor/autoload.php': '' });
   assert.deepEqual(await detect(php, composer({ 'laravel/pint': '1', 'phpstan/phpstan': '1', 'phpunit/phpunit': '10' })),
-    [{ id: 'lint', run: 'vendor/bin/pint --test' }, { id: 'typecheck', run: 'vendor/bin/phpstan analyse --no-progress' }, phpunit, audit]);
+    [{ id: 'lint', run: 'vendor/bin/pint --test', fix: 'vendor/bin/pint' }, { id: 'typecheck', run: 'vendor/bin/phpstan analyse --no-progress' }, phpunit, audit]);
   const others = await detect(php, composer({ 'friendsofphp/php-cs-fixer': '3', 'vimeo/psalm': '5', 'pestphp/pest': '2' }));
   assert.deepEqual(others!.map(gate => gate.run), ['vendor/bin/php-cs-fixer fix --dry-run --diff', 'vendor/bin/psalm --no-progress',
     'mkdir -p .qualitygate/php && vendor/bin/pest --log-junit .qualitygate/php/junit.xml', 'composer audit']);
-  assert.equal((await detect(php, composer({ 'squizlabs/php_codesniffer': '3' })))![0]!.run, 'vendor/bin/phpcs');
+  assert.deepEqual(others!.map(gate => gate.fix), ['vendor/bin/php-cs-fixer fix', undefined, undefined, undefined]);
+  const sniffer = (await detect(php, composer({ 'squizlabs/php_codesniffer': '3' })))![0]!;
+  assert.deepEqual([sniffer.run, sniffer.fix], ['vendor/bin/phpcs', 'vendor/bin/phpcbf']);
   assert.deepEqual(await detect(php, composer({}, { lint: 'x', analyse: 'x', test: 'x' })),
     [{ id: 'lint', run: 'composer run lint' }, { id: 'typecheck', run: 'composer run analyse' }, { id: 'tests', run: 'composer run test', timeoutMs: 300000 }, audit]);
 });

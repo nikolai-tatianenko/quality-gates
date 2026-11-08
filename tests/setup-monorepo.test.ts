@@ -81,6 +81,11 @@ test('eslint, vitest and node --test scripts get a report; other shapes stay unt
   assert.deepEqual(await runs({ lint: 'eslint src --fix', test: 'vitest' }), [
     'npx eslint src --fix --format json --output-file .qualitygate/node/eslint.json',
     'npx vitest run --reporter=default --reporter=junit --outputFile.junit=.qualitygate/node/junit.xml']);
+  const fixes = async (scripts: Record<string, string>) => (await detect({ 'package.json': { packageManager: 'npm@10.0.0', scripts } }))!.map(gate => gate.fix);
+  assert.deepEqual(await fixes({ lint: 'eslint src', test: 'vitest' }), ['npx eslint src --fix', undefined]);
+  assert.deepEqual(await fixes({ lint: 'eslint' }), ['npx eslint . --fix']);
+  assert.deepEqual(await fixes({ lint: 'eslint src --fix' }), [undefined]);
+  assert.deepEqual(await fixes({ lint: 'eslint . && prettier --check .', test: 'vitest' }), [undefined, undefined]);
   assert.deepEqual(await runs({ test: 'vitest run --coverage' }), ['npx vitest run --coverage --reporter=default --reporter=junit --outputFile.junit=.qualitygate/node/junit.xml']);
   assert.deepEqual(await runs({ test: 'node --import tsx --test tests/*.test.ts' }),
     ['mkdir -p .qualitygate/node && node --import tsx --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=.qualitygate/node/junit.xml tests/*.test.ts']);
