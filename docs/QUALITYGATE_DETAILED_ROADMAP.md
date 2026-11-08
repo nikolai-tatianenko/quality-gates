@@ -975,70 +975,70 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P1  
 **Phase dependency:** Phase 7 (except independent UI planning)
 
-### QG-801 — Wrap shared web dashboard in Tauri with minimal duplicated UI — **OPEN** (T-065)
+### QG-801 — Wrap shared web dashboard in Tauri with minimal duplicated UI — **PARTIAL: tested TypeScript host and launcher, Rust shell unbuilt** (T-065)
 
 **Depends on:** `QG-708`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create Tauri shell reusing web UI build. 
-- [ ] Keep Rust surface minimal. 
-- [ ] Separate UI from privileged commands. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [ ] Create Tauri shell reusing web UI build. *(Written, never compiled: no Rust toolchain here.)*
+- [x] Keep Rust surface minimal. 
+- [x] Separate UI from privileged commands. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-801` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-802 — Implement secure local runner connection and explicit permissions — **PARTIAL: bridge done, no desktop client** (T-065)
+### QG-802 — Implement secure local runner connection and explicit permissions — **PARTIAL: bridge done; desktop host launches or attaches after a prompt, Rust shell unbuilt** (T-065)
 
 **Depends on:** `QG-801`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [x] Implement explicit workspace grant and authenticated local runner connection. *(Server side: `qualitygate bridge` serves one project chosen at startup; the Tauri client does not exist.)*
+- [x] Implement explicit workspace grant and authenticated local runner connection. *(Server side: `qualitygate bridge` serves one project chosen at startup. The desktop host starts or attaches to it after a permission prompt; Rust shell unbuilt.)*
 - [x] Deny arbitrary shell commands from webview. *(The bridge accepts no command or path, only gate ids from the config.)*
 - [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/bridge.test.ts; no webview test.)*
 - [x] Document user-facing behavior, configuration and limitations where applicable. *(docs/BRIDGE.md)*
 
 **Acceptance criteria:** `QG-802` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-803 — Add workspace selection, recent projects, and run history — **PARTIAL: run history and team view in the web dashboard; no workspace picker, no desktop client** (T-065)
+### QG-803 — Add workspace selection, recent projects, and run history — **PARTIAL: picker, recents, preferences and validation tested in TypeScript; not run in a Tauri webview** (T-065)
 
 **Depends on:** `QG-802`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Add workspace picker, recent projects and persisted preferences. 
-- [ ] Ensure paths validated on each launch. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Add workspace picker, recent projects and persisted preferences. 
+- [x] Ensure paths validated on each launch. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-803` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-804 — Support desktop notifications and artifact opening — **OPEN** (T-065)
+### QG-804 — Support desktop notifications and artifact opening — **PARTIAL: notification mapping, opt-in and safe folder opening tested; OS notification and click unverified** (T-065)
 
 **Depends on:** `QG-803`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Use OS notifications only for completed/blocked runs with opt-in. 
-- [ ] Open evidence via safe file URL handler. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Use OS notifications only for completed/blocked runs with opt-in. 
+- [x] Open evidence via safe file URL handler. 
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-804` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-805 — Add platform packaging, signing plan, and macOS/Windows smoke tests — **OPEN** (T-065)
+### QG-805 — Add platform packaging, signing plan, and macOS/Windows smoke tests — **PARTIAL: packaging config, signing plan and manual CI workflow; nothing built or signed** (T-065)
 
 **Depends on:** `QG-804`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
 - [ ] Build macOS/Windows artifacts. 
-- [ ] Document signing/notarization prerequisites. 
+- [x] Document signing/notarization prerequisites. 
 - [ ] Smoke test clean install and updates. 
-- [ ] Add focused automated tests for the new behavior and its primary failure case.
-- [ ] Document user-facing behavior, configuration and limitations where applicable.
+- [x] Add focused automated tests for the new behavior and its primary failure case.
+- [x] Document user-facing behavior, configuration and limitations where applicable.
 
 **Acceptance criteria:** `QG-805` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 

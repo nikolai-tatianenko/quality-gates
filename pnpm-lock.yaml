@@ -321,6 +321,19 @@ importers:
         specifier: 0.25.10
         version: 0.25.10
 
+  packages/desktop:
+    dependencies:
+      react:
+        specifier: 19.2.0
+        version: 19.2.0
+      react-dom:
+        specifier: 19.2.0
+        version: 19.2.0(react@19.2.0)
+    devDependencies:
+      esbuild:
+        specifier: 0.25.10
+        version: 0.25.10
+
   packages/integrations: {}
 
   packages/mcp: {}

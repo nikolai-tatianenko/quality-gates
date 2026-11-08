@@ -1,0 +1,38 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "QualityGate",
+  "version": "0.1.0",
+  "identifier": "io.github.nikolai-tatianenko.qualitygate",
+  "build": {
+    "frontendDist": "../dist/ui"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [
+      { "label": "main", "title": "QualityGate", "width": 1100, "height": 760, "minWidth": 640, "minHeight": 480 }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src ipc: http://ipc.localhost; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app", "nsis", "msi"],
+    "category": "DeveloperTool",
+    "shortDescription": "Local quality gates for your projects",
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"],
+    "resources": {
+      "../dist/host.mjs": "host/host.mjs",
+      "../../../dist/qualitygate.mjs": "host/qualitygate.mjs",
+      "../../dashboard/dist/": "host/dashboard/"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist"
+    },
+    "windows": {
+      "digestAlgorithm": "sha256"
+    }
+  }
+}

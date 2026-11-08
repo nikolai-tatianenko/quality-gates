@@ -1,0 +1,23 @@
+# UNBUILT: no Rust toolchain was available when this was written. Dependency versions and Tauri API names
+# follow the Tauri 2 documentation and have not been compiled. See docs/DESKTOP.md.
+[package]
+name = "qualitygate-desktop"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-notification = "2"
+serde_json = "1"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+opt-level = "s"
+strip = true

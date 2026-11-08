@@ -7,3 +7,4 @@ await build({entryPoints: ['packages/plugins/lighthouse/src/worker.ts'], bundle:
 await import('../packages/code-analysis/build.mjs');
 await import('../packages/dashboard/build.mjs');
 await import("../packages/chrome-extension/build.mjs");
+await import("../packages/desktop/build.mjs");
