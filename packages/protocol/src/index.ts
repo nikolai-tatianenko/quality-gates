@@ -15,10 +15,13 @@ const pluginId = z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/, 'Plugin id: lowe
 const gateId = z.string().regex(/^[a-z0-9][a-z0-9_-]*$/i, 'Gate id: letters, digits, - and _');
 const reportSpec = z.object({ format: z.string().regex(/^[a-z0-9-]+$/), path: z.string().min(1) }).strict();
 const artifactGlobs = z.array(z.string().min(1)).max(50);
+const fixCommand = z.string().min(1);
 /** The command-gate subset an `ecosystem` plugin may propose to `qualitygate setup`. */
 export const detectedGateSchema = z.object({
   id: gateId, run: z.string().min(1), timeoutMs: z.number().int().min(1).max(3600000).optional(),
   report: reportSpec.optional(), artifacts: artifactGlobs.optional(),
+  /** Command that repairs what the gate reports (for example `eslint . --fix`); see `qualitygate fix`. */
+  fix: fixCommand.optional(),
   /** Found but not enabled: setup lists the gate as a commented block with this reason (slow, needs a browser, needs an emulator). */
   skip: z.string().min(1).optional(),
   /** Advice printed by setup (for example a run that will not fit the timeout); never written to the config. */
@@ -42,11 +45,17 @@ export const gateSchema = z.object({
   review: z.object({ sourceId: z.string().min(1) }).strict().optional(),
   report: reportSpec.optional(),
   artifacts: artifactGlobs.optional(),
+  /**
+   * Shell command that rewrites files to repair what this gate reports, run only by `qualitygate fix` and the interactive UI,
+   * with the same trust and working directory as `run`. It never changes a verdict: the gate is run again and that result counts.
+   */
+  fix: fixCommand.optional(),
   /** Gates that must pass first; a gate whose dependency did not pass is skipped. Independent gates run in parallel. */
   dependsOn: z.array(gateId).max(50).optional(),
   /** Project-relative globs of the files this gate reads: used by `--changed` and `--cache`. */
   inputs: z.array(z.string().min(1)).max(50).optional(),
 }).strict().superRefine((gate, ctx) => {
+  if (gate.type !== 'command' && gate.fix) ctx.addIssue({ code: 'custom', message: 'fix is only for command gates' });
   if (gate.type !== 'command' && (gate.report || gate.artifacts)) ctx.addIssue({ code: 'custom', message: 'report and artifacts are only for command gates' });
   if ((gate.type === 'sonarqube') !== !!gate.sonar) ctx.addIssue({ code: 'custom', message: 'sonar settings are required only for sonarqube gates' });
   if ((gate.type === 'review') !== !!gate.review) ctx.addIssue({ code: 'custom', message: 'review settings are required only for review gates' });
@@ -197,4 +206,16 @@ export const cliErrorSchema = z.object({
 }).strict();
 export const cliInitSchema = z.object({ schemaVersion: z.literal(1), configPath: z.string() }).strict();
 export const cliHelpSchema = z.object({ schemaVersion: z.literal(1), help: z.string() }).strict();
+/** `qualitygate fix --json`: what each fix command did and the decision of every re-run gate before and after. */
+export const fixResultSchema = z.object({
+  schemaVersion: z.literal(1),
+  gates: z.array(z.object({
+    id: z.string(), fix: z.string(), fixExitCode: z.number().int().nullable(), fixError: z.string().optional(),
+    before: z.enum(['PASS', 'BLOCK']).optional(), after: z.enum(['PASS', 'BLOCK']).optional(),
+  }).strict()),
+  /** `git diff --stat` after the fixes; absent outside a git repository. */
+  diffStat: z.string().optional(), warnings: z.array(z.string()),
+  run: runResultSchema,
+}).strict();
+export type FixResult = z.infer<typeof fixResultSchema>;
 export const cliOutputSchema = z.union([runResultSchema, cliErrorSchema, cliInitSchema, cliHelpSchema]);

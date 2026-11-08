@@ -34,7 +34,7 @@ export interface SetupOptions {
   gitignore?: boolean;
 }
 export interface SetupResult {
-  configPath: string; gates: { id: string; run: string }[]; gitignore: string[]; ecosystems: string[]; plugins: string[];
+  configPath: string; gates: { id: string; run: string; fix?: string }[]; gitignore: string[]; ecosystems: string[]; plugins: string[];
   /** Found but not enabled, with the reason; written to the config as comments. */
   skipped: { id: string; run: string; reason: string }[];
   /** Advice, for example about a run that will not fit the timeout. */
@@ -100,7 +100,7 @@ export async function setupProject(configPath: string, ecosystems: EcosystemPlug
     throw new Error(error.code === 'EEXIST' ? `${path} already exists; remove it or pick another path with --config` : error.message);
   });
   const gitignore = options.gitignore === false ? [] : await updateGitignore(directory);
-  return { configPath: path, gates: gates.map(({ id, run }) => ({ id, run })), gitignore, ecosystems: found.map(({ ecosystem }) => ecosystem), plugins,
+  return { configPath: path, gates: gates.map(({ id, run, fix }) => ({ id, run, ...(fix ? { fix } : {}) })), gitignore, ecosystems: found.map(({ ecosystem }) => ecosystem), plugins,
     skipped: skipped.map(({ id, run, skip }) => ({ id, run, reason: skip! })), notes: merged.flatMap(gate => gate.note ? [`${gate.id}: ${gate.note}`] : []),
     changed: [path, ...(gitignore.length ? [join(directory, '.gitignore')] : [])] };
 }
