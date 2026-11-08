@@ -15,6 +15,7 @@ import { syncSources, restoreSources, checkSources, listSources, readMethodology
 import { printRun } from './output.js';
 import { liveView, liveEnabled } from './live.js';
 import { setupProject } from './setup.js';
+import { fixGates, describeFix } from './fix.js';
 import { serveBridge, revokeAll } from '../../bridge/src/index.js';
 import { DEFAULT_PORT } from '../../bridge/src/serve.js';
 import { historyCommand, trendsCommand } from './history.js';
@@ -29,6 +30,7 @@ const noGitignore = args.includes('--no-gitignore');
 const noLive = args.includes('--no-live');
 const sarif = args.includes('--sarif');
 const revoke = args.includes('--revoke-all');
+const allowDirty = args.includes('--allow-dirty');
 const controller = new AbortController();
 const interrupt = () => controller.abort();
 process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
@@ -41,7 +43,7 @@ try {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
-    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live' || arg === '--revoke-all') continue;
+    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live' || arg === '--revoke-all' || arg === '--allow-dirty') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
     if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin' || arg === '--origin') {
       const value = args[++i];
@@ -56,7 +58,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
     report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -65,8 +67,9 @@ try {
   };
   if (command && validFlags[command]) {
     for (const key of values.keys()) if (!validFlags[command]!.includes(key)) throw new Error(`${command} does not accept ${key}`);
-    if (only.length && command !== 'run') throw new Error(`${command} does not accept --gate or --only`);
+    if (only.length && command !== 'run' && command !== 'fix') throw new Error(`${command} does not accept --gate or --only`);
     if ((changed || cache) && command !== 'run') throw new Error(`${command} does not accept --changed or --cache`);
+    if (allowDirty && command !== 'fix') throw new Error(`${command} does not accept --allow-dirty`);
     if (noLive && command !== 'run') throw new Error(`${command} does not accept --no-live`);
     if (noGitignore && command !== 'setup') throw new Error(`${command} does not accept --no-gitignore`);
     if (sarif && command !== 'report') throw new Error(`${command} does not accept --sarif`);
@@ -80,6 +83,7 @@ try {
     const help = 'Usage: qualitygate init [URL...] [--config <path>] [--json]\n'
       + '       qualitygate setup [--config <path>] [--from <gates.json|gates.mjs>] [--plugin <package>...] [--no-gitignore] [--json]\n'
       + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--no-live] [--json]\n'
+      + '       qualitygate fix [--config <path>] [--gate <id>...] [--allow-dirty] [--json]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate history [--limit <n>] [--config <path>] [--json]\n'
       + '       qualitygate trends [--limit <n>] [--config <path>] [--json]\n'
@@ -131,6 +135,17 @@ try {
       printRun(result);
     }
     process.exitCode = exitCode(result);
+  } else if (command === 'fix') {
+    if (positional.length) throw new Error('fix does not accept positional arguments');
+    const result = await fixGates(configPath, controller.signal, { gates: only.length ? only : undefined, allowDirty });
+    if (json) console.log(JSON.stringify(result));
+    else {
+      for (const warning of result.warnings) console.error(`QualityGate: warning: ${warning}`);
+      console.log(`Project root: ${dirname(resolve(configPath))}`);
+      console.log(describeFix(result).join('\n'));
+      printRun(result.run);
+    }
+    process.exitCode = exitCode(result.run);
   } else if (['report', 'pr', 'status', 'comment', 'notify'].includes(command ?? '')) {
     if (positional.length) throw new Error(`${command} does not accept positional arguments`);
     const input = z.string().min(1).parse(values.get('--input'));
