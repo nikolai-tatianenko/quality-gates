@@ -971,13 +971,13 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 **Priority:** P1  
 **Phase dependency:** Phase 7 (except independent UI planning)
 
-### QG-801 — Wrap shared web dashboard in Tauri with minimal duplicated UI — **PARTIAL: tested TypeScript host and launcher, Rust shell unbuilt** (T-065)
+### QG-801 — Wrap shared web dashboard in Tauri with minimal duplicated UI — **PARTIAL: tested TypeScript host and launcher, Rust shell builds on macOS** (T-065)
 
 **Depends on:** `QG-708`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [ ] Create Tauri shell reusing web UI build. *(Written, never compiled: no Rust toolchain here.)*
+- [ ] Create Tauri shell reusing web UI build. *(Compiles and bundles on macOS; Windows and webview behaviour unverified.)*
 - [x] Keep Rust surface minimal. 
 - [x] Separate UI from privileged commands. 
 - [x] Add focused automated tests for the new behavior and its primary failure case.
@@ -985,13 +985,13 @@ Each task is independently trackable as a GitHub issue. Work in small PRs (ideal
 
 **Acceptance criteria:** `QG-801` is demonstrated in a reproducible command or fixture; tests pass in CI; errors are explicit rather than silently treated as success; no private cross-package imports are introduced.
 
-### QG-802 — Implement secure local runner connection and explicit permissions — **PARTIAL: bridge done; desktop host launches or attaches after a prompt, Rust shell unbuilt** (T-065)
+### QG-802 — Implement secure local runner connection and explicit permissions — **PARTIAL: bridge done; desktop host launches or attaches after a prompt, Rust shell builds on macOS** (T-065)
 
 **Depends on:** `QG-801`  
 **Deliverable:** working implementation, focused tests, and updated docs or example.
 
 **Implementation checklist**
-- [x] Implement explicit workspace grant and authenticated local runner connection. *(Server side: `qualitygate bridge` serves one project chosen at startup. The desktop host starts or attaches to it after a permission prompt; Rust shell unbuilt.)*
+- [x] Implement explicit workspace grant and authenticated local runner connection. *(Server side: `qualitygate bridge` serves one project chosen at startup. The desktop host starts or attaches to it after a permission prompt; Rust shell builds on macOS.)*
 - [x] Deny arbitrary shell commands from webview. *(The bridge accepts no command or path, only gate ids from the config.)*
 - [x] Add focused automated tests for the new behavior and its primary failure case. *(tests/bridge.test.ts; no webview test.)*
 - [x] Document user-facing behavior, configuration and limitations where applicable. *(docs/BRIDGE.md)*
