@@ -1,5 +1,4 @@
-# UNBUILT: no Rust toolchain was available when this was written. Dependency versions and Tauri API names
-# follow the Tauri 2 documentation and have not been compiled. See docs/DESKTOP.md.
+# Built on macOS with Rust 1.95 and Tauri 2.12; Cargo.lock is committed. Windows is not built yet. See docs/DESKTOP.md.
 [package]
 name = "qualitygate-desktop"
 version = "0.1.0"

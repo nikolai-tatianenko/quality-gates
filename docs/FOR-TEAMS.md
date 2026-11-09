@@ -198,8 +198,8 @@ package and submission. See [CHROME_EXTENSION.md](CHROME_EXTENSION.md).
 
 `packages/desktop` is a prototype: a project picker with recent projects, a permission prompt before the bridge starts,
 opt-in notifications and buttons that open the report folder. Its TypeScript host and launcher page are unit and
-integration tested (including against the real bridge). The **Rust/Tauri shell has never been compiled** (no `cargo`
-was available), nothing ran in a Tauri webview, and no signed or notarized package exists. There is no installer to
+integration tested (including against the real bridge). The Rust/Tauri shell **builds and starts on macOS** (unsigned),
+but nothing was clicked through in its webview, and no signed or notarized package exists. There is no installer to
 download; treat it as not usable by end users yet. What you can run today is the host:
 `pnpm build:desktop`, then see [DESKTOP.md](DESKTOP.md). Signing plan: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md).
 
