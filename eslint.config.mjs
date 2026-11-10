@@ -1,4 +1,4 @@
 import tseslint from 'typescript-eslint';
-export default tseslint.config({ ignores: ['**/dist/**', '**/coverage/**'] }, ...tseslint.configs.recommended, {
+export default tseslint.config({ ignores: ['**/dist/**', '**/coverage/**', '**/src-tauri/target/**'] }, ...tseslint.configs.recommended, {
   rules: { '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }] }
 });

@@ -1,4 +1,4 @@
-// UNBUILT: written without a Rust toolchain, never compiled. API names follow the Tauri 2 documentation.
+// Compiled with Rust 1.95 and Tauri 2.12 (cargo check, clippy -D warnings, tauri build --bundles app on macOS).
 // This file is deliberately small. It does four things and holds no project logic:
 //   1. starts the Node host (host/host.mjs) that owns workspaces, the bridge, notifications and folder opening,
 //   2. forwards the launcher page's requests to the host, but only for the method names in ALLOWED_METHODS,
@@ -60,9 +60,12 @@ fn main() {
                 .unwrap_or_else(|| resources.join("qualitygate.mjs"));
             let mut child = Command::new("node")
                 .arg(resources.join("host.mjs"))
-                .arg("--cli").arg(cli)
-                .arg("--assets").arg(resources.join("dashboard"))
-                .arg("--data-dir").arg(data)
+                .arg("--cli")
+                .arg(cli)
+                .arg("--assets")
+                .arg(resources.join("dashboard"))
+                .arg("--data-dir")
+                .arg(data)
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::null())
@@ -75,9 +78,23 @@ fn main() {
                 for line in BufReader::new(stdout).lines().map_while(Result::ok) {
                     if let Ok(value) = serde_json::from_str::<serde_json::Value>(&line) {
                         if value.get("event").and_then(|e| e.as_str()) == Some("notify") {
-                            let title = clip(value.get("title").and_then(|t| t.as_str()).unwrap_or("QualityGate"), 120);
-                            let body = clip(value.get("body").and_then(|b| b.as_str()).unwrap_or(""), 240);
-                            let _ = handle.notification().builder().title(title).body(body).show();
+                            let title = clip(
+                                value
+                                    .get("title")
+                                    .and_then(|t| t.as_str())
+                                    .unwrap_or("QualityGate"),
+                                120,
+                            );
+                            let body = clip(
+                                value.get("body").and_then(|b| b.as_str()).unwrap_or(""),
+                                240,
+                            );
+                            let _ = handle
+                                .notification()
+                                .builder()
+                                .title(title)
+                                .body(body)
+                                .show();
                         }
                     }
                     let _ = handle.emit("host-message", line);

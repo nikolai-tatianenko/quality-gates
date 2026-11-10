@@ -61,7 +61,7 @@ Besides the terminal, CI and MCP, three local clients reach the same runner thro
 | Bridge (`qualitygate bridge`) | Working, tested; live provider/OS matrix not covered | itself: pairing code, bearer token, Origin/Host checks, approved gate ids only ([BRIDGE.md](docs/BRIDGE.md)) |
 | Dashboard with team view and history | Working, verified in real Chrome (`pnpm smoke:dashboard`); local only | the service in process; reads `history.sqlite` |
 | Chrome extension (popup) | Working unpacked, verified in real Chrome (`pnpm smoke:extension`); not on the Web Store; no DevTools panel | the bridge |
-| Desktop prototype | TypeScript host tested; **Rust/Tauri shell never built**, no signed package | the bridge and the dashboard server |
+| Desktop prototype | TypeScript host tested; Rust/Tauri shell builds on macOS (unsigned, window not clicked through) | the bridge and the dashboard server |
 
 ```mermaid
 sequenceDiagram
@@ -488,8 +488,8 @@ unpacked after `pnpm build`; verified in real Chrome with `pnpm smoke:extension`
 
 `packages/desktop` wraps the shared dashboard in a Tauri 2 shell: project picker with recent projects, an explicit permission
 prompt before the bridge starts, opt-in notifications for PASS, BLOCK and error, and buttons that open the report and evidence
-folders. The TypeScript logic is unit and integration tested (including against the real bridge). The **Rust shell has never
-been built** (no Rust toolchain was available) and nothing was checked in a Tauri webview; no signed package exists.
+folders. The TypeScript logic is unit and integration tested (including against the real bridge). The Rust shell **builds and starts on macOS**
+(Rust 1.95, Tauri 2.12); Windows is not built, the window was not clicked through, and no signed package exists.
 [Status and design](docs/DESKTOP.md), [signing plan](docs/DESKTOP_SIGNING.md), manual build workflow `.github/workflows/desktop-smoke.yml`.
 
 ### Run history and trends
@@ -574,7 +574,7 @@ provider, OS or deployment has been tested.
 | Bridge, team view, extension, desktop host | Bridge and API tests, dashboard team view in real Chrome (`pnpm smoke:dashboard`), extension against the real bridge in real Chrome (`pnpm smoke:extension`), desktop host and launcher tested against the real bridge. Not verified: a real toolbar click granting `activeTab`, screen readers, Safari/Firefox, GitHub Code Scanning upload, live branch protection |
 | Still unverified | Live Cursor/Codex sessions, live Ollama/vLLM inference, live SonarQube and all provider deployments |
 | Real-project trial | One pnpm monorepo with Node, Vitest and Playwright: setup found its gates, parallel runs, timeout exit code `3` and the step registry worked; truncated `node --test` reports in long runs are still being investigated |
-| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, history pruning, filters and a chosen baseline run (T-085), plugin isolation and signing, a compiled and signed Tauri desktop client (the TypeScript side exists and is tested, the Rust shell is unbuilt, see docs/DESKTOP.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
+| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, history pruning, filters and a chosen baseline run (T-085), plugin isolation and signing, a compiled and signed Tauri desktop client (the TypeScript side exists and is tested, the Rust shell builds unsigned on macOS only, see docs/DESKTOP.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
 
 The repository checks itself with the same gate configuration. Runtime coverage
 includes the CLI, core, plugins, services, adapters and dashboard TS/TSX; the only
