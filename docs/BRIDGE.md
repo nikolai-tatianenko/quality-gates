@@ -94,7 +94,7 @@ an arbitrary page would distort trends.
 
 ## Limits of this work
 
-- The Chrome extension exists (QG-901/902/904-906, partly; see CHROME_EXTENSION.md). The desktop client's TypeScript side exists (QG-801 to QG-805, see DESKTOP.md); its Rust shell is unbuilt.
+- The Chrome extension exists (QG-901/902/904-906, partly; see CHROME_EXTENSION.md). The desktop client's TypeScript side exists (QG-801 to QG-805, see DESKTOP.md); its Rust shell builds on macOS but is unsigned and not clicked through.
 - A scan opens the page with the local Chrome through the configured Lighthouse gate, from the user's machine and
   network; it can reach any host that machine can reach. The extension shows the URL and asks for consent first (QG-902); other clients must do the same.
 - Plain HTTP on loopback; any other local program of the same user can try to connect, but needs a valid Origin and a token
