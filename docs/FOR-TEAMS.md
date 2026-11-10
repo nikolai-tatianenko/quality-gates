@@ -93,15 +93,17 @@ tracked as T-088. Uploading to GitHub Code Scanning was not exercised against a 
 
 - **Blocks per week** and the blocked share of runs, plus run duration.
 - **Most frequently failing gates.**
-- **Flaky gates**: a gate that flips between PASS and BLOCK at least twice with no change of its input hash. A gate that
-  declares no `inputs` has no hash, so every flip counts. Declare `inputs: [globs]` on a gate to make this signal
-  meaningful (T-089 tracks making it stricter).
+- **Flaky gates**: a gate that flips between PASS and BLOCK at least twice between runs whose input hash is equal. A gate
+  that declares no `inputs` has no hash, so nothing proves its inputs did not change and it is never reported as flaky:
+  declare `inputs: [globs]` on a gate to make this signal available.
 - **Time to green**: from the start of the first blocked run of a streak to the finish of the next PASS; the median over
   completed recoveries, and "blocked since" for a streak that is still open. Interrupted runs are skipped.
 
-`qualitygate history [--limit 10]` compares the newest run with the previous one: **regression** (passed, now failed,
+`qualitygate history [--limit 10]` compares the newest run with the previous one (or with `--baseline <runId>`, any recorded run): **regression** (passed, now failed,
 timeout or error), **new failure**, **fixed**, **newly slow** (at least twice as long and one second longer). Both
 commands exit `0` even when they report a regression; they never gate anything.
+
+Filters, on both `history` and `trends`: `--gate <id>` (repeatable; keeps runs that have the gate and only that gate's results, so counts and the comparison cover those gates), `--since <date>` (runs started at or after a date such as `2026-11-01`, UTC when no zone is given) and `--decision <PASS|BLOCK>`. `history --baseline <runId>` compares the newest matching run with the run of that id wherever it is in the history; an unknown id is an error (exit `2`). The history file carries a schema version and is upgraded in place by the next run that writes it; a file written by a newer QualityGate is refused with a message that names both versions (`history`/`trends` exit `2`, `run` warns and keeps its verdict), and is never modified.
 
 ### Exporting a report
 
@@ -124,7 +126,7 @@ commands exit `0` even when they report a regression; they never gate anything.
 - Fewer blocks can mean better code or fewer gates. The step registry tells you how many gates ran.
 - Nothing here ranks or attributes results to people. Do not use it that way.
 - History is never pruned and never uploaded; delete the file to start over. If it cannot be written, `run` warns on
-  stderr and keeps its result and exit code. Pruning, filters and a chosen baseline are open work (T-085).
+  stderr and keeps its result and exit code. Pruning is open work (T-085).
 
 ## Engineers
 

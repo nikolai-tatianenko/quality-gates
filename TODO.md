@@ -98,7 +98,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 - [ ] T-056: Plugin authoring tutorial, generator (`create-qualitygate-plugin`) and compatibility matrix (QG-705, QG-1007)
 
 ### CLI (QG-401, QG-402)
-- [ ] T-057: Add `qualitygate list` (gates and last result) and `qualitygate doctor` (Node, Chrome, tools on PATH, config validity); `inspect` already exists
+- [x] T-057: Add `qualitygate list` (gates and last result) and `qualitygate doctor` (Node, Chrome, tools on PATH, config validity, writable output directory, history database); `inspect` already exists. Both read-only with `--json` and `--config`; `doctor` exits 2 when a check fails
 - [x] T-058: Live progress view for interactive terminals (gate statuses, last log line per running gate, summary); non-TTY, CI and `--json` output unchanged. `run` uses plain ANSI codes; the interactive `qualitygate ui` (Ink 7.1.1 on React 19.2.0, own workspace package, bundled into `dist/qualitygate-ui.mjs`) runs and fixes gates with the same runner. Gates may declare `fix`; `qualitygate fix` re-runs them and prints before/after
 
 ### Gate depth (QG-1003–1006)
@@ -146,13 +146,17 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 ### 5. Testing the tool itself
 - [x] T-082: Self-test suite on 3–4 reference repositories (pnpm monorepo, Playwright, Maestro, Python) asserting that `setup` finds the expected gates
 - [x] T-083: Exit-code contract tests, one per code (0, 1, 2, 130 and the timeout code)
-- [ ] T-085: History follow-ups: schema versioning/migrations for `history.sqlite`, filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run, retention/pruning (trend charts and a history table in the dashboard team view are already done)
+- [ ] T-085: History follow-ups. Done: schema versioning/migrations for `history.sqlite` (`PRAGMA user_version`, a newer database is refused), filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run (`history --baseline <runId>`). Open: retention/pruning (trend charts and a history table in the dashboard team view are already done)
 
 ### Suggested start
 T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic `report:` for eslint and junit. These are small changes in the `node` plugin and the runner, and they remove what made the trial result hard to trust.
 
 ## Review follow-ups (scanners, history and live view)
+- [x] T-086: Live view: erase rows with the real terminal height and width (resize and more gates than rows), assert exit 130 in the pty and SIGINT tests, route the history warning after the live rows are erased
+- [x] T-087: npm audit parser: a package whose `via` entries are all strings must still produce a finding when the referenced package is missing from the report
+- [x] T-088: SARIF: resolve file paths against the project root instead of the working directory, escape `#` and `?`, and report `skip:` gates as notes
+- [ ] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`
 - [ ] T-086: Live view: erase rows with the real terminal height and width (resize and more gates than rows), assert exit 130 in the pty and SIGINT tests, route the history warning after the live rows are erased
 - [ ] T-087: npm audit parser: a package whose `via` entries are all strings must still produce a finding when the referenced package is missing from the report
 - [ ] T-088: SARIF: resolve file paths against the project root instead of the working directory, escape `#` and `?`, and report `skip:` gates as notes
-- [ ] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`
+- [x] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`

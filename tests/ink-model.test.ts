@@ -156,7 +156,7 @@ test('trends: a sparkline of the blocked share per week plus failing and flaky g
   assert.equal(sparkline([]), '');
   assert.deepEqual(trendLines(undefined, 80), ['Loading trends...']);
   assert.match(trendLines('none', 80)[0]!, /No run history/);
-  const run = (id: string, startedAt: string, status: 'passed' | 'failed'): HistoryRun => ({ id, startedAt, finishedAt: startedAt, execution: 'completed', decision: status === 'failed' ? 'BLOCK' : 'PASS', durationMs: 1, gates: [{ id: 'lint', status, durationMs: 1 }] });
+  const run = (id: string, startedAt: string, status: 'passed' | 'failed'): HistoryRun => ({ id, startedAt, finishedAt: startedAt, execution: 'completed', decision: status === 'failed' ? 'BLOCK' : 'PASS', durationMs: 1, gates: [{ id: 'lint', status, durationMs: 1, inputsHash: 'same' }] });
   const t = buildTrends([run('4', '2026-11-03T00:00:00Z', 'failed'), run('3', '2026-10-27T00:00:00Z', 'passed'), run('2', '2026-10-26T00:00:00Z', 'failed'), run('1', '2026-10-20T00:00:00Z', 'passed')]);
   const lines = trendLines(t, 120);
   assert.match(lines[0]!, /last 4 runs: [▁-█]{3}$/);
