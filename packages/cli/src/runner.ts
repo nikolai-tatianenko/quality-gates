@@ -26,7 +26,7 @@ export async function loadConfig(configPath: string): Promise<{ config: Config; 
   config.outputDir = resolve(directory, config.outputDir);
   return { config, directory };
 }
-export interface ExecuteFlags { changed?: boolean; cache?: boolean; /** Audit only this URL with the configured thresholds; no gates run and the run is not recorded in the history. */ scanUrl?: string; onProgress?: (event: ProgressEvent) => void }
+export interface ExecuteFlags { changed?: boolean; cache?: boolean; /** Audit only this URL with the configured thresholds; no gates run and the run is not recorded in the history. */ scanUrl?: string; onProgress?: (event: ProgressEvent) => void; /** Receives warnings (a history that could not be saved) instead of stderr, so a live view can print them after it has erased its rows. */ onWarning?: (text: string) => void }
 /** Gate ids to run: `only`, narrowed to the gates affected by changed files when `changed` is set. */
 async function selectIds(config: Config, directory: string, only: string[] | undefined, changed: boolean | undefined) {
   const unknown = only?.filter(id => !config.gates.some(gate => gate.id === id));
@@ -36,12 +36,13 @@ async function selectIds(config: Config, directory: string, only: string[] | und
   return only ? only.filter(id => wanted.includes(id)) : wanted;
 }
 /** Stores the finished run in the history database. It must never change the verdict or exit code, so a failure is only a warning. */
-async function remember(config: Config, directory: string, result: RunResult, known: Record<string, string>) {
+async function remember(config: Config, directory: string, run: { result: RunResult; known: Record<string, string> }, warn: (text: string) => void) {
+  const { result, known } = run;
   try {
     const hashes = { ...known };
     for (const gate of config.gates) if (!(gate.id in hashes)) { const hash = await inputHash(directory, gate); if (hash) hashes[gate.id] = hash; }
     await recordRun(config.outputDir, toHistoryRun(result, hashes));
-  } catch (error) { process.stderr.write(`QualityGate: warning: run history not saved (${message(error)})\n`); }
+  } catch (error) { warn(`QualityGate: warning: run history not saved (${message(error)})\n`); }
 }
 /** Executes every gate (or only `only`) from the config with the built-in plugins. */
 export async function execute(configPath: string, signal: AbortSignal, only?: string[], flags: ExecuteFlags = {}): Promise<RunResult> {
@@ -66,6 +67,6 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
   }, { signal, only: ids, cached, onProgress: flags.onProgress });
   if (flags.cache) await saveCache(config.outputDir, hashes, result);
-  if (!flags.scanUrl) await remember(config, directory, result, hashes);
+  if (!flags.scanUrl) await remember(config, directory, { result, known: hashes }, flags.onWarning ?? (text => process.stderr.write(text)));
   return result;
 }

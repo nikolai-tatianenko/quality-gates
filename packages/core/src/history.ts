@@ -14,7 +14,7 @@ export interface Trends {
   failingGates: { id: string; failures: number; runs: number }[];
   flakyGates: { id: string; flips: number; runs: number }[];
 }
-/** A gate is flaky after this many PASS/BLOCK flips that no change of its inputs explains. */
+/** A gate is flaky after this many PASS/BLOCK flips between two runs with an equal inputs hash; without a hash nothing proves the inputs did not change. */
 const MIN_FLIPS = 2;
 /** A gate is newly slow when it takes at least twice as long and at least this much longer than before. */
 const SLOWER_BY_MS = 1000;
@@ -23,24 +23,60 @@ const blocking = (status: string) => status === 'failed' || status === 'timeout'
 const passing = (status: string) => status === 'passed' || status === 'cached';
 const executed = (status: string) => status === 'passed' || status === 'failed';
 
-/** Loads `node:sqlite` on demand; its experimental-feature warning would otherwise reach every run's stderr. */
-async function loadSqlite() {
-  const emit = process.emitWarning;
-  process.emitWarning = () => undefined;
-  const sqlite = await import('node:sqlite').finally(() => { process.emitWarning = emit; });
-  return sqlite.DatabaseSync;
+const isSqliteWarning = (warning: Error) => warning.name === 'ExperimentalWarning' && /sqlite/i.test(warning.message);
+let sqlite: Promise<typeof import('node:sqlite').DatabaseSync> | undefined;
+/**
+ * Loads `node:sqlite` on demand; its experimental-feature warning would otherwise reach every run's stderr.
+ * `process.emitWarning` stays untouched: while the module loads, the 'warning' listeners are replaced by one that forwards every
+ * warning except the SQLite one, and they are put back once the warning event has been dispatched (it fires on a later tick).
+ */
+function loadSqlite() {
+  sqlite ??= (async () => {
+    const listeners = process.listeners('warning');
+    const forward = (warning: Error) => { if (!isSqliteWarning(warning)) for (const listener of listeners) listener.call(process, warning); };
+    process.removeAllListeners('warning'); process.on('warning', forward);
+    try {
+      const { DatabaseSync } = await import('node:sqlite');
+      await new Promise(done => setImmediate(done));
+      return DatabaseSync;
+    } finally { process.removeListener('warning', forward); for (const listener of listeners) process.on('warning', listener); }
+  })();
+  return sqlite;
 }
-const SCHEMA = `CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT NOT NULL, execution TEXT NOT NULL, decision TEXT NOT NULL, duration_ms INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS gates (run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, position INTEGER NOT NULL, gate_id TEXT NOT NULL, status TEXT NOT NULL, duration_ms INTEGER NOT NULL, inputs_hash TEXT, PRIMARY KEY (run_id, position));`;
 
-/** Opens the history database; a read never creates it and returns undefined when none exists. */
+/** Schema migrations; entry `n` upgrades the database to version `n + 1`. The version is kept in `PRAGMA user_version`. A database from before versioning has version 0 and the layout of version 1. */
+const MIGRATIONS = [
+  `CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT NOT NULL, execution TEXT NOT NULL, decision TEXT NOT NULL, duration_ms INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS gates (run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, position INTEGER NOT NULL, gate_id TEXT NOT NULL, status TEXT NOT NULL, duration_ms INTEGER NOT NULL, inputs_hash TEXT, PRIMARY KEY (run_id, position));`,
+];
+export const SCHEMA_VERSION = MIGRATIONS.length;
+
+const versionOf = (db: DatabaseSync) => (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
+/** Refuses a database written by a newer QualityGate: reading or changing it with an older layout could lose data. */
+function assertSupported(db: DatabaseSync): number {
+  const version = versionOf(db);
+  if (version > SCHEMA_VERSION) throw new Error(`run history was written by a newer QualityGate (schema ${version}, this version supports ${SCHEMA_VERSION}); upgrade QualityGate or move history.sqlite aside`);
+  return version;
+}
+/** Applies the missing migrations in one transaction, so a failed upgrade leaves the old database as it was. */
+function migrate(db: DatabaseSync) {
+  db.exec('BEGIN IMMEDIATE');
+  try {
+    const from = assertSupported(db);
+    for (let n = from; n < SCHEMA_VERSION; n++) db.exec(MIGRATIONS[n]!);
+    if (from < SCHEMA_VERSION) db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+    db.exec('COMMIT');
+  } catch (error) { db.exec('ROLLBACK'); throw error; }
+}
+
+/** Opens the history database; a read never creates or upgrades it and returns undefined when none exists. */
 async function open(outputDir: string, create: boolean): Promise<DatabaseSync | undefined> {
   if (create) await mkdir(outputDir, { recursive: true }); else if (!existsSync(historyPath(outputDir))) return undefined;
   const Database = await loadSqlite();
   const db = new Database(historyPath(outputDir));
   try {
     db.exec('PRAGMA busy_timeout = 3000; PRAGMA foreign_keys = ON');
-    if (create) db.exec(SCHEMA);
+    if (create) migrate(db); else assertSupported(db);
     return db;
   } catch (error) { db.close(); throw error; }
 }
@@ -65,17 +101,37 @@ export async function recordRun(outputDir: string, run: HistoryRun): Promise<voi
   } finally { db.close(); }
 }
 
-/** The most recent runs, newest first. Throws when the database is unreadable. */
-export async function readRuns(outputDir: string, limit: number): Promise<HistoryRun[]> {
+/** Narrows which runs are read. `since` is an ISO timestamp, `gates` keeps only those gates in each run (and only runs that have one of them). */
+export interface HistoryFilter { since?: string; decision?: RunResult['decision']; gates?: string[] }
+
+function runsFrom(db: DatabaseSync, rows: Record<string, string | number>[], gateIds?: string[]): HistoryRun[] {
+  const gates = db.prepare('SELECT * FROM gates WHERE run_id = ? ORDER BY position');
+  return rows.map(row => ({ id: String(row.id), startedAt: String(row.started_at), finishedAt: String(row.finished_at),
+    execution: row.execution as HistoryRun['execution'], decision: row.decision as HistoryRun['decision'], durationMs: Number(row.duration_ms),
+    gates: (gates.all(String(row.id)) as Record<string, string | number | null>[]).filter(g => !gateIds || gateIds.includes(String(g.gate_id))).map(g => ({ id: String(g.gate_id), status: g.status as HistoryGate['status'],
+      durationMs: Number(g.duration_ms), ...(g.inputs_hash ? { inputsHash: String(g.inputs_hash) } : {}) })) }));
+}
+
+/** The most recent runs matching the filter, newest first. Throws when the database is unreadable or newer than this version. */
+export async function readRuns(outputDir: string, limit: number, filter: HistoryFilter = {}): Promise<HistoryRun[]> {
   const db = await open(outputDir, false);
   if (!db) return [];
   try {
-    const rows = db.prepare('SELECT * FROM runs ORDER BY started_at DESC, rowid DESC LIMIT ?').all(limit) as Record<string, string | number>[];
-    const gates = db.prepare('SELECT * FROM gates WHERE run_id = ? ORDER BY position');
-    return rows.map(row => ({ id: String(row.id), startedAt: String(row.started_at), finishedAt: String(row.finished_at),
-      execution: row.execution as HistoryRun['execution'], decision: row.decision as HistoryRun['decision'], durationMs: Number(row.duration_ms),
-      gates: (gates.all(String(row.id)) as Record<string, string | number | null>[]).map(g => ({ id: String(g.gate_id), status: g.status as HistoryGate['status'],
-        durationMs: Number(g.duration_ms), ...(g.inputs_hash ? { inputsHash: String(g.inputs_hash) } : {}) })) }));
+    const where: string[] = []; const params: (string | number)[] = [];
+    if (filter.since) { where.push('started_at >= ?'); params.push(filter.since); }
+    if (filter.decision) { where.push('decision = ?'); params.push(filter.decision); }
+    if (filter.gates?.length) { where.push(`EXISTS (SELECT 1 FROM gates WHERE gates.run_id = runs.id AND gate_id IN (${filter.gates.map(() => '?').join(', ')}))`); params.push(...filter.gates); }
+    const rows = db.prepare(`SELECT * FROM runs ${where.length ? `WHERE ${where.join(' AND ')}` : ''} ORDER BY started_at DESC, rowid DESC LIMIT ?`).all(...params, limit) as Record<string, string | number>[];
+    return runsFrom(db, rows, filter.gates?.length ? filter.gates : undefined);
+  } finally { db.close(); }
+}
+
+/** One run by id, or undefined when there is none. `gates` keeps only those gates. */
+export async function readRun(outputDir: string, id: string, gates?: string[]): Promise<HistoryRun | undefined> {
+  const db = await open(outputDir, false);
+  if (!db) return undefined;
+  try {
+    return runsFrom(db, db.prepare('SELECT * FROM runs WHERE id = ?').all(id) as Record<string, string | number>[], gates?.length ? gates : undefined)[0];
   } finally { db.close(); }
 }
 
@@ -121,7 +177,7 @@ export function trends(newestFirst: HistoryRun[]): Trends {
   for (const [id, list] of outcomes) {
     const failures = list.filter(o => o.blocked).length;
     if (failures) failingGates.push({ id, failures, runs: list.length });
-    const flips = list.filter((o, i) => i > 0 && o.blocked !== list[i - 1]!.blocked && !(o.hash && list[i - 1]!.hash && o.hash !== list[i - 1]!.hash)).length;
+    const flips = list.filter((o, i) => i > 0 && o.blocked !== list[i - 1]!.blocked && o.hash !== undefined && o.hash === list[i - 1]!.hash).length;
     if (flips >= MIN_FLIPS) flakyGates.push({ id, flips, runs: list.length });
   }
   const byName = (a: { id: string }, b: { id: string }) => a.id.localeCompare(b.id);

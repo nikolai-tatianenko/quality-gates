@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PassThrough } from 'node:stream';
 import { spawn } from 'node:child_process';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { configSchema, type GateResult, type RunResult } from '../packages/protocol/src/index.js';
@@ -17,9 +17,9 @@ const node = (code: string) => `${JSON.stringify(process.execPath)} -e ${JSON.st
 function gate(id: string, patch: Partial<GateResult> = {}): GateResult {
   return { id, command: 'x', execution: 'completed', decision: 'PASS', exitCode: 0, durationMs: 5, outputTail: '', errors: [], findings: [], artifacts: [], ...patch };
 }
-function fakeStream(columns = 40) {
-  const stream = new PassThrough() as PassThrough & { isTTY: boolean; columns: number };
-  stream.isTTY = true; stream.columns = columns;
+function fakeStream(columns = 40, rows = 24) {
+  const stream = new PassThrough() as PassThrough & { isTTY: boolean; columns: number; rows: number };
+  stream.isTTY = true; stream.columns = columns; stream.rows = rows;
   let text = ''; stream.on('data', chunk => { text += chunk; });
   return { stream, text: () => text };
 }
@@ -94,6 +94,35 @@ test('live view stop without a result only clears and restores the cursor; frame
   for (const row of text().split(/\x1b\[[0-9;?]*[A-Za-z]/).join('\n').split('\n')) assert.ok(row.length <= 20, row);
   assert.match(text(), /\x1b\[\?25h$/);
 });
+/** The distances of every "cursor up" in the output. */
+const ups = (text: string) => [...text.matchAll(/\x1b\[(\d+)A/g)].map(match => Number(match[1]));
+test('live view with more gates than terminal rows draws fewer rows than the height, running gates first, and never moves up further than it drew', () => {
+  const { stream, text } = fakeStream(40, 5);
+  const view = liveView(stream, { interval: 0 });
+  const ids = Array.from({ length: 12 }, (_, index) => `gate${index}`);
+  view.onProgress({ kind: 'plan', ids });
+  view.onProgress({ kind: 'start', id: 'gate11' });
+  for (const id of ids.slice(0, 6)) view.onProgress({ kind: 'end', gate: gate(id) });
+  const frames = text().split('\x1b[J').pop()!;
+  assert.match(frames, /gate11/); assert.match(frames, /\+\d+ more/);
+  assert.equal(frames.trimEnd().split('\n').length, 4);
+  assert.ok(ups(text()).every(up => up <= 4), String(ups(text())));
+  view.stop();
+  assert.ok(ups(text()).every(up => up <= 4));
+});
+test('live view erases wrapped rows after the terminal is made narrower and redraws on resize, and releases the listener', () => {
+  const { stream, text } = fakeStream(40);
+  const view = liveView(stream, { interval: 0 });
+  view.onProgress({ kind: 'plan', ids: ['a'] });
+  view.onProgress({ kind: 'log', id: 'a', line: 'x'.repeat(100) });
+  const wide = text().length;
+  stream.columns = 10; stream.emit('resize');
+  assert.deepEqual(ups(text().slice(wide)).slice(0, 1), [4]);
+  assert.match(text().slice(wide), /\x1b\[J.*a/s);
+  assert.equal(stream.listenerCount('resize'), 1);
+  view.stop();
+  assert.equal(stream.listenerCount('resize'), 0);
+});
 test('live view timer redraws while gates run and is released by stop', async () => {
   const { stream, text } = fakeStream();
   const view = liveView(stream, { interval: 5 });
@@ -149,8 +178,26 @@ test('on a real terminal the live view draws, restores the cursor and keeps the 
       let out = ''; child.stdout.on('data', chunk => { out += chunk; });
       child.once('error', reject); child.once('close', code => done({ code, out }));
     });
+    assert.equal(result.code, 0);
     assert.match(result.out, /\x1b\[\?25l/); assert.match(result.out, /\x1b\[\?25h/);
     assert.match(result.out, /PASS gate ok \(completed, exit 0, /);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+test('a history warning is printed after the live rows are erased and the cursor is restored', { skip: process.platform === 'win32' }, async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-pty-'));
+  try {
+    const path = join(dir, '.qualitygate.yml');
+    await writeFile(path, `schemaVersion: 1\ngates:\n  - id: ok\n    type: command\n    run: ${JSON.stringify(node('console.log("fine")'))}\n`);
+    await mkdir(join(dir, '.qualitygate', 'history.sqlite'), { recursive: true });
+    const command = [process.execPath, '--import', 'tsx', entry, 'run', '--config', path];
+    const args = process.platform === 'darwin' ? ['-q', '/dev/null', ...command] : ['-qec', command.map(part => JSON.stringify(part)).join(' '), '/dev/null'];
+    const out = await new Promise<string>((done, reject) => {
+      const child = spawn('script', args, { cwd: process.cwd(), env: { ...process.env, CI: undefined, TERM: 'xterm' }, stdio: ['ignore', 'pipe', 'pipe'] });
+      let text = ''; child.stdout.on('data', chunk => { text += chunk; });
+      child.once('error', reject); child.once('close', () => done(text));
+    });
+    const warning = out.indexOf('run history not saved');
+    assert.ok(warning > out.lastIndexOf('\x1b[?25h') && out.lastIndexOf('\x1b[?25h') > out.lastIndexOf('\x1b[J'), out);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 test('SIGINT on a real terminal (what Ctrl+C sends) cancels the gate, restores the cursor and exits 130', { skip: process.platform === 'win32' }, async () => {
@@ -160,13 +207,14 @@ test('SIGINT on a real terminal (what Ctrl+C sends) cancels the gate, restores t
     await writeFile(path, `schemaVersion: 1\ngates:\n  - id: slow\n    type: command\n    run: ${JSON.stringify('echo working; sleep 1; kill -INT $PPID; sleep 30')}\n`);
     const command = [process.execPath, '--import', 'tsx', entry, 'run', '--config', path];
     const args = process.platform === 'darwin' ? ['-q', '/dev/null', ...command] : ['-qec', command.map(part => JSON.stringify(part)).join(' '), '/dev/null'];
-    const result = await new Promise<string>((done, reject) => {
+    const result = await new Promise<{ code: number | null; out: string }>((done, reject) => {
       const child = spawn('script', args, { cwd: process.cwd(), env: { ...process.env, CI: undefined, TERM: 'xterm' }, stdio: ['ignore', 'pipe', 'pipe'] });
       let out = ''; child.stdout.on('data', chunk => { out += chunk; });
-      child.once('error', reject); child.once('close', () => done(out));
+      child.once('error', reject); child.once('close', code => done({ code, out }));
     });
-    assert.match(result, /\x1b\[\?25h/);
-    assert.match(result, /interrupted/);
+    assert.equal(result.code, 130);
+    assert.match(result.out, /\x1b\[\?25h/);
+    assert.match(result.out, /interrupted/);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
 

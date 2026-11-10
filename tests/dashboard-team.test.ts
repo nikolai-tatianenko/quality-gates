@@ -10,7 +10,7 @@ import { buildTeamReport, teamMarkdown } from '../packages/core/src/team.js';
 import type { HistoryGate, HistoryRun } from '../packages/core/src/history.js';
 import { runResultSchema } from '../packages/protocol/src/index.js';
 
-const gate = (id: string, status: HistoryGate['status']): HistoryGate => ({ id, status, durationMs: 10 });
+const gate = (id: string, status: HistoryGate['status']): HistoryGate => ({ id, status, durationMs: 10, inputsHash: 'same' });
 function hrun(n: number, gates: HistoryGate[], over: Partial<HistoryRun> = {}): HistoryRun {
   const start = new Date(Date.UTC(2026, 10, 2, 10 + n)).toISOString();
   return { id: `run${n}-aaaaaaaa-0000`, startedAt: start, finishedAt: new Date(Date.parse(start) + 60_000).toISOString(), execution: 'completed',

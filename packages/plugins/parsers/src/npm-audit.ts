@@ -10,12 +10,15 @@ const reportSchema = z.object({ auditReportVersion: z.literal(2), vulnerabilitie
 const SEVERITY = { critical: 'error', high: 'error', moderate: 'warning', low: 'info', info: 'info' } as const;
 /** The advisory id: the GHSA id from the advisory URL, else npm's numeric source id. */
 const advisoryId = (advisory: z.infer<typeof advisorySchema>) => /GHSA(-[0-9a-z]{4}){3}/.exec(advisory.url ?? '')?.[0] ?? (advisory.source === undefined ? undefined : String(advisory.source));
-/** `npm audit --json` (npm 7+, `auditReportVersion: 2`): one finding per advisory. Packages that are only vulnerable through another package are reported where the advisory is. Error output (`{"error": ...}`) or the legacy format is an error, never "no vulnerabilities". */
+/** `npm audit --json` (npm 7+, `auditReportVersion: 2`): one finding per advisory. Packages that are only vulnerable through another package are reported where the advisory is, unless that package is missing from the report. Error output (`{"error": ...}`) or the legacy format is an error, never "no vulnerabilities". */
 export const npmAudit: ParserPlugin = { id: 'npm-audit', apiVersion: 1, kind: 'parser', parse(raw, { gateId }) {
-  return Object.values(reportSchema.parse(JSON.parse(raw)).vulnerabilities).flatMap(pkg => {
+  const report = reportSchema.parse(JSON.parse(raw));
+  return Object.values(report.vulnerabilities).flatMap(pkg => {
     const range = pkg.range ? ` (${pkg.range})` : '';
     const advisories = pkg.via.filter((item): item is z.infer<typeof advisorySchema> => typeof item !== 'string');
     if (!pkg.via.length) return [{ gateId, severity: SEVERITY[pkg.severity], message: `${pkg.name}: vulnerable${range}` }];
+    const missing = pkg.via.filter((item): item is string => typeof item === 'string' && !(item in report.vulnerabilities));
+    if (!advisories.length && missing.length) return [{ gateId, severity: SEVERITY[pkg.severity], message: `${pkg.name}: vulnerable via ${missing.join(', ')}${range}` }];
     return advisories.map((advisory): Finding => {
       const helpUrl = findingSchema.shape.helpUrl.parse(advisory.url);
       const ruleId = advisoryId(advisory);

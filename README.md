@@ -360,7 +360,7 @@ editor agent. Live-model/editor verification limits are listed below.
 | TS/JS analysis | ESLint/SonarJS complexity and code smells through the reusable analyzer |
 | Python analysis/tests | Ruff findings and your declared Python test commands |
 | Lighthouse | Performance, accessibility, SEO and best-practices scores on a 0–100 scale |
-| axe-core JSON | Report parser, not an accessibility preset: one finding per violating element (`violations` only, not `incomplete`) with rule, impact and the selector from the page; `qualitygate report --sarif` exports a run as SARIF 2.1.0 |
+| axe-core JSON | Report parser, not an accessibility preset: one finding per violating element (`violations` only, not `incomplete`) with rule, impact and the selector from the page; `qualitygate report --sarif` exports a run as SARIF 2.1.0 (file uris relative to the project root, skipped gates as notes) |
 | SonarQube | The quality gate for the specific scanner analysis, not an old project result |
 | Agent review producer | Normalized confirmed/unresolved/rejected findings with methodology provenance |
 
@@ -414,7 +414,7 @@ not `--json`; `--no-live` or `QUALITYGATE_NO_LIVE=1` turns it off. Piped output,
 identical with and without it. Escape sequences in gate output are stripped before display, and the output of a gate whose
 report parser handles secrets (such as `gitleaks`) is not shown live. Ctrl+C still cancels the gates (exit 130) and restores
 the cursor. `qualitygate run` keeps this plain ANSI view (no UI framework is loaded for it); it shows the newest line only, not a
-scrolling log window. The separate interactive screen, `qualitygate ui`, is built with Ink 7 (see below).
+scrolling log window. It uses the terminal's real size: with more gates than rows it shows the running gates and `+N more`, and it redraws on resize. A history warning is printed after the rows are erased. The separate interactive screen, `qualitygate ui`, is built with Ink 7 (see below).
 
 ### Interactive UI and fix
 
@@ -492,6 +492,23 @@ folders. The TypeScript logic is unit and integration tested (including against 
 (Rust 1.95, Tauri 2.12); Windows is not built, the window was not clicked through, and no signed package exists.
 [Status and design](docs/DESKTOP.md), [signing plan](docs/DESKTOP_SIGNING.md), manual build workflow `.github/workflows/desktop-smoke.yml`.
 
+### List gates and check the setup
+
+```sh
+qualitygate list   [--config <path>] [--json]   # every configured gate and its newest recorded result
+qualitygate doctor [--config <path>] [--json]   # is this machine ready to run these gates?
+```
+
+Both are read-only: they run no gate, create no file and never change a verdict. `list` shows each gate's id, type and
+the newest result found in the last 50 recorded runs (`passed`, `failed`, `cached`, ... with time and duration, or `never run`);
+it never prints commands or gate output. An unreadable history database only adds a warning. `doctor` checks the Node
+version (`>=22.23.4`), that the config parses and validates, Chrome (only when the config has URLs; `CHROME_PATH` first, as the
+audit does), that every program the gates start (`run` and `fix`, first word of each `&&`, `||`, `;`, `|` part) is on `PATH` or
+at its relative path, that the output directory is writable (or its nearest existing parent, for a directory that does not
+exist yet) and that the history database opens. It prints no environment values and no file content: a config error shows
+only the schema paths and rules. Exit `0` when no check failed (a `warn`, such as a corrupt history database, does not fail),
+`2` when one did, including a broken config; `list` exits `2` on a broken config like every other command.
+
 ### Run history and trends
 
 Every `run` (CLI, dashboard and MCP) also appends the finished run to a local SQLite database,
@@ -503,6 +520,9 @@ their input files. Nothing is uploaded and old runs are not pruned; delete the f
 ```sh
 qualitygate history [--limit 10] [--json]   # recent runs: id, time, decision, duration, gate counts, then a comparison
 qualitygate trends  [--limit 50] [--json]   # blocks per week, most frequently failing gates, flaky gates
+
+# both: --gate <id>... (only these gates), --since 2026-11-01, --decision BLOCK
+qualitygate history --baseline <runId>      # compare the newest run with a chosen run instead of the previous one
 ```
 
 `history` compares the newest run with the one before it: a **regression** is a gate that passed before and blocks now
@@ -510,12 +530,13 @@ qualitygate trends  [--limit 50] [--json]   # blocks per week, most frequently f
 included), **fixed** gates blocked before and pass now, and **newly slow** gates took at least twice as long and at least
 one second longer. Skipped and interrupted gates are not compared. Both commands exit `0` even when they report a
 regression; they never gate anything. A **flaky** gate flips between PASS and BLOCK at least twice within the last `--limit`
-runs without a change of its inputs hash (when no hash exists, because the gate declares no `inputs`, a flip cannot be
-explained and counts). `qualitygate export` adds the same trends to the static HTML report when history exists (last 50 runs).
+runs whose inputs hash is equal (a gate that declares no `inputs` has no hash, so nothing proves its inputs did not
+change and it is never reported as flaky). `qualitygate export` adds the same trends to the static HTML report when history exists (last 50 runs).
 
 History never changes a verdict: if the database cannot be written, `run` prints `warning: run history not saved (...)` to
 stderr and keeps its result and exit code. A corrupt database does not break `run`; `history` and `trends` report it as an
-error (exit `2`) and `export` omits the trends with a warning. History is a local file, so it only reflects runs made on
+error (exit `2`) and `export` omits the trends with a warning. The file has a schema version: an older file is upgraded in
+place by the next run, and a file written by a newer QualityGate is refused with a message naming both versions and never modified. History is a local file, so it only reflects runs made on
 this machine and is not shared between CI jobs.
 
 ## How it fits alongside existing tools
@@ -575,6 +596,7 @@ provider, OS or deployment has been tested.
 | Still unverified | Live Cursor/Codex sessions, live Ollama/vLLM inference, live SonarQube and all provider deployments |
 | Real-project trial | One pnpm monorepo with Node, Vitest and Playwright: setup found its gates, parallel runs, timeout exit code `3` and the step registry worked; truncated `node --test` reports in long runs are still being investigated |
 | Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, history pruning, filters and a chosen baseline run (T-085), plugin isolation and signing, a compiled and signed Tauri desktop client (the TypeScript side exists and is tested, the Rust shell builds unsigned on macOS only, see docs/DESKTOP.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
+| Still to build | Complete Cloudflare audit harness/sandbox, exact source-tree binding, history pruning (T-085), plugin isolation and signing, a compiled and signed Tauri desktop client (the TypeScript side exists and is tested, the Rust shell is unbuilt, see docs/DESKTOP.md), Chrome Web Store publication, an extension DevTools panel and screenshot thumbnails |
 
 The repository checks itself with the same gate configuration. Runtime coverage
 includes the CLI, core, plugins, services, adapters and dashboard TS/TSX; the only

@@ -4,7 +4,7 @@ import { runResultSchema, type RunResult } from '../packages/protocol/src/index.
 import type { HistoryGate, HistoryRun } from '../packages/core/src/history.js';
 import { buildTeamReport, reproduceCommand, shellWord, teamMarkdown } from '../packages/core/src/team.js';
 
-const gate = (id: string, status: HistoryGate['status'], durationMs = 100, inputsHash?: string): HistoryGate => ({ id, status, durationMs, ...(inputsHash ? { inputsHash } : {}) });
+const gate = (id: string, status: HistoryGate['status'], durationMs = 100, inputsHash = 'same'): HistoryGate => ({ id, status, durationMs, ...(inputsHash ? { inputsHash } : {}) });
 /** Runs one hour apart starting 2026-11-02T10:00Z, so run n started at hour 10+n. */
 function hrun(n: number, gates: HistoryGate[], over: Partial<HistoryRun> = {}): HistoryRun {
   const start = new Date(Date.UTC(2026, 10, 2, 10 + n)).toISOString();
