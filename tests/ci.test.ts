@@ -125,6 +125,6 @@ test('CLI renders reports and updates a fixture PR through real HTTP; JSON outpu
     assert.equal(JSON.parse((await cli([...args, '--write', '--json'])).stdout).write, true); assert.equal(writes, 1);
     assert.match((await cli([...args, '--write'])).stdout, /Handwritten PR/); assert.equal(writes, 1);
     await writeFile(input, JSON.stringify({ ...run, finishedAt: '2026-10-30T20:02:00.000Z' })); assert.match((await cli([...args, '--write'])).stdout, /PR: updated/); assert.equal(writes, 2);
-    for (const invalid of [['report'], ['report', 'extra', '--input', input], ['pr', '--input', input], ['run', '--write'], ['report', '--input', input, '--config', 'x']]) await assert.rejects(cli([...invalid, '--json']));
+    for (const invalid of [['report'], ['report', 'extra', '--input', input], ['pr', '--input', input], ['run', '--write'], ['report', '--input', input, '--limit', '1']]) await assert.rejects(cli([...invalid, '--json']));
   } finally { server.closeAllConnections(); await new Promise<void>(resolve => server.close(() => resolve())); await rm(dir, { recursive: true, force: true }); }
 });

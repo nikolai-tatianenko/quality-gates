@@ -19,6 +19,7 @@ import { fixGates, describeFix } from './fix.js';
 import { serveBridge, revokeAll } from '../../bridge/src/index.js';
 import { DEFAULT_PORT } from '../../bridge/src/serve.js';
 import { historyCommand, trendsCommand } from './history.js';
+import { listCommand, doctorCommand } from './doctor.js';
 import { readTrends } from '../../core/src/history.js';
 import { readReport, renderMarkdown, renderSarif, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
 const args = process.argv.slice(2);
@@ -39,7 +40,7 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = []; const origins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit', '--port'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit', '--port', '--since', '--decision', '--baseline'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
@@ -58,8 +59,8 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], history: ['--config', '--limit'], trends: ['--config', '--limit'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
-    report: ['--input', '--output'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], list: ['--config'], doctor: ['--config'], history: ['--config', '--limit', '--since', '--decision', '--baseline'], trends: ['--config', '--limit', '--since', '--decision'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
+    report: ['--input', '--output', '--config'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
     notify: ['--input', '--webhook-env', '--report-url'],
@@ -67,7 +68,7 @@ try {
   };
   if (command && validFlags[command]) {
     for (const key of values.keys()) if (!validFlags[command]!.includes(key)) throw new Error(`${command} does not accept ${key}`);
-    if (only.length && command !== 'run' && command !== 'fix') throw new Error(`${command} does not accept --gate or --only`);
+    if (only.length && !['run', 'fix', 'history', 'trends'].includes(command)) throw new Error(`${command} does not accept --gate or --only`);
     if ((changed || cache) && command !== 'run') throw new Error(`${command} does not accept --changed or --cache`);
     if (allowDirty && command !== 'fix') throw new Error(`${command} does not accept --allow-dirty`);
     if (noLive && command !== 'run') throw new Error(`${command} does not accept --no-live`);
@@ -86,8 +87,10 @@ try {
       + '       qualitygate fix [--config <path>] [--gate <id>...] [--allow-dirty] [--json]\n'
       + '       qualitygate ui [--config <path>]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
-      + '       qualitygate history [--limit <n>] [--config <path>] [--json]\n'
-      + '       qualitygate trends [--limit <n>] [--config <path>] [--json]\n'
+      + '       qualitygate list [--config <path>] [--json]\n'
+      + '       qualitygate doctor [--config <path>] [--json]\n'
+      + '       qualitygate history [--limit <n>] [--gate <id>...] [--since <date>] [--decision <PASS|BLOCK>] [--baseline <runId>] [--config <path>] [--json]\n'
+      + '       qualitygate trends [--limit <n>] [--gate <id>...] [--since <date>] [--decision <PASS|BLOCK>] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
       + '       qualitygate bridge [--port <n>] [--origin <origin>...] [--config <path>] | qualitygate bridge --revoke-all\n'
       + '       qualitygate report --input <run.json> [--output <report.md|report.sarif>] [--sarif] [--json]\n'
@@ -118,18 +121,27 @@ try {
       ...(result.gitignore.length ? [`Added to .gitignore: ${result.gitignore.join(' ')}`] : []),
       `Files changed: ${result.changed.join(', ')}`,
       'Check that the test script exits (not watch mode), then run: qualitygate run'].join('\n'));
+  } else if (command === 'list' || command === 'doctor') {
+    if (positional.length) throw new Error(`${command} does not accept positional arguments`);
+    if (command === 'list') console.log(await listCommand(configPath, json));
+    else { const result = await doctorCommand(configPath, json); console.log(result.text); process.exitCode = result.code; }
   } else if (command === 'history' || command === 'trends') {
     if (positional.length) throw new Error(`${command} does not accept positional arguments`);
     const limit = z.coerce.number().int().min(1).max(1000).parse(values.get('--limit') ?? (command === 'history' ? 10 : 50));
-    console.log(await (command === 'history' ? historyCommand : trendsCommand)(configPath, limit, json));
+    const since = values.get('--since'); const baseline = values.get('--baseline');
+    if (since !== undefined && Number.isNaN(Date.parse(since))) throw new Error(`--since expects a date such as 2026-11-01 or 2026-11-01T10:00:00Z, got "${since}"`);
+    if (baseline !== undefined && !baseline) throw new Error('--baseline expects a run id');
+    const filter = { gates: only, ...(since ? { since: new Date(since).toISOString() } : {}), ...(values.has('--decision') ? { decision: z.enum(['PASS', 'BLOCK']).parse(values.get('--decision')) } : {}) };
+    console.log(await (command === 'history' ? historyCommand(configPath, limit, json, { ...filter, baseline }) : trendsCommand(configPath, limit, json, filter)));
   } else if (command === 'run' || command === 'inspect') {
     if ((command === 'run' && positional.length) || positional.length > 1) throw new Error(`${command}: unexpected arguments`);
     const view = command === 'run' && liveEnabled(process.stdout, process.env, { noLive, json }) ? liveView(process.stdout) : undefined;
     let result;
+    const warnings: string[] = [];
     try {
-      result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache, onProgress: view?.onProgress }) : await getRun(configPath, positional[0]);
+      result = command === 'run' ? await execute(configPath, controller.signal, only.length ? only : undefined, { changed, cache, onProgress: view?.onProgress, onWarning: view && (text => warnings.push(text)) }) : await getRun(configPath, positional[0]);
       view?.stop(result);
-    } finally { view?.stop(); }
+    } finally { view?.stop(); for (const text of warnings) process.stderr.write(text); }
     if (json) process.stdout.write(jsonReporter.render(result));
     else {
       if (command === 'run') console.log(`Project root: ${dirname(resolve(configPath))}`);
@@ -156,7 +168,7 @@ try {
     const input = z.string().min(1).parse(values.get('--input'));
     if (command === 'report') {
       const report = await readReport(input);
-      const markdown = sarif ? renderSarif(report) : renderMarkdown(report);
+      const markdown = sarif ? renderSarif(report, dirname(resolve(configPath))) : renderMarkdown(report);
       const output = values.get('--output');
       if (output) await writeFile(output, markdown);
       if (json) console.log(JSON.stringify({ schemaVersion: 1, ...(output ? { output: resolve(output) } : { [sarif ? 'sarif' : 'markdown']: markdown }) }));

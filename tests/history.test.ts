@@ -1,11 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runResultSchema, type RunResult } from '../packages/protocol/src/index.js';
-import { compareRuns, historyPath, readRuns, readTrends, recordRun, toHistoryRun, trends, type HistoryGate, type HistoryRun } from '../packages/core/src/history.js';
+import { compareRuns, historyPath, readRun, readRuns, readTrends, recordRun, SCHEMA_VERSION, toHistoryRun, trends, type HistoryGate, type HistoryRun } from '../packages/core/src/history.js';
 import { historyCommand } from '../packages/cli/src/history.js';
 import { renderHtml } from '../packages/ci/src/html.js';
 
@@ -85,7 +86,7 @@ test('trends: blocks per week, most failing gates and flaky gates', () => {
   assert.equal(t.runs, 5);
   assert.deepEqual(t.weeks, [{ week: '2026-10-26', runs: 1, blocked: 0 }, { week: '2026-11-02', runs: 3, blocked: 2 }, { week: '2026-11-09', runs: 1, blocked: 1 }]);
   assert.deepEqual(t.failingGates.map(g => [g.id, g.failures, g.runs]), [['flaky', 2, 5], ['nohash', 1, 4], ['real', 1, 5]]);
-  assert.deepEqual(t.flakyGates, [{ id: 'flaky', flips: 3, runs: 5 }, { id: 'nohash', flips: 2, runs: 4 }]);
+  assert.deepEqual(t.flakyGates, [{ id: 'flaky', flips: 3, runs: 5 }], 'a gate without a hash proves nothing, a changed hash explains the flip');
 });
 
 test('readTrends is undefined without history and soft on a broken database', async () => {
@@ -145,7 +146,7 @@ test('trends text shows a flaky gate and an empty history', async () => {
     assert.match((await cli(dir, ['trends'])).stdout, /No runs recorded/);
     assert.deepEqual(JSON.parse((await cli(dir, ['trends', '--json'])).stdout), { schemaVersion: 1, runs: 0, weeks: [], failingGates: [], flakyGates: [] });
     const out = join(dir, 'out');
-    for (const [i, status] of (['passed', 'failed', 'passed', 'failed'] as const).entries()) await recordRun(out, hrun(`r${i}`, `2026-11-0${i + 1}T10:00:00.000Z`, [gate('wobble', status)]));
+    for (const [i, status] of (['passed', 'failed', 'passed', 'failed'] as const).entries()) await recordRun(out, hrun(`r${i}`, `2026-11-0${i + 1}T10:00:00.000Z`, [gate('wobble', status, 10, 'same')]));
     const text = (await cli(dir, ['trends'])).stdout;
     assert.match(text, /Flaky gates/); assert.match(text, /wobble/);
     const none = await project([{ id: 'ok', run: 'true' }]);
@@ -183,5 +184,113 @@ test('history text marks runs that did not complete and names newly slow gates',
     const text = await historyCommand(join(dir, '.qualitygate.yml'), 10, false);
     assert.match(text, /new  2026-11-02T10:00:00.000Z  PASS \(interrupted\)  1.0s  1 pass, 0 block, 0 other/);
     assert.match(text, /Newly slow: build \(1.0s -> 4.0s\)/);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+const legacy = (dir: string, version: number) => {
+  const db = new DatabaseSync(historyPath(dir));
+  db.exec(`CREATE TABLE runs (id TEXT PRIMARY KEY, started_at TEXT NOT NULL, finished_at TEXT NOT NULL, execution TEXT NOT NULL, decision TEXT NOT NULL, duration_ms INTEGER NOT NULL);
+CREATE TABLE gates (run_id TEXT NOT NULL REFERENCES runs(id) ON DELETE CASCADE, position INTEGER NOT NULL, gate_id TEXT NOT NULL, status TEXT NOT NULL, duration_ms INTEGER NOT NULL, inputs_hash TEXT, PRIMARY KEY (run_id, position));
+INSERT INTO runs VALUES ('old', '2026-10-01T10:00:00.000Z', '2026-10-01T10:00:01.000Z', 'completed', 'BLOCK', 1000);
+INSERT INTO gates VALUES ('old', 0, 'lint', 'failed', 7, 'h');`);
+  db.exec(`PRAGMA user_version = ${version}`); db.close();
+};
+const version = (dir: string) => { const db = new DatabaseSync(historyPath(dir)); try { return (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version; } finally { db.close(); } };
+
+test('a database without a schema version migrates on the next write and keeps its data', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-history-'));
+  try {
+    legacy(dir, 0);
+    assert.equal((await readRuns(dir, 5))[0]!.id, 'old', 'readable before migration');
+    assert.equal(version(dir), 0, 'a read never writes');
+    await recordRun(dir, hrun('new', '2026-10-02T10:00:00.000Z', [gate('lint', 'passed')]));
+    assert.equal(version(dir), SCHEMA_VERSION);
+    const runs = await readRuns(dir, 5);
+    assert.deepEqual(runs.map(r => r.id), ['new', 'old']);
+    assert.deepEqual(runs[1]!.gates, [gate('lint', 'failed', 7, 'h')]);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('a database written by a newer schema is refused with a clear error and left untouched', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-history-'));
+  try {
+    legacy(dir, SCHEMA_VERSION + 1);
+    const newer = new RegExp(`newer.*schema ${SCHEMA_VERSION + 1}.*supports ${SCHEMA_VERSION}`, 'i');
+    await assert.rejects(readRuns(dir, 5), newer);
+    await assert.rejects(recordRun(dir, hrun('x', '2026-10-02T10:00:00.000Z', [])), newer);
+    assert.equal(version(dir), SCHEMA_VERSION + 1);
+    const warnings: string[] = [];
+    assert.equal(await readTrends(dir, 5, w => warnings.push(w)), undefined);
+    assert.match(warnings[0]!, newer);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('readRuns filters by gate, since and decision, and readRun finds one run by id', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-history-'));
+  try {
+    await recordRun(dir, hrun('a', '2026-11-01T10:00:00.000Z', [gate('lint', 'passed'), gate('test', 'failed')]));
+    await recordRun(dir, hrun('b', '2026-11-03T10:00:00.000Z', [gate('lint', 'passed')]));
+    await recordRun(dir, hrun('c', '2026-11-05T10:00:00.000Z', [gate('lint', 'failed')]));
+    const ids = async (filter: Parameters<typeof readRuns>[2]) => (await readRuns(dir, 10, filter)).map(r => r.id);
+    assert.deepEqual(await ids({ decision: 'BLOCK' }), ['c', 'a']);
+    assert.deepEqual(await ids({ since: '2026-11-03T00:00:00.000Z' }), ['c', 'b']);
+    assert.deepEqual(await ids({ gates: ['test'] }), ['a']);
+    assert.deepEqual(await ids({ gates: ['test', 'lint'], decision: 'PASS' }), ['b']);
+    const narrowed = await readRuns(dir, 10, { gates: ['test'] });
+    assert.deepEqual(narrowed[0]!.gates, [gate('test', 'failed')], 'only the selected gates remain');
+    assert.equal((await readRun(dir, 'b'))!.gates.length, 1);
+    assert.equal(await readRun(dir, 'missing'), undefined);
+    assert.equal(await readRun(join(dir, 'none'), 'b'), undefined);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('history and trends accept --gate, --since, --decision and --baseline; bad values exit 2', async () => {
+  const dir = await project([{ id: 'ok', run: 'true' }]);
+  try {
+    const out = join(dir, 'out');
+    await recordRun(out, hrun('r1', '2026-11-01T10:00:00.000Z', [gate('a', 'passed'), gate('b', 'passed')]));
+    await recordRun(out, hrun('r2', '2026-11-02T10:00:00.000Z', [gate('a', 'failed'), gate('b', 'passed')]));
+    await recordRun(out, hrun('r3', '2026-11-03T10:00:00.000Z', [gate('a', 'failed'), gate('b', 'failed')]));
+    const j = async (...args: string[]) => JSON.parse((await cli(dir, [...args, '--json'])).stdout);
+    assert.deepEqual((await j('history', '--decision', 'PASS')).runs.map((r: { id: string }) => r.id), ['r1']);
+    assert.deepEqual((await j('history', '--since', '2026-11-02')).runs.map((r: { id: string }) => r.id), ['r3', 'r2']);
+    const onlyB = await j('history', '--gate', 'b');
+    assert.deepEqual(onlyB.runs[0].gates, { passed: 0, blocked: 1, other: 0 }); assert.deepEqual(onlyB.comparison.newFailures, ['b']);
+    const base = await j('history', '--baseline', 'r1');
+    assert.equal(base.comparison.previous, 'r1'); assert.deepEqual(base.comparison.regressions, ['a', 'b']);
+    assert.match((await cli(dir, ['history', '--baseline', 'r1'])).stdout, /Compared with the baseline run r1:/);
+    assert.match((await cli(dir, ['history'])).stdout, /Compared with the previous run r2:/);
+    const t = await j('trends', '--gate', 'b', '--since', '2026-11-02', '--decision', 'BLOCK');
+    assert.equal(t.runs, 2); assert.deepEqual(t.failingGates.map((g: { id: string }) => g.id), ['b']);
+    const missing = await cli(dir, ['history', '--baseline', 'nope']);
+    assert.equal(missing.code, 2); assert.match(missing.stderr, /baseline run nope/);
+    for (const bad of [['--since', 'yesterday'], ['--decision', 'MAYBE'], ['--baseline', '']]) assert.equal((await cli(dir, ['history', ...bad])).code, 2, bad.join(' '));
+    assert.equal((await cli(dir, ['trends', '--baseline', 'r1'])).code, 2);
+    assert.equal((await cli(dir, ['run', '--since', '2026-11-01'])).code, 2);
+    assert.match((await cli(dir, ['history', '--decision', 'BLOCK', '--gate', 'zzz'])).stdout, /No runs/);
+    assert.match((await cli(dir, ['history', '--baseline', 'r3'])).stdout, /baseline run is the newest run/);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('loading node:sqlite neither swaps process.emitWarning nor prints its warning, and other warnings still get through', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-history-'));
+  const script = `import { recordRun } from ${JSON.stringify(resolve('packages/core/src/history.ts'))};
+const emit = process.emitWarning;
+const before = process.listeners('warning').length;
+process.on('warning', w => { if (w.name === 'CustomWarning') console.log('seen ' + w.message); });
+const pending = recordRun(${JSON.stringify(dir)}, { id: 'r', startedAt: 'a', finishedAt: 'a', execution: 'completed', decision: 'PASS', durationMs: 0, gates: [] });
+process.emitWarning('during load', 'CustomWarning');
+await pending;
+console.log('same ' + (process.emitWarning === emit) + ' listeners ' + (process.listeners('warning').length - before));`;
+  try {
+    await writeFile(join(dir, 'probe.mts'), script);
+    const probe = await new Promise<{ stdout: string; stderr: string }>(res => {
+      const child = spawn(process.execPath, ['--import', 'tsx', join(dir, 'probe.mts')], { cwd: resolve('.') });
+      let stdout = ''; let stderr = '';
+      child.stdout.on('data', c => { stdout += c; }); child.stderr.on('data', c => { stderr += c; });
+      child.once('close', () => res({ stdout, stderr }));
+    });
+    assert.doesNotMatch(probe.stderr, /SQLite/); assert.match(probe.stderr, /CustomWarning: during load/, 'other warnings are printed');
+    assert.match(probe.stdout, /same true listeners 1/); assert.match(probe.stdout, /seen during load/);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });

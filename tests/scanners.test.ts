@@ -67,6 +67,13 @@ test('npm-audit keeps a vulnerable package whose via list is empty as one findin
   assert.deepEqual(parse('npm-audit', audit({ a: { name: 'a', severity: 'moderate', via: [], range: '*' } })), [{ gateId: 'g', severity: 'warning', message: 'a: vulnerable (*)' }]);
   assert.deepEqual(parse('npm-audit', audit({ a: { name: 'a', severity: 'info', via: [] } })), [{ gateId: 'g', severity: 'info', message: 'a: vulnerable' }]);
 });
+test('npm-audit keeps a package whose via entries are all strings when a referenced package is missing from the report', () => {
+  const present = { name: 'b', severity: 'high', via: [advisory({ name: 'b' })], range: '*' };
+  const chained = (via: string[]) => parse('npm-audit', audit({ a: { name: 'a', severity: 'high', via, range: '<2' }, b: present })).filter(finding => finding.message.startsWith('a:'));
+  assert.deepEqual(chained(['gone']), [{ gateId: 'g', severity: 'error', message: 'a: vulnerable via gone (<2)' }]);
+  assert.deepEqual(chained(['b', 'gone'])[0], { gateId: 'g', severity: 'error', message: 'a: vulnerable via gone (<2)' });
+  assert.deepEqual(chained(['b']), []);
+});
 
 const osv = (vuln: object, extra = {}) => JSON.stringify({ results: [{ source: { path: '/proj/package-lock.json', type: 'lockfile' }, packages: [
   { package: { name: 'lodash', version: '4.17.20', ecosystem: 'npm' }, vulnerabilities: [vuln], groups: [{ ids: ['GHSA-35jh-r3h4-6jhm'], max_severity: '7.2' }], ...extra }] }] });
