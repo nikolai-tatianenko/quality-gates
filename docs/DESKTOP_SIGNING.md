@@ -1,7 +1,7 @@
 # Desktop signing and notarization plan (QG-805)
 
 Status: **a plan, not a result.** No package has been built, signed, notarized or installed by the author; the Rust
-shell is unbuilt and every step below is unverified (see [DESKTOP.md](DESKTOP.md)). Nothing here contains a secret. Certificates, passwords
+shell builds unsigned on macOS and every step below is unverified (see [DESKTOP.md](DESKTOP.md)). Nothing here contains a secret. Certificates, passwords
 and API keys never go into the repository, `tauri.conf.json`, workflow files or logs; they are supplied as CI secrets or
 read from a local keychain at release time. The repository's `desktop-smoke.yml` uses none of them and builds unsigned.
 

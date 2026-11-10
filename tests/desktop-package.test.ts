@@ -33,7 +33,7 @@ test('the shell has no shell, filesystem, opener or http plugin and the launcher
   const rust = await read('src-tauri/src/main.rs');
   assert.equal(rust.match(/Command::new\(/g)?.length, 1, 'the only process the shell starts is the Node host');
   assert.match(rust, /Command::new\("node"\)/);
-  assert.match(rust, /UNBUILT/);
+  assert.doesNotMatch(rust, /UNBUILT/, 'the shell compiles; the header must not claim otherwise');
 });
 
 test('the Rust method allow list equals the host method list', async () => {
