@@ -50,7 +50,7 @@ test('loads parser, ecosystem and gate from the fixture package', async () => wi
   assert.deepEqual(Object.keys(loaded.parsers), ['fixture-json']);
   assert.deepEqual(loaded.ecosystems.map(p => p.id), ['fixture-eco']);
   assert.deepEqual(Object.keys(loaded.gates), ['fixture-gate']);
-  assert.deepEqual(await loadExternalPlugins(dir, []), { parsers: {}, ecosystems: [], gates: {} });
+  assert.deepEqual(await loadExternalPlugins(dir, []), { parsers: {}, ecosystems: [], gates: {}, commands: {} });
 }));
 test('follows pnpm-style symlinks and scoped names', async () => withProject(async dir => {
   await cp(fixture, join(dir, 'node_modules', '.pnpm', 'fixture@1', 'node_modules', 'fixture'), { recursive: true });

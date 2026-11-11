@@ -102,3 +102,32 @@ the same numbers. The web page is served by `pnpm dashboard`, not by the bridge;
 Verified in real Chrome by `pnpm smoke:dashboard` (desktop and 320px layouts, no overflow, copy by keyboard). Clipboard
 success depends on the browser; failure is announced and the Markdown preview can be selected by hand. A screen reader pass
 and Safari/Firefox were not tested.
+
+## Visual section (optional plugin)
+
+When the latest run holds `<outputDir>/<runId>/visual/visual.json`, written by the optional visual-regression plugin, the
+dashboard adds a **Visual** section. Without the plugin nothing changes: no section, no link, no error.
+
+- The list shows every screenshot with a text status chip (Changed, New, Missing, Match) and its diff ratio; blocking items come first.
+- The viewer has four modes. **Slider** puts the approved image on the left and the current one on the right behind a draggable
+  divider that is a `role="slider"` (`aria-valuenow`; arrows move 1, Shift or Page keys 10, Home and End jump to the ends).
+  **Side by side**, **Diff** (the plugin's red highlight image) and **Onion** (an opacity blend with a range input) complete it.
+  **Zoom to fit** toggles between fitting the width and real size (scrolls).
+- A new screenshot has no approved baseline: only the current image is shown, with a notice that a missing baseline blocks the run.
+  A missing one shows the approved image and says the run did not produce it.
+- The command `qualitygate visual approve <name>` is shown with a copy button. The dashboard never approves anything itself:
+  run the command in your project, review the change and commit it.
+- The section refetches after **Run quality gates** finishes and when the browser window regains focus, so a run started from the
+  terminal shows up when you come back to the tab. Nothing is animated, so reduced-motion settings need no special case.
+
+A visual.json the reader refuses (invalid, over 1 MB, a symbolic link) is not hidden: the section stays, with the reader's warning
+as a notice instead of the list. The reader accepts item names of ASCII letters, digits, dots, dashes and underscores that start
+with neither a dot nor a dash (so a name never reads as an option of the shown command), a project-relative `baselineDir`
+(no absolute path, drive letter or `..`), and refuses a run or `visual/` folder that is a symbolic link.
+
+Images are served by `GET /api/run/visual?run=<runId>&name=<item>&image=approved|current|diff`: only items the run's own
+`visual.json` lists, only regular PNG files inside that run's `visual/` folder (symlinks refused), at most 10 MB, and only when the
+PNG header size equals the item's `width` and `height` and is at most 40 megapixels (`422` otherwise). The same data is
+on the bridge as `GET /v1/visual` ([docs/BRIDGE.md](../../docs/BRIDGE.md)). The Visual section is covered by
+`scripts/dashboard-smoke.mjs` (`pnpm smoke:dashboard`, seeded with generated fixtures: drag, keyboard, modes, contrast in both
+themes). That smoke is written and must be run where Chrome is available; it has not been run for this section.

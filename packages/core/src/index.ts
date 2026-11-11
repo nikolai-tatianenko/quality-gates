@@ -46,6 +46,8 @@ export interface RunOptions {
   only?: string[];
   /** Gate ID to a note: the gate passes without running (inputs unchanged since a passing run). */
   cached?: Record<string, string>;
+  /** The project root, handed to plugins as `context.projectDir`. */
+  directory?: string;
 }
 /** Runs configured gates then audits; selection by gate ID skips URL audits. */
 export async function run(configInput: Config, plugins: RunPlugins,
@@ -65,7 +67,7 @@ export async function runWith(configInput: Config, plugins: RunPlugins, options:
   let directory: string | undefined;
   try { directory = await selected.storage.createRun(result.runId); }
   catch (error) { result.errors.push(`Storage initialization: ${message(error)}`); }
-  const environment = { signal, storage: selected.storage, directory };
+  const environment = { signal, storage: selected.storage, directory, projectDir: options.directory };
   const cached = options.cached ?? {};
   // Progress is display only: a failing view must never change a gate or the verdict.
   const report = (event: ProgressEvent) => { try { options.onProgress?.(event); } catch { /* ignored */ } };

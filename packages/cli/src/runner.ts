@@ -65,7 +65,7 @@ export async function execute(configPath: string, signal: AbortSignal, only?: st
   const result = await runWith(config, {
     audit: lighthousePlugin(config.timeoutMs, config.chrome), gate: { ...command, run: (spec, context) => gates.get(spec.type)!.run(spec, context) },
     storage: filesystemPlugin(config.outputDir), reporter: jsonReporter,
-  }, { signal, only: ids, cached, onProgress: flags.onProgress });
+  }, { signal, only: ids, cached, onProgress: flags.onProgress, directory });
   if (flags.cache) await saveCache(config.outputDir, hashes, result);
   if (!flags.scanUrl) await remember(config, directory, { result, known: hashes }, flags.onWarning ?? (text => process.stderr.write(text)));
   return result;

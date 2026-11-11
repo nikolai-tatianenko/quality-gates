@@ -2,14 +2,31 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
-import { QualityGateService, teamView } from '../../service/src/index.js';
+import { QualityGateService, teamView, visualImage, visualView } from '../../service/src/index.js';
 import { message } from '../../protocol/src/index.js';
+import { VisualImageError } from '../../core/src/visual.js';
 import { portlessOrigin, dashboardHost } from './address.js';
 
 const headers = { 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store',
   'Content-Security-Policy': "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'" };
 function json(res: ServerResponse, status: number, value: unknown) {
   res.writeHead(status, { ...headers, 'Content-Type': 'application/json' }); res.end(JSON.stringify(value));
+}
+/** The visual-regression screenshots: a PNG with the dashboard's headers, never an attachment a page could script. */
+function image(res: ServerResponse, body: Buffer) {
+  res.writeHead(200, { ...headers, 'Content-Type': 'image/png' }); res.end(body);
+}
+/** `GET /api/run/visual`: the comparison of the latest run, or with `name`, `image` and `run` one listed screenshot. */
+async function visual(configPath: string, url: URL, res: ServerResponse) {
+  const runId = url.searchParams.get('run') ?? undefined; const name = url.searchParams.get('name');
+  try {
+    if (name === null) { json(res, 200, await visualView(configPath, runId)); return; }
+    image(res, await visualImage(configPath, runId ?? '', name, url.searchParams.get('image') ?? ''));
+  } catch (error) {
+    if (error instanceof VisualImageError) { json(res, error.status, { error: error.message }); return; }
+    if (message(error) === 'Invalid run ID') { json(res, 400, { error: 'Invalid run ID' }); return; }
+    throw error;
+  }
 }
 const cookieName = 'qg_token';
 function sameToken(supplied: string, token: string) {
@@ -62,7 +79,8 @@ export function createDashboard(configPath: string, assets = resolve('packages/d
     if (shareToken && req.method !== 'GET') { res.setHeader('Allow', 'GET'); json(res, 405, { error: 'Read-only shared dashboard' }); return; }
     return url;
   }
-  async function read(path: string, res: ServerResponse) {
+  async function read(path: string, url: URL, res: ServerResponse) {
+    if (path === '/api/run/visual') { await visual(configPath, url, res); return true; }
     if (path === '/api/project') { json(res, 200, { configPath: resolve(configPath), ...await service.list(), ...(shareToken ? { readOnly: true } : {}) }); return true; }
     if (path === '/api/team') { json(res, 200, await teamView(configPath)); return true; }
     if (path !== '/api/run') return false;
@@ -84,7 +102,7 @@ export function createDashboard(configPath: string, assets = resolve('packages/d
       await mutate(path, res); return;
     }
     if (req.method !== 'GET') { json(res, 405, { error: 'Method not allowed' }); return; }
-    if (await read(path, res)) return;
+    if (await read(path, url, res)) return;
     const files: Record<string, [string, string]> = { '/': ['index.html', 'text/html; charset=utf-8'],
       '/theme-init.js': ['theme-init.js', 'text/javascript; charset=utf-8'],
       '/app.js': ['app.js', 'text/javascript; charset=utf-8'], '/app.css': ['app.css', 'text/css; charset=utf-8'] };

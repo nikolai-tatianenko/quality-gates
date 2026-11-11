@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { message, runResultSchema, type RunResult } from '../../protocol/src/index.js';
 import { execute, loadConfig } from '../../cli/src/runner.js';
 import { readRuns } from '../../core/src/history.js';
+import { readVisual, readVisualImage, type VisualView } from '../../core/src/visual.js';
 import { buildTeamReport, teamMarkdown, type TeamReport } from '../../core/src/team.js';
 export const runArgsSchema = z.object({ gates: z.array(z.string().min(1)).min(1).optional() }).strict();
 export const getRunArgsSchema = z.object({ runId: z.string().optional() }).strict();
@@ -42,6 +43,17 @@ export async function teamView(configPath: string, limit = 50): Promise<TeamRepo
   const latest = await getRun(configPath).catch(error => { if (message(error) !== 'No runs found') throw error; return null; });
   const report = buildTeamReport({ runs, latest, configName: basename(configPath), warnings });
   return { ...report, markdown: teamMarkdown(report) };
+}
+/** The visual comparison of a run (the latest by default). A project without the visual-regression plugin gets an empty answer. */
+export async function visualView(configPath: string, runId?: string): Promise<VisualView> {
+  const { config } = await loadConfig(configPath);
+  if (runId) return readVisual(config.outputDir, runId);
+  const latest = await getRun(configPath).catch(error => { if (message(error) !== 'No runs found') throw error; return undefined; });
+  return latest ? readVisual(config.outputDir, latest.runId) : { enabled: false, items: [] };
+}
+/** One image of a run's visual comparison, by item name; the run must be named so the image matches the list the client holds. */
+export async function visualImage(configPath: string, runId: string, name: string, kind: string): Promise<Buffer> {
+  return readVisualImage((await loadConfig(configPath)).config.outputDir, runId, name, kind);
 }
 /** One mutation at a time per service. Read tools remain available during execution. */
 export class QualityGateService {
