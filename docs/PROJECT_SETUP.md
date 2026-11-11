@@ -266,6 +266,12 @@ export const manifest = {
   `node_modules`. An unknown gate `type` also fails before
   any gate runs. Listing gates and viewing runs (`inspect`, dashboard, MCP `list_gates`) does not
   import plugins; `run` does.
+- A gate plugin's `run(spec, context)` also receives the optional `context.projectDir` (the folder of the
+  config file) and `context.evidenceDir` (this run's evidence folder, where it may write its own files). A
+  gate may carry the plugin settings `current`, `baseline`, `threshold`, `maxDiffRatio`, `maxPixels` and
+  `ignore` (not accepted on `command` gates). A package may export `commands: { <name>: async ({ args, config,
+  directory, signal }) => ({ lines }) }` to add a command; the CLI dispatches only `qualitygate visual` to it today. The optional
+  [visual-regression plugin](VISUAL_REGRESSION.md) uses all three.
 
 ## 3. Attach Husky hooks
 

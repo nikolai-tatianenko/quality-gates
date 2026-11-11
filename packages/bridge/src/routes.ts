@@ -2,10 +2,11 @@ import { lstat, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { z } from 'zod';
 import { message, type RunResult } from '../../protocol/src/index.js';
-import { getRun, readRun, teamView } from '../../service/src/index.js';
+import { getRun, readRun, teamView, visualImage, visualView } from '../../service/src/index.js';
 import { loadConfig } from '../../cli/src/runner.js';
 import { compareRuns, readRuns, trends } from '../../core/src/history.js';
-import { HttpError, parse, parseJson, type Route } from './http.js';
+import { VisualImageError } from '../../core/src/visual.js';
+import { HttpError, Image, parse, parseJson, type Reply, type Route } from './http.js';
 import type { Jobs } from './jobs.js';
 import type { TokenStore } from './tokens.js';
 import type { RateLimiter } from './limits.js';
@@ -64,6 +65,23 @@ class Project {
   }
 }
 
+const visualQuery = z.object({ run: z.string().max(64).optional(), name: z.string().max(255).optional(), image: z.string().max(16).optional() });
+/**
+ * `GET /v1/visual`: the visual comparison of the latest run (or `?run=`); with `?name=&image=approved|current|diff&run=` one
+ * screenshot the run lists, as image/png. A project without the plugin gets `{enabled: false, items: []}`.
+ */
+async function visual(c: { url: URL }, configPath: string): Promise<Reply> {
+  const query = parse(visualQuery, Object.fromEntries(c.url.searchParams));
+  try {
+    if (query.name === undefined) return [200, await visualView(configPath, query.run)];
+    return [200, new Image(await visualImage(configPath, query.run ?? '', query.name, query.image ?? ''))];
+  } catch (error) {
+    if (error instanceof VisualImageError) throw new HttpError(error.status, error.message);
+    if (message(error) === 'Invalid run ID') throw new HttpError(400, 'Invalid run ID');
+    throw error;
+  }
+}
+
 function pairingRoutes({ store, pairLimiter }: RouteDeps): Route[] {
   return [
     { method: 'GET', path: ['v1', 'ping'], auth: false, handle: async () => [200, { name: 'qualitygate-bridge', apiVersion: 1 }] },
@@ -117,6 +135,7 @@ function resultRoutes(project: Project): Route[] {
       return [200, { runs: runs.slice(0, limit).map(strip), comparison: runs.length > 1 ? compareRuns(runs[0]!, runs[1]!) : null }];
     } },
     { method: 'GET', path: ['v1', 'team'], auth: true, handle: async c => [200, await teamView(project.configPath, parse(limitQuery(50, 200), query(c)))] },
+    { method: 'GET', path: ['v1', 'visual'], auth: true, handle: async c => visual(c, project.configPath) },
     { method: 'GET', path: ['v1', 'trends'], auth: true, handle: async c => [200, trends(await project.history(parse(limitQuery(50, 1000), query(c))))] },
   ];
 }

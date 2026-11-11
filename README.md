@@ -3,7 +3,7 @@
 QualityGate runs your project's existing checks and gives developers, CI and AI agents
 one **PASS / BLOCK decision**, actionable findings and saved evidence.
 
-**Local-first · CLI + MCP + React dashboard · TypeScript / JavaScript / Python · MIT**
+**Local-first · CLI + MCP + React dashboard · TypeScript / JavaScript / Python / PHP · MIT**
 
 [Quickstart](#try-it-locally) · [Install in your project](#add-to-an-existing-project) ·
 [CI](#run-in-ci) · [Husky](#attach-to-git-with-husky) · [Agents](#connect-an-agent) ·
@@ -32,6 +32,24 @@ QualityGate puts the **decision and its evidence** behind one project-owned cont
 The feedback loop is simple: **check → read the cause → fix → check again**.
 QualityGate is useful when that loop needs to work consistently across several tools
 and interfaces. Your existing tools remain responsible for their own analyses.
+
+## What you get
+
+| If you are | You get | Where |
+| --- | --- | --- |
+| **An engineer** | One command (`qualitygate run`) that runs the project's own lint, types and tests, and says what to fix first: file, line, rule and the command to reproduce it. `qualitygate fix` runs the declared fixers and re-runs the same checks, so the re-run decides, not the fixer. `list` and `doctor` show what is configured and what is missing before a run fails for the wrong reason. | [CLI](#results-and-exit-codes), [`qualitygate ui`](#the-dashboard) |
+| **A team lead or engineering manager** | A dashboard with the current decision and the top risks, what changed since the last run, run history, trends (time to green, most frequently failing and flaky gates) and a Markdown summary for a report or a pull request. Verdicts come from the stored run and are never recomputed by the viewer. | [For teams](docs/FOR-TEAMS.md), [dashboard](#the-dashboard) |
+| **A CI owner** | The same checks as local, one exit code contract (0 pass, 1 block, 2 error, 3 timeout, 130 interrupted), SARIF and Markdown reports, pull request comments and commit statuses. A broken tool or a missing report fails the run instead of passing it. | [Run in CI](#run-in-ci) |
+| **Someone using AI agents** | The agent reads the same decision over MCP, fixes the cause and re-runs; tests and policy stay unchanged. Scanner output (secrets) is never shown to the agent or the UI. | [Connect an agent](#connect-an-agent) |
+| **A UI owner** (optional plugin) | Visual regression as an opt-in plugin: current screenshots against approved baselines, a missing baseline blocks, approving is an explicit command that never runs inside a check. The dashboard shows approved and current with a slider, side by side, a diff and an onion view. | [Visual regression](docs/VISUAL_REGRESSION.md) |
+
+What this does for a project in practice:
+
+- **Fewer arguments about "is it green":** the decision and its evidence live in one project-owned file and one saved report.
+- **Faster fixes:** the first blocking cause is named with its location, and a gate that flips between PASS and BLOCK with unchanged inputs is flagged as flaky instead of being blamed on the last change.
+- **Nothing hidden:** timeouts keep the end of the output, test counts are shown, and a failed tool is an error, not a pass.
+- **Works with what you have:** Node, TypeScript, JavaScript, Python, PHP and Unity projects are detected by `qualitygate setup`; your existing tools keep doing the analysis.
+- **Local first:** nothing leaves the machine unless you wire up a CI publisher; the local bridge listens on 127.0.0.1 only.
 
 ## How it works
 
@@ -234,6 +252,8 @@ Third-party ecosystems, parsers and gates come from npm packages: `qualitygate s
 (repeatable) loads them from the project's `node_modules` and writes a `plugins:` list. **Plugins are
 not sandboxed: they run inside QualityGate with your permissions**, so install only packages you
 trust (see [Third-party plugins](docs/PROJECT_SETUP.md#third-party-plugins) and [SECURITY.md](SECURITY.md)).
+The repository ships one optional plugin of its own, [visual regression](docs/VISUAL_REGRESSION.md)
+(`packages/plugins/visual-regression`), which stays off until the config lists it.
 
 ```sh
 pnpm exec qualitygate setup
@@ -361,6 +381,8 @@ editor agent. Live-model/editor verification limits are listed below.
 | Python analysis/tests | Ruff findings and your declared Python test commands |
 | Lighthouse | Performance, accessibility, SEO and best-practices scores on a 0–100 scale |
 | axe-core JSON | Report parser, not an accessibility preset: one finding per violating element (`violations` only, not `incomplete`) with rule, impact and the selector from the page; `qualitygate report --sarif` exports a run as SARIF 2.1.0 (file uris relative to the project root, skipped gates as notes) |
+| axe-core JSON | Report parser, not an accessibility preset: one finding per violating element (`violations` only, not `incomplete`) with rule, impact and the selector from the page; `qualitygate report --sarif` exports a run as SARIF 2.1.0 |
+| Visual regression (optional plugin) | `type: visual` gate: your command writes PNG screenshots, the plugin compares them with a version-controlled baseline using its own comparer (no dependency). A changed, new (no baseline) or missing screenshot blocks; `qualitygate visual approve <name>\|--all` updates the baseline on purpose. Off unless listed under `plugins:`; see [docs/VISUAL_REGRESSION.md](docs/VISUAL_REGRESSION.md) |
 | SonarQube | The quality gate for the specific scanner analysis, not an old project result |
 | Agent review producer | Normalized confirmed/unresolved/rejected findings with methodology provenance |
 

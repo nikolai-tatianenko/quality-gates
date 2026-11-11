@@ -4,6 +4,8 @@ import { z } from 'zod';
 export class HttpError extends Error {
   constructor(readonly status: number, text: string, readonly headers: Record<string, string> = {}) { super(text); }
 }
+/** File contents with a fixed, known content type (a screenshot); everything else binary stays an attachment. */
+export class Image { constructor(readonly bytes: Buffer, readonly type = 'image/png') {} }
 export type Reply = [number, unknown?];
 export interface Context { req: IncomingMessage; url: URL; params: Record<string, string>; origin: string; tokenId?: string; body: string }
 export interface Route { method: string; path: string[]; auth: boolean; handle: (c: Context) => Promise<Reply> }
@@ -36,8 +38,9 @@ export function matchRoute(routes: Route[], method: string, segments: string[]) 
   }
   throw new HttpError(pathMatched ? 405 : 404, pathMatched ? 'Method not allowed' : 'Not found');
 }
-/** JSON for objects, an attachment for file contents. */
+/** JSON for objects, an image for screenshots, an attachment for other file contents. */
 export function send(res: ServerResponse, status: number, body: unknown, headers: Record<string, string> = {}) {
+  if (body instanceof Image) { res.writeHead(status, { ...baseHeaders, ...headers, 'Content-Type': body.type }); res.end(body.bytes); return; }
   const raw = Buffer.isBuffer(body);
   res.writeHead(status, { ...baseHeaders, ...headers, 'Content-Type': raw ? 'application/octet-stream' : 'application/json', ...(raw ? { 'Content-Disposition': 'attachment' } : {}) });
   res.end(status === 204 ? undefined : raw ? body : JSON.stringify(body ?? {}));
