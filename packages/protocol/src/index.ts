@@ -198,6 +198,28 @@ export function coverageLine(run: Pick<RunResult, 'steps'>): string {
   const ran = run.steps.filter(step => step.status !== 'not-run').length;
   return `${ran} of ${run.steps.length} steps ran`;
 }
+const ANSI = /\u001b\[[0-?]*[ -/]*[@-~]|\u001b\][^\u0007\u001b]*(?:\u0007|\u001b\\)|\u001b[@-Z\\-_]/g;
+/** Text without ANSI escape sequences (colors, cursor moves, hyperlinks). */
+export const stripAnsi = (text: string): string => text.replace(ANSI, '');
+/** First `at fn (file:///x.mjs:1:2)` or `at /x.ts:1:2` frame of a Node style stack, flattened onto one line or not. */
+const STACK_FRAME = /(?:^|\s)at (?:async )?(?:[^\s(]+ \()?(?:file:\/\/|node:|\/|[A-Za-z]:[\\/]|\.{1,2}\/)[^\s)]*:\d+:\d+\)?/;
+/**
+ * A finding message as a person reads it: ANSI escape sequences removed and, when the text carries a stack trace (even one
+ * flattened to a single line), only its first meaningful line. The full text stays in the gate log and the report artifact.
+ */
+export function tidyMessage(text: string): string {
+  const plain = stripAnsi(text).trim();
+  const frame = STACK_FRAME.exec(plain);
+  if (!frame) return plain || text;
+  const lines = (line: string) => line.split(/\r?\n/).map(part => part.trim()).filter(Boolean);
+  return lines(plain.slice(0, frame.index))[0] ?? lines(plain)[0] ?? text;
+}
+/** "56 tests passed", or the split when something failed or was skipped; shown next to a gate that parsed a test report. */
+export function countsLine({ passed, failed, skipped }: Counts): string {
+  const total = passed + failed + skipped;
+  if (!failed && !skipped) return `${total} ${total === 1 ? 'test' : 'tests'} passed`;
+  return `${total} tests: ${passed} passed, ${failed} failed, ${skipped} skipped`;
+}
 export function message(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }

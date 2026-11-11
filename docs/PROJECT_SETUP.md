@@ -70,8 +70,12 @@ written under `.qualitygate/<ecosystem>/`.
 
 Unity gates run `${UNITY:-/Applications/Unity/Hub/Editor/<version>/Unity.app/Contents/MacOS/Unity}`
 with the version from `ProjectVersion.txt`; on Windows or Linux set the `UNITY` environment
-variable to the editor binary. Before each run the gate removes a stale `Temp/UnityLockfile`, but
-fails with "Unity project is open in an editor" if a `Unity` process is running.
+variable to the editor binary. Before each run the gate looks for Unity processes that have this
+project open (`-projectPath <this directory>`; other projects are ignored). It fails with "Unity
+project is open in an editor" if one is not in batch mode, and waits up to 120 seconds
+(`QUALITYGATE_UNITY_WAIT` seconds) for an earlier batch run, such as `unity-compile` before
+`unity-tests`, to exit; it then fails with a message naming the path. With none left it removes a
+stale `Temp/UnityLockfile`.
 
 Add these entries to the target project's `.gitignore`:
 

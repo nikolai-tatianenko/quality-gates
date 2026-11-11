@@ -1,4 +1,4 @@
-import { coverageLine, type RunResult, type GateResult, type Finding } from '../../protocol/src/index.js';
+import { countsLine, coverageLine, type RunResult, type GateResult, type Finding } from '../../protocol/src/index.js';
 /** npm, pnpm and Node warnings stay in the gate log; the terminal shows only what explains a failure. */
 const NOISE = /^\s*(npm (warn|notice)|\S*\s*WARN\b|\(node:\d+\)|\(Use `node --trace-warnings)/i;
 export function printRun(result: RunResult) {
@@ -28,6 +28,7 @@ function printGate(item: GateResult) {
     const lines = item.outputTail.trimEnd().split('\n').filter(line => !NOISE.test(line));
     for (const line of lines.slice(-15)) console.log(`  | ${line}`);
   }
+  if (item.counts) console.log(`  ${countsLine(item.counts)}`);
   for (const issue of item.errors) console.log(`  ${issue}`);
   for (const artifact of item.artifacts) console.log(`  Artifact: ${artifact}`);
 }

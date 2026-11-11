@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, rm, access, chmod } from 'node:fs/promises';
 import { realpathSync } from 'node:fs';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, delimiter } from 'node:path';
 import { gateSchema } from '../packages/protocol/src/index.js';
@@ -36,19 +36,54 @@ test('unity is absent without ProjectVersion.txt and rejects an unreadable versi
   await withProject(async project => { await assert.rejects(unity.detect(project), /Unreadable Unity version/); }, 'nothing here\n');
 });
 
-test('the prepare prefix removes a stale lockfile and refuses while an editor runs', () => withProject(async dir => {
+/** Runs the prepare prefix with a fake `ps` that lists `lines` until the `done` file exists. */
+async function prepare(dir: string, lines: string[], env: Record<string, string> = {}) {
+  const bin = join(dir, 'bin'); await mkdir(bin, { recursive: true });
+  await fake(bin, 'ps', `[ -f "${join(dir, 'done')}" ] && exit 0\ncat <<'EOF'\n${lines.join('\n')}\nEOF`);
+  return { env: { ...process.env, ...env, PATH: `${bin}${delimiter}${process.env.PATH}` }, bin };
+}
+const batch = (dir: string, pid = 41) => `  ${pid} /Applications/Unity/Unity.app/Contents/MacOS/Unity -batchmode -nographics -projectPath ${dir} -runTests`;
+
+test('the prepare prefix removes a stale lockfile and never waits for other projects', () => withProject(async dir => {
   await mkdir(join(dir, 'Temp')); await writeFile(join(dir, 'Temp', 'UnityLockfile'), '');
-  const bin = join(dir, 'bin'); await mkdir(bin);
-  await fake(bin, 'pgrep', 'exit 1');
-  const env = { ...process.env, PATH: `${bin}${delimiter}${process.env.PATH}` };
+  const other = `${dir}-other`;
+  const { env } = await prepare(dir, [batch(other), `  42 /Applications/Unity/Unity.app/Contents/MacOS/Unity -projectpath ${other}`, batch(`${dir}2`, 43)]);
+  const started = Date.now();
   assert.equal(spawnSync(unityPrepare, { cwd: dir, shell: true, env }).status, 0);
+  assert.ok(Date.now() - started < 900, 'must not wait');
   assert.equal(await exists(join(dir, 'Temp', 'UnityLockfile')), false);
   assert.equal(await exists(join(dir, '.qualitygate', 'unity')), true);
-  await writeFile(join(dir, 'Temp', 'UnityLockfile'), '');
-  await fake(bin, 'pgrep', 'exit 0');
+}));
+
+test('the prepare prefix waits until the batch process of this project exits', () => withProject(async dir => {
+  await mkdir(join(dir, 'Temp')); await writeFile(join(dir, 'Temp', 'UnityLockfile'), '');
+  const { env } = await prepare(dir, [batch(dir)]);
+  const child = spawn(unityPrepare, { cwd: dir, shell: true, env, stdio: 'ignore' });
+  const exited = new Promise<number | null>(resolve => child.once('close', resolve));
+  const started = Date.now();
+  await new Promise(resolve => setTimeout(resolve, 1300)); await writeFile(join(dir, 'done'), '');
+  assert.equal(await exited, 0); assert.ok(Date.now() - started >= 1300);
+  assert.equal(await exists(join(dir, 'Temp', 'UnityLockfile')), false);
+}));
+
+test('the prepare prefix fails with a clear message when the batch process never exits', () => withProject(async dir => {
+  await mkdir(join(dir, 'Temp')); await writeFile(join(dir, 'Temp', 'UnityLockfile'), '');
+  const { env } = await prepare(dir, [batch(dir)], { QUALITYGATE_UNITY_WAIT: '1' });
+  const result = spawnSync(unityPrepare, { cwd: dir, shell: true, env, encoding: 'utf8' });
+  assert.equal(result.status, 1); assert.match(result.stderr, /still running for this project after 1s/);
+  assert.equal(await exists(join(dir, 'Temp', 'UnityLockfile')), true);
+}));
+
+test('the prepare prefix refuses at once while an editor has this project open', () => withProject(async dir => {
+  const { env } = await prepare(dir, [`  50 /Applications/Unity/Hub/Editor/2022.3.10f1/Unity.app/Contents/MacOS/Unity -projectpath ${dir}`]);
+  const started = Date.now();
   const busy = spawnSync(unityPrepare, { cwd: dir, shell: true, env, encoding: 'utf8' });
   assert.equal(busy.status, 1); assert.match(busy.stderr, /open in an editor/);
-  assert.equal(await exists(join(dir, 'Temp', 'UnityLockfile')), true);
+  assert.ok(Date.now() - started < 900);
+}));
+
+test('generated gates name the project by absolute path so its processes can be told apart', () => withProject(async dir => {
+  for (const gate of (await unity.detect(dir))!) assert.match(gate.run, /-projectPath "\$\(pwd -P\)"/);
 }));
 
 test('gates run the editor named by UNITY and yield findings with file and line', () => withProject(async dir => {

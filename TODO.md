@@ -37,6 +37,7 @@ Order: parsers → ecosystems → external loading; each part ships on its own. 
 - [x] T-022: `ecosystem` plugin kind and `qualitygate setup` merging proposals (id prefixed on collision, never overwrites config): move node, add python (`ruff`, `pytest --junitxml`), unity (compile + EditMode via `-runTests`, macOS Hub path, `UNITY` override, stale `Temp/UnityLockfile`), playwright, maestro (`--format junit`)
 - [x] T-023: `plugins: [package]` in `.qualitygate.yml` loaded from the project's `node_modules`, validated against plugin schemas, duplicate ids rejected; `setup --plugin <package>` (repeatable); docs and `SECURITY.md` say plugins run unsandboxed
 - [ ] T-024: Acceptance on real projects: Unity client (`setup && run`, failing test yields a finding with file and line), Python server (`ruff` + `pytest` gates), Playwright failure with screenshot and trace in the evidence
+- [x] T-024a: Defects found by the first real-project acceptance run, fixed with tests: Unity gates racing each other (false BLOCK), JUnit findings without file/line, noisy finding messages (ANSI, flattened stacks), no test counts on PASS, empty log after a timeout. Still open for T-024: re-run on the real projects to confirm
 - [ ] T-025: Open a PR `features/october31` → `main` (merge is the owner's call); tag the next release only after CI is green
 - [ ] T-026: Re-verify and clear the stale session note that `pnpm smoke` and the stdio-close test fail with exit 2 (CI on `6c33b33` and `92e9943` passed); keep a ticket only if it reproduces
 - [ ] T-027 (backlog, only after T-020/T-021): visual regression as a thin gate over Playwright screenshots, with explicit baseline updates and a missing baseline = BLOCK; not a custom comparer
@@ -89,7 +90,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 
 ### Adoption and portfolio
 - [ ] T-051: Adoption case study: install on 1–2 real work/personal projects (iOS, Unity, Python, web), record the pain, gates chosen, findings and before/after numbers, write a one-page case for each (customer-facing story, not a feature list)
-- [ ] T-052: Make the quality-gate manifest for this repo so `gates.mjs check --completion` can run, and commit a test-review report (measured suite time, coverage gaps, isolation/duplication findings)
+- [x] T-052: Test-review report `docs/TEST_REVIEW.md` (measured suite time, coverage gaps, isolation and duplication findings). The external quality-gate manifest is deliberately not committed: this repository keeps no tooling files of that kind. The four full-tier gates (smoke, smoke:dashboard, verify:hooks, verify:package) still need one run where Chrome and the network are available
 
 ### Distribution (QG-405, QG-704, QG-706–708)
 - [ ] T-053: Publish `qualitygate-toolbox` to npm with provenance and a release workflow; verify `npx` / `pnpm dlx` clean install on macOS and Linux (owner approves the first publish)
