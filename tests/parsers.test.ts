@@ -52,6 +52,24 @@ test('nunit reports failed cases with file and line from the stack trace', () =>
   assert.deepEqual(parse('nunit', nunit('Failed', '<failure><message>m</message><stack-trace>no location</stack-trace></failure>')), [{ gateId: 'g', severity: 'error', message: 'N.T.m: m' }]);
   assert.deepEqual(parse('nunit', '<test-run/>'), []);
 });
+const junitFailure = (attributes: string, body: string) => `<testsuite><testcase name="t" ${attributes}><failure message="boom">${body}</failure></testcase></testsuite>`;
+const locationOf = (raw: string) => { const [finding] = parse('junit', raw); return { file: finding?.file, line: finding?.line }; };
+test('junit derives file and line from node --test and vitest style stacks, relative to the project', () => {
+  assert.deepEqual(locationOf(junitFailure('classname="test"', 'Error: boom\n    at TestContext.&lt;anonymous&gt; (file:///proj/tests/a.test.mjs:12:3)\n    at node:internal/test_runner/test:100:5')), { file: 'tests/a.test.mjs', line: 12 });
+  assert.deepEqual(locationOf(junitFailure('', 'AssertionError: boom\n    at /proj/src/x.ts:40:9\n    at file:///proj/src/y.ts:1:1')), { file: 'src/x.ts', line: 40 });
+  assert.deepEqual(locationOf(junitFailure('', 'boom at file:///proj/tests/flat.mjs:7:1 at node:internal/process/task_queues:95:5')), { file: 'tests/flat.mjs', line: 7 });
+  assert.deepEqual(locationOf(junitFailure('', 'x\n    at run (/proj/node_modules/lib/index.js:5:5)\n    at it (/proj/tests/b.test.ts:3:2)')), { file: 'tests/b.test.ts', line: 3 });
+});
+test('junit prefers testcase file and line attributes and a path-like classname', () => {
+  assert.deepEqual(locationOf(junitFailure('file="/proj/tests/c.test.mjs" line="20" column="1"', 'at /proj/other.ts:1:1')), { file: 'tests/c.test.mjs', line: 20 });
+  assert.deepEqual(locationOf(junitFailure('classname="src/d.test.ts"', 'no stack here')), { file: 'src/d.test.ts', line: undefined });
+  assert.deepEqual(locationOf(junitFailure('classname="src/d.test.ts"', 'at /proj/src/d.test.ts:9:4')), { file: 'src/d.test.ts', line: 9 });
+});
+test('junit never invents a location', () => {
+  assert.deepEqual(locationOf(junitFailure('classname="Suite.Name"', 'no location at all 10:30:45')), { file: undefined, line: undefined });
+  assert.deepEqual(locationOf(junitFailure('classname="test"', 'at /elsewhere/z.ts:1:1\n at node:internal/x:2:2')), { file: undefined, line: undefined });
+  assert.deepEqual(locationOf(junitFailure('file="/elsewhere/z.ts" line="4"', 'plain')), { file: undefined, line: undefined });
+});
 test('xml parsers reject malformed input', () => {
   for (const format of ['junit', 'nunit']) {
     assert.throws(() => parse(format, '<testsuite><oops></testsuite>'), /^Error: Invalid XML/);

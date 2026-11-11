@@ -1,5 +1,5 @@
 import { basename, join } from 'node:path';
-import { auditDataSchema, gateDataSchema, message, runResultSchema, stepStatus,
+import { auditDataSchema, gateDataSchema, message, runResultSchema, stepStatus, tidyMessage,
   type AuditResult, type GateResult, type GateSpec, type RunResult, type Step } from '../../protocol/src/index.js';
 import type { AuditPlugin, Context, GatePlugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
 interface Environment { signal: AbortSignal; storage: StoragePlugin; directory?: string; log?: (line: string) => void }
@@ -24,7 +24,7 @@ async function lifecycle(item: Item, signal: AbortSignal, execute: (context: Con
 /** Copies the plugin's answer onto the result; a timeout keeps its own status instead of becoming a generic error. */
 function applyGateData(item: GateResult, data: ReturnType<typeof gateDataSchema.parse>, signal: AbortSignal) {
   item.exitCode = data.exitCode; item.outputTail = data.output.slice(-4000); item.counts = data.counts;
-  item.findings = data.findings.map(finding => ({ ...finding, gateId: item.id }));
+  item.findings = data.findings.map(finding => ({ ...finding, gateId: item.id, message: tidyMessage(finding.message) }));
   item.decision = data.exitCode === 0 ? 'PASS' : 'BLOCK';
   if (!data.error) return;
   item.execution = signal.aborted ? 'interrupted' : data.timedOut ? 'timeout' : 'error';

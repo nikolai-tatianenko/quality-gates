@@ -1,7 +1,7 @@
-import { runResultSchema, exitCode, coverageLine, type RunResult } from '../../protocol/src/index.js';
+import { runResultSchema, exitCode, countsLine, coverageLine, stripAnsi, type RunResult } from '../../protocol/src/index.js';
 /** Treat report/tool text as data: no injected HTML, marker comments or mentions. */
 export function markdownText(value: string): string {
-  return value.replace(/[\\*_{}[\]()#!]/g, '\\$&').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
+  return stripAnsi(value).replace(/[\\*_{}[\]()#!]/g, '\\$&').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')
     .replaceAll('@', '&#64;').replaceAll('|', '&#124;').replaceAll('`', '&#96;')
     .replace(/\r?\n/g, '<br>');
 }
@@ -22,6 +22,7 @@ function findingLines(run: RunResult) {
 }
 function gateDetails(run: RunResult) {
   return run.gates.flatMap(gate => [
+    ...(gate.counts ? [`- Gate ${markdownText(gate.id)}: ${countsLine(gate.counts)}`] : []),
     ...gate.errors.map(error => `- Gate ${markdownText(gate.id)}: ${markdownText(error)}`),
     ...(gate.decision === 'BLOCK' && gate.outputTail ? [`### Output: ${markdownText(gate.id)}\n\n${markdownText(gate.outputTail)}`] : []),
     ...(gate.reportPath ?? gate.evidencePath ? [`Evidence (${markdownText(gate.id)}): ${markdownText((gate.reportPath ?? gate.evidencePath)!)}`] : []),

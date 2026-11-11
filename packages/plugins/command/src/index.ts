@@ -4,6 +4,8 @@ import { message, type GateData, type GateSpec } from '../../../protocol/src/ind
 import { DEFAULT_LIMITS, expandArtifacts } from './artifacts.js';
 import { readReport } from './report.js';
 const MAX_OUTPUT_BYTES = 1_000_000;
+/** Newest output kept even after the capture limit is full, so a timeout still shows what the command was doing when it hung. */
+const TAIL_BYTES = 64 * 1024;
 const DEFAULT_TIMEOUT_MS = 300_000;
 export interface CommandOutput {
   exitCode: number | null; output: string; stdout: string; stderr: string;
@@ -20,8 +22,9 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   context.defer(async () => { kill(); await closed; });
   const result: CommandOutput = { exitCode: null, output: '', stdout: '', stderr: '', truncated: false };
   const chunks: Record<'output' | 'stdout' | 'stderr', Buffer[]> = { output: [], stdout: [], stderr: [] };
-  let bytes = 0;
+  let bytes = 0; let tail = Buffer.alloc(0);
   const append = (stream: 'stdout' | 'stderr', chunk: Buffer) => {
+    tail = Buffer.concat([tail, chunk]).subarray(-TAIL_BYTES);
     const available = Math.max(0, MAX_OUTPUT_BYTES - bytes);
     const captured = chunk.subarray(0, available);
     chunks[stream].push(captured); chunks.output.push(captured);
@@ -43,6 +46,7 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   } catch (error) { result.error ??= message(error); }
   finally { clearTimeout(timer); context.signal.removeEventListener('abort', abort); }
   for (const stream of ['stdout', 'stderr', 'output'] as const) result[stream] = Buffer.concat(chunks[stream]).toString('utf8');
+  if (result.timedOut && result.truncated) result.output += `\n[output truncated; the last ${tail.length} bytes before the timeout follow]\n${tail.toString('utf8')}`;
   return result;
 }
 /** Shows the newest complete line of a chunk in the live view (display only). */

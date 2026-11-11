@@ -614,7 +614,7 @@ pnpm verify:package           # Local CLI tarball install + browser smoke
 pnpm verify:analysis-package  # Independent analyzer tarball
 ```
 
-[Verification records](docs/VERIFICATION.md) · [Environment matrix](docs/ENVIRONMENTS.md) ·
+[Verification records](docs/VERIFICATION.md) · [Test review](docs/TEST_REVIEW.md) · [Environment matrix](docs/ENVIRONMENTS.md) ·
 [Roadmap](TODO.md) · [Detailed roadmap and status](docs/QUALITYGATE_DETAILED_ROADMAP.md) · [Product vision](VISION.md).
 
 ## Security, contribution and license
