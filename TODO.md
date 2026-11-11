@@ -40,7 +40,8 @@ Order: parsers → ecosystems → external loading; each part ships on its own. 
 - [x] T-024a: Defects found by the first real-project acceptance run, fixed with tests: Unity gates racing each other (false BLOCK), JUnit findings without file/line, noisy finding messages (ANSI, flattened stacks), no test counts on PASS, empty log after a timeout. Still open for T-024: re-run on the real projects to confirm
 - [ ] T-025: Open a PR `features/october31` → `main` (merge is the owner's call); tag the next release only after CI is green
 - [ ] T-026: Re-verify and clear the stale session note that `pnpm smoke` and the stdio-close test fail with exit 2 (CI on `6c33b33` and `92e9943` passed); keep a ticket only if it reproduces
-- [ ] T-027 (backlog, only after T-020/T-021): visual regression as a thin gate over Playwright screenshots, with explicit baseline updates and a missing baseline = BLOCK; not a custom comparer
+- [ ] T-027 (backlog, only after T-020/T-021): visual regression as a thin gate over Playwright screenshots, with explicit baseline updates and a missing baseline = BLOCK; not a custom comparer. Dashboard side done (reader, `GET /api/run/visual`, `GET /v1/visual`, Visual section; `pnpm smoke:dashboard` extended but not yet run in real Chrome); the plugin that writes `visual.json` and `qualitygate visual approve` are separate work
+- [x] T-027: visual regression as an optional plugin (`packages/plugins/visual-regression`, docs/VISUAL_REGRESSION.md): `type: visual` gate over screenshots your command writes, explicit `qualitygate visual approve`, missing baseline = BLOCK. Decision changed from the backlog note: it ships its own small PNG comparer (zero dependencies) instead of wrapping one. Open: a run with real Playwright; dashboard view of `visual.json`
 
 ## Verification limits / follow-up
 - [x] CI Markdown artifacts and managed PR/MR descriptions for GitHub, GitLab and Bitbucket Cloud

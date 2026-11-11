@@ -54,7 +54,19 @@ export const gateSchema = z.object({
   dependsOn: z.array(gateId).max(50).optional(),
   /** Project-relative globs of the files this gate reads: used by `--changed` and `--cache`. */
   inputs: z.array(z.string().min(1)).max(50).optional(),
+  /**
+   * Settings read by plugin gates such as the optional visual-regression plugin; the core ignores them. Known coupling: the
+   * protocol hard-codes these names and the bounds of this one plugin (a plugin cannot add its own settings yet), so a change
+   * to them in packages/plugins/visual-regression must be made here too (see docs/VISUAL_REGRESSION.md).
+   */
+  current: z.string().min(1).optional(),
+  baseline: z.string().min(1).optional(),
+  threshold: z.number().min(0).max(1).optional(),
+  maxDiffRatio: z.number().min(0).max(1).optional(),
+  maxPixels: z.number().int().min(1).max(64_000_000).optional(),
+  ignore: z.array(z.string().min(1)).max(500).optional(),
 }).strict().superRefine((gate, ctx) => {
+  if (gate.type === 'command' && ['current', 'baseline', 'threshold', 'maxDiffRatio', 'maxPixels', 'ignore'].some(key => key in gate)) ctx.addIssue({ code: 'custom', message: 'current, baseline, threshold, maxDiffRatio, maxPixels and ignore are only for plugin gates' });
   if (gate.type !== 'command' && gate.fix) ctx.addIssue({ code: 'custom', message: 'fix is only for command gates' });
   if (gate.type !== 'command' && (gate.report || gate.artifacts)) ctx.addIssue({ code: 'custom', message: 'report and artifacts are only for command gates' });
   if ((gate.type === 'sonarqube') !== !!gate.sonar) ctx.addIssue({ code: 'custom', message: 'sonar settings are required only for sonarqube gates' });
@@ -116,7 +128,7 @@ export const externalPluginSchema = z.discriminatedUnion('kind', [
   z.object({ ...pluginBase, kind: z.literal('ecosystem'), detect: callable }).passthrough(),
   z.object({ ...pluginBase, kind: z.literal('gate'), run: callable }).passthrough(),
 ]);
-export const pluginPackageSchema = z.object({ apiVersion: z.literal(1), plugins: z.array(externalPluginSchema).min(1).max(50) }).passthrough();
+export const pluginPackageSchema = z.object({ apiVersion: z.literal(1), plugins: z.array(externalPluginSchema).min(1).max(50), commands: z.record(pluginId, callable).optional() }).passthrough();
 export const scoresSchema = thresholdsSchema.partial();
 export const auditDataSchema = z.object({ scores: scoresSchema, raw: z.unknown().optional(), error: z.string().optional() }).strict();
 export const auditResultSchema = z.object({

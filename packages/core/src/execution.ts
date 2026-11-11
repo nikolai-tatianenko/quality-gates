@@ -2,15 +2,16 @@ import { basename, join } from 'node:path';
 import { auditDataSchema, gateDataSchema, message, runResultSchema, stepStatus, tidyMessage,
   type AuditResult, type GateResult, type GateSpec, type RunResult, type Step } from '../../protocol/src/index.js';
 import type { AuditPlugin, Context, GatePlugin, ReporterPlugin, StoragePlugin } from '../../plugin-sdk/src/index.js';
-interface Environment { signal: AbortSignal; storage: StoragePlugin; directory?: string; log?: (line: string) => void }
+interface Environment { signal: AbortSignal; storage: StoragePlugin; directory?: string; projectDir?: string; log?: (line: string) => void }
 type Item = GateResult | AuditResult;
 /** Cleanup errors remain visible and do not prevent other cleanup handlers running. */
-async function lifecycle(item: Item, signal: AbortSignal, execute: (context: Context) => Promise<void>, log?: (line: string) => void) {
+async function lifecycle(item: Item, env: Environment, execute: (context: Context) => Promise<void>) {
+  const { signal, log } = env;
   if (signal.aborted) {
     item.execution = 'skipped'; item.errors.push('Interrupted before check'); return;
   }
   const cleanups: (() => void | Promise<void>)[] = [];
-  try { await execute({ signal, defer: fn => cleanups.push(fn), log }); }
+  try { await execute({ signal, defer: fn => cleanups.push(fn), log, projectDir: env.projectDir, evidenceDir: env.directory }); }
   catch (error) {
     item.execution = signal.aborted ? 'interrupted' : 'error'; item.errors.push(message(error));
     item.decision = 'BLOCK';
@@ -34,7 +35,7 @@ export async function executeGate(spec: GateSpec, index: number, env: Environmen
   const item: GateResult = { id: spec.id, command: spec.run, execution: 'completed', decision: 'BLOCK',
     exitCode: null, durationMs: 0, outputTail: '', errors: [], findings: [], artifacts: [] };
   const started = Date.now();
-  await lifecycle(item, env.signal, async context => {
+  await lifecycle(item, env, async context => {
     const data = gateDataSchema.parse(await plugin.run(spec, context));
     applyGateData(item, data, env.signal);
     if (env.directory) {
@@ -47,13 +48,13 @@ export async function executeGate(spec: GateSpec, index: number, env: Environmen
       if (data.rawReport !== undefined) item.reportPath = await env.storage.write(env.directory, `gate-${index + 1}-${spec.id}.json`, data.rawReport);
     }
     item.findings = item.findings.map(finding => ({ ...finding, evidencePath: item.reportPath ?? item.evidencePath }));
-  }, env.log);
+  });
   item.durationMs = Date.now() - started;
   return item;
 }
 export async function executeAudit(url: string, index: number, env: Environment, plugin: AuditPlugin): Promise<AuditResult> {
   const item: AuditResult = { url, execution: 'completed', scores: {}, decision: 'BLOCK', violations: [], errors: [] };
-  await lifecycle(item, env.signal, async context => {
+  await lifecycle(item, env, async context => {
     const data = auditDataSchema.parse(await plugin.audit(url, context));
     item.scores = data.scores;
     if (data.error) { item.execution = 'error'; item.errors.push(data.error); }

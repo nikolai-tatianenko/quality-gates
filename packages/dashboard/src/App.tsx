@@ -3,6 +3,7 @@ import type { RunResult } from '../../protocol/src/index.js';
 import { ThemeSwitcher } from './theme.js';
 import { Icon } from './Icon.js';
 import { TeamView, type Team } from './Team.js';
+import { VisualLink, VisualSection, type Visual } from './Visual.js';
 interface Project { configPath: string; gates: { id: string; type: string; run: string }[]; urls: string[]; readOnly?: boolean }
 export async function request<T>(path: string, method = 'GET'): Promise<T> {
   const response = await fetch(path, { method, ...(method === 'POST' ? { headers: { 'X-QualityGate-Request': '1' } } : {}) });
@@ -17,23 +18,32 @@ export function App() {
   const [error, setError] = useState('');
   const [team, setTeam] = useState<Team>();
   const [teamError, setTeamError] = useState('');
+  const [visual, setVisual] = useState<Visual>();
   async function loadTeam() {
     try { setTeam(await request<Team>('/api/team')); setTeamError(''); }
     catch (error) { setTeamError(error instanceof Error ? error.message : String(error)); }
   }
+  /** The visual-regression plugin is optional: an absent or empty answer hides the section; a warning from the reader is shown as a notice. */
+  async function loadVisual() {
+    try { const answer = await request<Visual>('/api/run/visual'); setVisual(Array.isArray(answer?.items) ? answer : undefined); }
+    catch { setVisual(undefined); }
+  }
   useEffect(() => {
-    void loadTeam();
+    void loadTeam(); void loadVisual();
+    // A run started elsewhere (the CLI, CI hook) finishes without telling this page; coming back to the tab refreshes it.
+    const refresh = () => { void loadVisual(); };
+    window.addEventListener('focus', refresh);
     let mounted = true;
     void Promise.all([request<Project>('/api/project'), request<RunResult | null>('/api/run')])
       .then(([project, run]) => { if (mounted) { setProject(project); setRun(run); } })
       .catch(error => { if (mounted) setError(String(error.message)); });
-    return () => { mounted = false; };
+    return () => { mounted = false; window.removeEventListener('focus', refresh); };
   }, []);
   async function start() {
     setRunning(true); setError('');
     try { setRun(await request<RunResult>('/api/run', 'POST')); }
     catch (error) { setError(error instanceof Error ? error.message : String(error)); }
-    finally { setRunning(false); void loadTeam(); }
+    finally { setRunning(false); void loadTeam(); void loadVisual(); }
   }
   async function cancel() {
     try { await request('/api/cancel', 'POST'); }
@@ -58,8 +68,9 @@ export function App() {
       </section>
       {error && <div role="alert" className="error">{error}</div>}
       <Metrics project={project} run={run}/>
-      <nav className="section-nav" aria-label="Report sections"><a href="#team">Summary</a><a href="#trends">Trends</a><a href="#history">History</a><a href="#engineer">Engineer</a><a href="#checks">Checks <span>{project ? project.gates.length + project.urls.length : '—'}</span></a><a href="#findings">Findings <span>{run?.findings.length ?? 0}</span></a></nav>
+      <nav className="section-nav" aria-label="Report sections"><a href="#team">Summary</a><a href="#trends">Trends</a><a href="#history">History</a><a href="#engineer">Engineer</a><VisualLink visual={visual}/><a href="#checks">Checks <span>{project ? project.gates.length + project.urls.length : '—'}</span></a><a href="#findings">Findings <span>{run?.findings.length ?? 0}</span></a></nav>
       <TeamView team={team} error={teamError}/>
+      <VisualSection visual={visual}/>
       <Checks project={project} run={run} running={running}/>
       <section className="panel" id="findings"><div className="section-title"><div><h2>Findings & evidence</h2><p className="section-description">The reasons behind your latest verdict.</p></div><span>{run ? run.runId.slice(0, 8) : 'AWAITING FIRST RUN'}</span></div>
         {!run && <div className="empty"><span className="empty-icon"><Icon name="findings"/></span>No findings yet.<p>Run the project’s gates to see findings and saved evidence here.</p></div>}

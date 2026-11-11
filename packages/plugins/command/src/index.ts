@@ -12,7 +12,7 @@ export interface CommandOutput {
   truncated: boolean; error?: string; timedOut?: boolean;
 }
 /** Captures a trusted shell command; timers and aborts kill the owned process group. */
-export async function captureCommand(cwd: string, spec: GateSpec, context: Context): Promise<CommandOutput> {
+export async function captureCommand(cwd: string, spec: GateSpec, context: Context, { withTail = true }: { withTail?: boolean } = {}): Promise<CommandOutput> {
   const child = spawn(spec.run, { cwd, shell: true, detached: true, stdio: ['ignore', 'pipe', 'pipe'] });
   const closed = new Promise<void>(resolve => child.once('close', () => resolve()));
   const kill = () => {
@@ -22,9 +22,13 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   context.defer(async () => { kill(); await closed; });
   const result: CommandOutput = { exitCode: null, output: '', stdout: '', stderr: '', truncated: false };
   const chunks: Record<'output' | 'stdout' | 'stderr', Buffer[]> = { output: [], stdout: [], stderr: [] };
-  let bytes = 0; let tail = Buffer.alloc(0);
+  let bytes = 0; let tail = Buffer.alloc(0); let tailCut = false;
   const append = (stream: 'stdout' | 'stderr', chunk: Buffer) => {
-    tail = Buffer.concat([tail, chunk]).subarray(-TAIL_BYTES);
+    if (withTail) {
+      const joined = Buffer.concat([tail, chunk]);
+      tailCut ||= joined.length > TAIL_BYTES;
+      tail = joined.subarray(-TAIL_BYTES);
+    }
     const available = Math.max(0, MAX_OUTPUT_BYTES - bytes);
     const captured = chunk.subarray(0, available);
     chunks[stream].push(captured); chunks.output.push(captured);
@@ -46,8 +50,16 @@ export async function captureCommand(cwd: string, spec: GateSpec, context: Conte
   } catch (error) { result.error ??= message(error); }
   finally { clearTimeout(timer); context.signal.removeEventListener('abort', abort); }
   for (const stream of ['stdout', 'stderr', 'output'] as const) result[stream] = Buffer.concat(chunks[stream]).toString('utf8');
-  if (result.timedOut && result.truncated) result.output += `\n[output truncated; the last ${tail.length} bytes before the timeout follow]\n${tail.toString('utf8')}`;
+  if (withTail && result.timedOut && result.truncated) {
+    const shown = tailCut ? alignToLine(tail) : tail;
+    result.output += `\n[output truncated; the last ${shown.length} bytes before the timeout follow]\n${shown.toString('utf8')}`;
+  }
   return result;
+}
+/** A tail cut at the front starts mid-line and maybe mid-character: keep only the lines after the first newline (a byte that never occurs inside a UTF-8 sequence). */
+function alignToLine(tail: Buffer): Buffer {
+  const newline = tail.indexOf(10);
+  return newline < 0 ? Buffer.alloc(0) : tail.subarray(newline + 1);
 }
 /** Shows the newest complete line of a chunk in the live view (display only). */
 function showLastLine(context: Context, chunk: Buffer) {
@@ -62,7 +74,8 @@ export function commandPlugin(cwd: string, parsers: Record<string, ParserPlugin>
   return { id: 'command', apiVersion: 1, kind: 'gate', async run(spec, context) {
     const startedAt = Date.now() - FILE_TIME_SLACK_MS;
     const secretive = spec.report && parsers[spec.report.format]?.secrets;
-    const captured = await captureCommand(cwd, spec, secretive ? { ...context, log: undefined } : context);
+    // A secret scanner gets no tail: the tail starts mid-line, so a secret cut by its boundary would escape the scrub (fail closed).
+    const captured = await captureCommand(cwd, spec, secretive ? { ...context, log: undefined } : context, { withTail: !secretive });
     if (!spec.report && !spec.artifacts) return { exitCode: captured.exitCode, output: captured.output, error: captured.error, ...(captured.timedOut ? { timedOut: true } : {}) };
     const data: GateData = { exitCode: captured.exitCode, output: secretive ? WITHHELD : captured.output, error: captured.error, artifacts: [] };
     if (spec.report && (!captured.error || captured.timedOut)) await applyReport(spec, data, { cwd, parsers, startedAt, output: captured.output });

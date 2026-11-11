@@ -10,7 +10,8 @@ import { clients, clientConfig } from '../../integrations/src/index.js';
 import { getRun } from '../../service/src/index.js';
 import { askModel, providers } from '../../model-client/src/index.js';
 import { connectTools } from '../../model-client/src/mcp-host.js';
-import { execute, loadConfig } from './runner.js';
+import { execute, loadConfig, builtinIds } from './runner.js';
+import { loadExternalPlugins } from '../../core/src/external.js';
 import { syncSources, restoreSources, checkSources, listSources, readMethodology } from '../../review-sources/src/index.js';
 import { printRun } from './output.js';
 import { liveView, liveEnabled } from './live.js';
@@ -32,6 +33,7 @@ const noLive = args.includes('--no-live');
 const sarif = args.includes('--sarif');
 const revoke = args.includes('--revoke-all');
 const allowDirty = args.includes('--allow-dirty');
+const all = args.includes('--all');
 const controller = new AbortController();
 const interrupt = () => controller.abort();
 process.on('SIGINT', interrupt); process.on('SIGTERM', interrupt);
@@ -44,7 +46,7 @@ try {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
-    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live' || arg === '--revoke-all' || arg === '--allow-dirty') continue;
+    if (arg === '--write' || arg === '--changed' || arg === '--cache' || arg === '--no-gitignore' || arg === '--sarif' || arg === '--no-live' || arg === '--revoke-all' || arg === '--allow-dirty' || arg === '--all') continue;
     if (arg === '--help' || arg === '-h') { help = true; continue; }
     if (valueFlags.includes(arg) || arg === '--gate' || arg === '--only' || arg === '--plugin' || arg === '--origin') {
       const value = args[++i];
@@ -59,7 +61,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], list: ['--config'], doctor: ['--config'], history: ['--config', '--limit', '--since', '--decision', '--baseline'], trends: ['--config', '--limit', '--since', '--decision'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], visual: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], list: ['--config'], doctor: ['--config'], history: ['--config', '--limit', '--since', '--decision', '--baseline'], trends: ['--config', '--limit', '--since', '--decision'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
     report: ['--input', '--output', '--config'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -75,6 +77,7 @@ try {
     if (noGitignore && command !== 'setup') throw new Error(`${command} does not accept --no-gitignore`);
     if (sarif && command !== 'report') throw new Error(`${command} does not accept --sarif`);
     if (plugins.length && command !== 'setup') throw new Error(`${command} does not accept --plugin`);
+    if (all && command !== 'visual') throw new Error(`${command} does not accept --all`);
     if (revoke && command !== 'bridge') throw new Error(`${command} does not accept --revoke-all`);
     if (values.has('--port') && command !== 'bridge') throw new Error(`${command} does not accept --port`);
     if (origins.length && command !== 'bridge') throw new Error(`${command} does not accept --origin`);
@@ -85,6 +88,7 @@ try {
       + '       qualitygate setup [--config <path>] [--from <gates.json|gates.mjs>] [--plugin <package>...] [--no-gitignore] [--json]\n'
       + '       qualitygate run [--config <path>] [--gate|--only <id>...] [--changed] [--cache] [--no-live] [--json]\n'
       + '       qualitygate fix [--config <path>] [--gate <id>...] [--allow-dirty] [--json]\n'
+      + '       qualitygate visual approve <name>|--all [--config <path>] [--json]   (optional visual-regression plugin)\n'
       + '       qualitygate ui [--config <path>]\n'
       + '       qualitygate inspect [runId] [--config <path>] [--json]\n'
       + '       qualitygate list [--config <path>] [--json]\n'
@@ -159,6 +163,12 @@ try {
       printRun(result.run);
     }
     process.exitCode = exitCode(result.run);
+  } else if (command === 'visual') {
+    const { config, directory } = await loadConfig(configPath);
+    const handler = (await loadExternalPlugins(directory, config.plugins ?? [], builtinIds)).commands.visual;
+    if (!handler) throw new Error(`The visual-regression plugin is not enabled: add "@qualitygate/plugin-visual-regression" to plugins: in ${configPath}`);
+    const result = await handler({ args: [...positional, ...(all ? ['--all'] : [])], config, directory, signal: controller.signal });
+    console.log(json ? JSON.stringify({ schemaVersion: 1, ...result }) : result.lines.join('\n'));
   } else if (command === 'ui') {
     if (positional.length) throw new Error('ui takes only --config');
     const { runUi } = await import('./ui.js');

@@ -369,6 +369,8 @@ importers:
 
   packages/plugins/storage-fs: {}
 
+  packages/plugins/visual-regression: {}
+
   packages/policy: {}
 
   packages/protocol: {}

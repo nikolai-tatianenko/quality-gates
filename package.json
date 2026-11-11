@@ -78,7 +78,8 @@
     "examples/security-review/qualitygate.sources.lock.json",
     "docs/PROJECT_SETUP.md",
     "examples/hooks",
-    "docs/screenshots"
+    "docs/screenshots",
+    "docs/VISUAL_REGRESSION.md"
   ],
   "engines": {
     "node": ">=22.23.4"
