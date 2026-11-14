@@ -511,7 +511,7 @@ unpacked after `pnpm build`; verified in real Chrome with `pnpm smoke:extension`
 `packages/desktop` wraps the shared dashboard in a Tauri 2 shell: project picker with recent projects, an explicit permission
 prompt before the bridge starts, opt-in notifications for PASS, BLOCK and error, and buttons that open the report and evidence
 folders. The TypeScript logic is unit and integration tested (including against the real bridge). The Rust shell **builds and starts on macOS**
-(Rust 1.95, Tauri 2.12); Windows is not built, the window was not clicked through, and no signed package exists.
+(Rust 1.95, Tauri 2.12); an unsigned Windows debug bundle builds in CI but was never started, the window was not clicked through, and no signed package exists.
 [Status and design](docs/DESKTOP.md), [signing plan](docs/DESKTOP_SIGNING.md), manual build workflow `.github/workflows/desktop-smoke.yml`.
 
 ### List gates and check the setup
