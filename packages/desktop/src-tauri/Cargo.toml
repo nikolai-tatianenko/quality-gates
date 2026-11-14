@@ -1,4 +1,4 @@
-# Built on macOS with Rust 1.95 and Tauri 2.12; Cargo.lock is committed. Windows is not built yet. See docs/DESKTOP.md.
+# Built on macOS with Rust 1.95 and Tauri 2.12; Cargo.lock is committed. An unsigned Windows debug bundle builds in CI (not started). See docs/DESKTOP.md.
 [package]
 name = "qualitygate-desktop"
 version = "0.1.0"
