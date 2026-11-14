@@ -1,5 +1,5 @@
 # Manual only: builds the Tauri desktop shell on macOS and Windows. It is not triggered by push or pull_request,
-# uses no secrets and signs nothing. The shell builds on macOS locally; the Windows leg has not been run
+# uses no secrets and signs nothing. The shell builds on macOS locally and both legs passed in CI on 2026-11-14; nothing was started on Windows
 # (see docs/DESKTOP.md). Signing and notarization are described in docs/DESKTOP_SIGNING.md.
 name: Desktop smoke build
 on:

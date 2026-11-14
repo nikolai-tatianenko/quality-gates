@@ -11,8 +11,8 @@ project the window navigates to the same dashboard server (`packages/dashboard`)
 | TypeScript logic (workspace store, validation, bridge launcher, notification mapping, run watcher, folder opener, host protocol, launcher page) | Built and tested here: `tests/desktop-*.test.ts`, run inside `pnpm check` with the 100% line / 95% branch floors. The tests include a run against the real `qualitygate bridge`, the real dashboard server and the real CLI. |
 | Rust shell `packages/desktop/src-tauri/src/main.rs`, `Cargo.toml`, `tauri.conf.json`, `capabilities/` | **Built on macOS (arm64)** with Rust 1.95 and Tauri 2.12: `cargo check`, `cargo clippy -- -D warnings` and `tauri build --bundles app` pass, and the resulting `QualityGate.app` (5.2 MiB) starts, spawns the bundled Node host with the bundled CLI and dashboard, and stops it again on exit. Not built on Windows. The first build needed the generated icon set (`icons/*.png`, `.icns`, `.ico` are committed). |
 | Tauri webview behaviour (IPC, `window.__TAURI__`, navigating to the dashboard, the folder dialog, notifications) | **Unverified.** The app starts, but no one has clicked through the window yet. The launcher page is tested in jsdom against a fake `__TAURI__`, not in a Tauri webview. |
-| macOS and Windows packages, signing, notarization, updates | **Not done.** Plan only: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). |
-| CI | `.github/workflows/desktop-smoke.yml`, manual dispatch only, unsigned debug build on macOS and Windows. Never run. |
+| Signed macOS and Windows packages, notarization, updates | **Not done** (an unsigned Windows debug bundle builds in CI). Plan only: [DESKTOP_SIGNING.md](DESKTOP_SIGNING.md). |
+| CI | `.github/workflows/desktop-smoke.yml`, manual dispatch only, unsigned debug build on macOS and Windows. Both legs passed on 2026-11-14 (run 43632069611: desktop tests, `cargo tauri build --debug`, bundles uploaded); nothing was started or clicked on Windows. |
 
 ## How it is split
 
