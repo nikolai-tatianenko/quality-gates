@@ -97,7 +97,7 @@ async function compareFolders({ spec, root, visual, startedAt }: Run, settings: 
     items.push(item);
     if (outcome.rule) findings.push({ gateId: spec.id, severity: 'error', message: describe(item, outcome.rule, settings), file: posix(relative(root, join(current.path, `${name}.png`))), ruleId: outcome.rule });
   }
-  for (const problem of problems) findings.push({ gateId: spec.id, severity: 'error', message: problem, file: problem.split(': ')[0], ruleId: 'visual-problem' });
+  for (const problem of problems) findings.push({ gateId: spec.id, severity: 'error', message: problem, file: /^(.*?\.png): /.exec(problem)?.[1] ?? problem.split(': ')[0], ruleId: 'visual-problem' });
   return { items, findings, problems, labels };
 }
 function summary(items: VisualItem[]): string {

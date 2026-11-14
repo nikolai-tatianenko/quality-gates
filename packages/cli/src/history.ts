@@ -1,4 +1,4 @@
-import { compareRuns, readRun, readRuns, trends, type Comparison, type HistoryFilter, type HistoryRun } from '../../core/src/history.js';
+import { compareRuns, pruneRuns, readRun, readRuns, trends, type Comparison, type HistoryFilter, type HistoryRun } from '../../core/src/history.js';
 import { loadConfig } from './runner.js';
 
 const BLOCKED = ['failed', 'timeout', 'error'];
@@ -43,4 +43,11 @@ export async function trendsCommand(configPath: string, limit: number, json: boo
   return [`Last ${t.runs} recorded runs`, '', 'Blocks per week (week starting Monday, UTC):', ...t.weeks.map(w => `  ${w.week}  ${w.blocked} of ${w.runs} runs blocked`),
     '', 'Most frequently failing gates:', ...(t.failingGates.length ? t.failingGates.slice(0, 10).map(g => `  ${g.id}  ${g.failures} of ${g.runs} runs`) : ['  none']),
     '', 'Flaky gates (alternate between PASS and BLOCK while the hash of their inputs stays the same):', ...(t.flakyGates.length ? t.flakyGates.map(g => `  ${g.id}  ${g.flips} flips in ${g.runs} runs`) : ['  none'])].join('\n');
+}
+
+/** `qualitygate prune --keep <n>`: removes all but the `keep` newest runs from the history. Run folders on disk are not touched. */
+export async function pruneCommand(configPath: string, keep: number, json: boolean): Promise<string> {
+  const { config } = await loadConfig(configPath);
+  const removed = await pruneRuns(config.outputDir, keep);
+  return json ? JSON.stringify({ schemaVersion: 1, kept: keep, removed }) : `Removed ${removed} run${removed === 1 ? '' : 's'} from the history; kept the newest ${keep}.`;
 }

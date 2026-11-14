@@ -6,7 +6,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { runResultSchema, type RunResult } from '../packages/protocol/src/index.js';
-import { compareRuns, historyPath, readRun, readRuns, readTrends, recordRun, SCHEMA_VERSION, toHistoryRun, trends, type HistoryGate, type HistoryRun } from '../packages/core/src/history.js';
+import { compareRuns, historyPath, migrate, pruneRuns, readRun, readRuns, readTrends, recordRun, SCHEMA_VERSION, toHistoryRun, trends, type HistoryGate, type HistoryRun } from '../packages/core/src/history.js';
 import { historyCommand } from '../packages/cli/src/history.js';
 import { renderHtml } from '../packages/ci/src/html.js';
 
@@ -292,5 +292,55 @@ console.log('same ' + (process.emitWarning === emit) + ' listeners ' + (process.
     });
     assert.doesNotMatch(probe.stderr, /SQLite/); assert.match(probe.stderr, /CustomWarning: during load/, 'other warnings are printed');
     assert.match(probe.stdout, /same true listeners 1/); assert.match(probe.stdout, /seen during load/);
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('migrations apply one step at a time from any older version and a failing step rolls the whole upgrade back', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-history-'));
+  const db = new DatabaseSync(join(dir, 'steps.sqlite'));
+  try {
+    const steps = ['CREATE TABLE a (x INTEGER);', 'ALTER TABLE a ADD COLUMN y INTEGER;', 'ALTER TABLE a ADD COLUMN z INTEGER;'];
+    migrate(db, steps.slice(0, 1));
+    db.exec('INSERT INTO a (x) VALUES (1)');
+    migrate(db, steps);
+    assert.equal((db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 3);
+    assert.deepEqual(db.prepare('SELECT x, y, z FROM a').all().map(r => ({ ...r })), [{ x: 1, y: null, z: null }], 'data survives both later steps');
+    migrate(db, steps);
+    assert.throws(() => migrate(db, steps.slice(0, 2)), /newer.*schema 3.*supports 2/i);
+    const other = new DatabaseSync(join(dir, 'broken.sqlite'));
+    try {
+      migrate(other, steps.slice(0, 1));
+      assert.throws(() => migrate(other, [...steps.slice(0, 1), 'ALTER TABLE a ADD COLUMN y INTEGER;', 'NOT SQL;']));
+      assert.equal((other.prepare('PRAGMA user_version').get() as { user_version: number }).user_version, 1, 'the version is unchanged');
+      assert.equal(other.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('a') WHERE name = 'y'").get()!.n, 0, 'the first new step was rolled back too');
+    } finally { other.close(); }
+  } finally { db.close(); await rm(dir, { recursive: true, force: true }); }
+});
+
+test('pruneRuns keeps the newest runs, removes the rest with their gates, and a prune with nothing to remove returns 0', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'qg-history-'));
+  try {
+    for (const [id, day] of [['a', '01'], ['b', '02'], ['c', '03']] as const) await recordRun(dir, hrun(id, `2026-11-${day}T10:00:00.000Z`, [gate('lint', 'passed')]));
+    assert.equal(await pruneRuns(dir, 5), 0);
+    assert.equal(await pruneRuns(dir, 2), 1);
+    assert.deepEqual((await readRuns(dir, 10)).map(r => r.id), ['c', 'b']);
+    const db = new DatabaseSync(historyPath(dir));
+    try { assert.equal(db.prepare('SELECT COUNT(*) AS n FROM gates').get()!.n, 2, 'the removed run left no gate rows'); } finally { db.close(); }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+
+test('qualitygate prune --keep trims the history, reports JSON, and refuses a missing or invalid --keep', async () => {
+  const dir = await project([{ id: 'ok', run: 'true' }]);
+  try {
+    const out = join(dir, 'out');
+    for (const [id, day] of [['a', '01'], ['b', '02']] as const) await recordRun(out, hrun(id, `2026-11-${day}T10:00:00.000Z`, [gate('lint', 'passed')]));
+    const text = await cli(dir, ['prune', '--keep', '1']);
+    assert.equal(text.code, 0, text.stderr); assert.match(text.stdout, /Removed 1 run from the history; kept the newest 1\./);
+    assert.deepEqual(JSON.parse((await cli(dir, ['prune', '--keep', '1', '--json'])).stdout), { schemaVersion: 1, kept: 1, removed: 0 });
+    assert.match((await cli(dir, ['prune'])).stderr, /needs --keep/);
+    assert.notEqual((await cli(dir, ['prune', '--keep', '0'])).code, 0);
+    assert.match((await cli(dir, ['prune', '--keep', '1', 'extra'])).stderr, /positional/);
+    assert.match((await cli(dir, ['history', '--keep', '1'])).stderr, /does not accept --keep/);
+    assert.deepEqual((await readRuns(out, 10)).map(r => r.id), ['b']);
   } finally { await rm(dir, { recursive: true, force: true }); }
 });

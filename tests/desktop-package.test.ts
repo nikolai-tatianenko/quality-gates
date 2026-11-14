@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { readFile, stat } from 'node:fs/promises';
 import { promisify } from 'node:util';
+import { fileURLToPath } from 'node:url';
 import { HOST_METHODS } from '../packages/desktop/src/host.js';
 
 const root = new URL('../packages/desktop/', import.meta.url);
@@ -46,7 +47,7 @@ test('the Rust method allow list equals the host method list', async () => {
 });
 
 test('the manual smoke-build workflow cannot run on push, uses no secrets and signs nothing', async () => {
-  const workflow = (await read('.github/workflows/desktop-smoke.yml', repo)).replace(/^#.*\n/gm, '');
+  const workflow = (await read('.github/workflows/desktop-smoke.yml', repo)).replace(/\r\n/g, '\n').replace(/^#.*\n/gm, '');
   const triggers = /^on:\n((?:  .*\n)+)/m.exec(workflow)?.[1] ?? '';
   assert.equal(triggers.trim(), 'workflow_dispatch:');
   assert.doesNotMatch(workflow, /secrets\.|APPLE_|TAURI_SIGNING|CERTIFICATE|pull_request|push:|schedule:/);
@@ -56,7 +57,7 @@ test('the manual smoke-build workflow cannot run on push, uses no secrets and si
 });
 
 test('the build produces the launcher with no inline script, remote reference or eval, and a self-contained host', async () => {
-  await promisify(execFile)(process.execPath, [new URL('build.mjs', root).pathname]);
+  await promisify(execFile)(process.execPath, [fileURLToPath(new URL('build.mjs', root))]);
   const html = await read('dist/ui/index.html');
   assert.doesNotMatch(html, /<script(?![^>]*\bsrc="launcher\.js")|\son[a-z]+=|https?:\/\//);
   for (const file of ['launcher.js', 'launcher.css']) assert.ok((await stat(new URL(`dist/ui/${file}`, root))).size > 0, file);

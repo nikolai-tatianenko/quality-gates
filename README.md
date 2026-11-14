@@ -537,11 +537,12 @@ Every `run` (CLI, dashboard and MCP) also appends the finished run to a local SQ
 `<outputDir>/history.sqlite` (default `.qualitygate/history.sqlite`), through Node's built-in `node:sqlite`
 (no dependency; Node 22 prints an "experimental" warning for it, which QualityGate suppresses). Each run stores its id,
 times, decision, execution, duration and, per gate, the status, duration and, for gates that declare `inputs`, the hash of
-their input files. Nothing is uploaded and old runs are not pruned; delete the file to start over.
+their input files. Nothing is uploaded; `qualitygate prune --keep <n>` drops old runs, or delete the file to start over.
 
 ```sh
 qualitygate history [--limit 10] [--json]   # recent runs: id, time, decision, duration, gate counts, then a comparison
 qualitygate trends  [--limit 50] [--json]   # blocks per week, most frequently failing gates, flaky gates
+qualitygate prune --keep 100 [--json]       # keep the newest 100 runs in the history, drop the rest (run folders stay)
 
 # both: --gate <id>... (only these gates), --since 2026-11-01, --decision BLOCK
 qualitygate history --baseline <runId>      # compare the newest run with a chosen run instead of the previous one
