@@ -256,6 +256,13 @@ test('history and trends come from the recorded runs', async () => {
     assert.equal(trends.runs, 2); assert.equal(trends.failingGates[0].id, 'bad');
     assert.equal((await app.call('GET', '/v1/history?limit=0', { token })).status, 400);
     assert.equal((await app.call('GET', '/v1/trends?limit=nope', { token })).status, 400);
+    const blocked = (await app.call('GET', '/v1/history?decision=BLOCK', { token })).body;
+    assert.equal(blocked.runs.length, 1); assert.equal(blocked.runs[0].decision, 'BLOCK'); assert.equal(blocked.comparison, null);
+    assert.equal((await app.call('GET', '/v1/history?since=2999-01-01', { token })).body.runs.length, 0);
+    assert.equal((await app.call('GET', '/v1/history?since=2000-01-01&gate=bad&gate=ok', { token })).body.runs.length, 2);
+    assert.equal((await app.call('GET', '/v1/trends?decision=PASS', { token })).body.runs, 1);
+    assert.equal((await app.call('GET', '/v1/trends?gate=bad', { token })).body.runs, 1, 'only the run that has the gate');
+    for (const bad of ['decision=MAYBE', 'since=yesterday', `since=${'1'.repeat(41)}`]) assert.equal((await app.call('GET', `/v1/history?${bad}`, { token })).status, 400, bad);
     await writeFile(join(app.out, 'history.sqlite'), 'not a database');
     assert.equal((await app.call('GET', '/v1/history', { token })).status, 503);
   });

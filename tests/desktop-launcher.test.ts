@@ -43,7 +43,7 @@ test('the start-up error carries what the bridge wrote to stderr', async () => {
   await assert.rejects(launchBridge({ cli: { command: process.execPath, args: [script] }, configPath: 'c', cwd: process.cwd(), timeoutMs: 5000 }), /exit 2\)\. config exploded/);
 });
 
-test('a bridge killed by a signal is reported as exited', async () => {
+test('a bridge killed by a signal is reported as exited', { skip: process.platform === 'win32' && 'Windows has no signals: a killed process exits with code 1' }, async () => {
   const script = join(await mkdtemp(join(tmpdir(), 'qg-desktop-')), 'kill.mjs');
   await writeFile(script, 'process.kill(process.pid, "SIGKILL");');
   await assert.rejects(launchBridge({ cli: { command: process.execPath, args: [script] }, configPath: 'c', cwd: process.cwd(), timeoutMs: 5000 }), /exit signal/);

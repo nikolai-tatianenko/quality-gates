@@ -35,7 +35,7 @@ flowchart TD
 - **live view:** `core` emits display-only progress events (`plan`, `start`, `log`, `end`) through `RunOptions.onProgress`;
   `cli/src/live.ts` draws them with plain ANSI codes only on a TTY outside CI. It never changes results, output or exit codes.
 - **history:** `core/src/history.ts` appends each finished run to `<outputDir>/history.sqlite`
-  (`node:sqlite`, schema version in `PRAGMA user_version`, migrations applied on write, a newer schema refused) and derives comparisons and trends; the CLI `history`/`trends` commands and the exported HTML
+  (`node:sqlite`, schema version in `PRAGMA user_version`, migrations applied on write, a newer schema refused) and derives comparisons and trends; the CLI `history`/`trends`/`prune` commands and the exported HTML
   report read it. A write failure is a stderr warning and never changes the verdict or exit code.
 - **list and doctor:** `cli/src/doctor.ts`; read-only views of the config, the history and the machine
   (Node, Chrome, tools on `PATH`, output directory). They run no gate and never touch a verdict.

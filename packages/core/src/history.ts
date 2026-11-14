@@ -53,18 +53,18 @@ export const SCHEMA_VERSION = MIGRATIONS.length;
 
 const versionOf = (db: DatabaseSync) => (db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version;
 /** Refuses a database written by a newer QualityGate: reading or changing it with an older layout could lose data. */
-function assertSupported(db: DatabaseSync): number {
+function assertSupported(db: DatabaseSync, supported = SCHEMA_VERSION): number {
   const version = versionOf(db);
-  if (version > SCHEMA_VERSION) throw new Error(`run history was written by a newer QualityGate (schema ${version}, this version supports ${SCHEMA_VERSION}); upgrade QualityGate or move history.sqlite aside`);
+  if (version > supported) throw new Error(`run history was written by a newer QualityGate (schema ${version}, this version supports ${supported}); upgrade QualityGate or move history.sqlite aside`);
   return version;
 }
 /** Applies the missing migrations in one transaction, so a failed upgrade leaves the old database as it was. */
-function migrate(db: DatabaseSync) {
+export function migrate(db: DatabaseSync, migrations: readonly string[] = MIGRATIONS) {
   db.exec('BEGIN IMMEDIATE');
   try {
-    const from = assertSupported(db);
-    for (let n = from; n < SCHEMA_VERSION; n++) db.exec(MIGRATIONS[n]!);
-    if (from < SCHEMA_VERSION) db.exec(`PRAGMA user_version = ${SCHEMA_VERSION}`);
+    const from = assertSupported(db, migrations.length);
+    for (let n = from; n < migrations.length; n++) db.exec(migrations[n]!);
+    if (from < migrations.length) db.exec(`PRAGMA user_version = ${migrations.length}`);
     db.exec('COMMIT');
   } catch (error) { db.exec('ROLLBACK'); throw error; }
 }
@@ -99,6 +99,17 @@ export async function recordRun(outputDir: string, run: HistoryRun): Promise<voi
     for (const [position, g] of run.gates.entries()) insert.run(run.id, position, g.id, g.status, g.durationMs, g.inputsHash ?? null);
     db.exec('COMMIT');
   } finally { db.close(); }
+}
+
+/** Deletes all but the `keep` newest runs (and their gates) and returns how many runs were removed. Run folders on disk are left alone. */
+export async function pruneRuns(outputDir: string, keep: number): Promise<number> {
+  const db = (await open(outputDir, true))!;
+  try {
+    db.exec('BEGIN IMMEDIATE');
+    const removed = db.prepare('DELETE FROM runs WHERE rowid NOT IN (SELECT rowid FROM runs ORDER BY started_at DESC, rowid DESC LIMIT ?)').run(keep).changes;
+    db.exec('COMMIT');
+    return Number(removed);
+  } catch (error) { db.exec('ROLLBACK'); throw error; } finally { db.close(); }
 }
 
 /** Narrows which runs are read. `since` is an ISO timestamp, `gates` keeps only those gates in each run (and only runs that have one of them). */

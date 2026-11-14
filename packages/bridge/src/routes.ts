@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { message, type RunResult } from '../../protocol/src/index.js';
 import { getRun, readRun, teamView, visualImage, visualView } from '../../service/src/index.js';
 import { loadConfig } from '../../cli/src/runner.js';
-import { compareRuns, readRuns, trends } from '../../core/src/history.js';
+import { compareRuns, readRuns, trends, type HistoryFilter } from '../../core/src/history.js';
 import { VisualImageError } from '../../core/src/visual.js';
 import { HttpError, Image, parse, parseJson, type Reply, type Route } from './http.js';
 import type { Jobs } from './jobs.js';
@@ -24,6 +24,16 @@ export interface RouteDeps { configPath: string; store: TokenStore; service: Bri
 const pairSchema = z.object({ code: z.string().min(1).max(32), label: z.string().min(1).max(64).optional() }).strict();
 const runSchema = z.object({ gates: z.array(z.string().min(1).max(128)).min(1).max(100) }).strict();
 const scanSchema = z.object({ url: z.string().max(2048).refine(isScannable, 'Expected an http(s) URL without credentials') }).strict();
+const filterQuery = z.object({
+  since: z.string().max(40).refine(text => !Number.isNaN(Date.parse(text)), 'since must be a date such as 2026-11-01').optional(),
+  decision: z.enum(['PASS', 'BLOCK']).optional(), gate: z.array(z.string().max(64)).max(50).optional(),
+});
+/** The `since`, `decision` and repeated `gate` query parameters as a history filter; an invalid value is a 400. */
+function filterOf(c: { url: URL }): HistoryFilter {
+  const params = c.url.searchParams;
+  const { since, decision, gate } = parse(filterQuery, { since: params.get('since') ?? undefined, decision: params.get('decision') ?? undefined, gate: params.has('gate') ? params.getAll('gate') : undefined });
+  return { ...(since ? { since: new Date(since).toISOString() } : {}), ...(decision ? { decision } : {}), ...(gate?.length ? { gates: gate } : {}) };
+}
 const limitQuery = (fallback: number, max: number) => z.coerce.number().int().min(1).max(max).default(fallback);
 const safeName = (name: string) => name.length > 0 && name.length <= 255 && !/[/\\\0]/.test(name) && !name.startsWith('.');
 
@@ -59,8 +69,8 @@ class Project {
     if (!(await lstat(file).catch(() => undefined))?.isFile()) throw new HttpError(404, 'Artifact not found');
     return readFile(file);
   }
-  async history(limit: number) {
-    try { return await readRuns(await this.outputDir(), limit); }
+  async history(limit: number, filter: HistoryFilter = {}) {
+    try { return await readRuns(await this.outputDir(), limit, filter); }
     catch (error) { this.deps.onError?.(error); throw new HttpError(503, 'Run history is unreadable'); }
   }
 }
@@ -130,13 +140,13 @@ function resultRoutes(project: Project): Route[] {
     { method: 'GET', path: ['v1', 'runs', ':id', 'artifacts', ':name'], auth: true, handle: async c => [200, await project.artifact(c.params.id!, c.params.name!)] },
     { method: 'GET', path: ['v1', 'history'], auth: true, handle: async c => {
       const limit = parse(limitQuery(20, 200), query(c));
-      const runs = await project.history(Math.max(limit, 2));
+      const runs = await project.history(Math.max(limit, 2), filterOf(c));
       const strip = (run: (typeof runs)[number]) => ({ ...run, gates: run.gates.map(({ id, status, durationMs }) => ({ id, status, durationMs })) });
       return [200, { runs: runs.slice(0, limit).map(strip), comparison: runs.length > 1 ? compareRuns(runs[0]!, runs[1]!) : null }];
     } },
     { method: 'GET', path: ['v1', 'team'], auth: true, handle: async c => [200, await teamView(project.configPath, parse(limitQuery(50, 200), query(c)))] },
     { method: 'GET', path: ['v1', 'visual'], auth: true, handle: async c => visual(c, project.configPath) },
-    { method: 'GET', path: ['v1', 'trends'], auth: true, handle: async c => [200, trends(await project.history(parse(limitQuery(50, 1000), query(c))))] },
+    { method: 'GET', path: ['v1', 'trends'], auth: true, handle: async c => [200, trends(await project.history(parse(limitQuery(50, 1000), query(c)), filterOf(c)))] },
   ];
 }
 
