@@ -113,16 +113,16 @@ test('files over the size limit are refused without being read', () => withProje
 }));
 test('names are validated, symlinks never followed and collisions refused', () => withProject(async project => {
   await shot(project.dir, 'shots/ok.png'); await shot(project.dir, 'base/ok.png');
-  await shot(project.dir, 'shots/with space.png'); await shot(project.dir, 'outside/secret.png');
+  await shot(project.dir, 'shots/with space.png'); await shot(project.dir, 'outside/secret.png'); await shot(project.dir, 'shots/odd: name.png');
   await symlink(join(project.dir, 'outside', 'secret.png'), join(project.dir, 'shots', 'link.png'));
   await shot(project.dir, 'shots/sub/inner.png'); await writeFile(join(project.dir, 'shots', 'notes.txt'), 'x');
   const result = await runGate(project);
   assert.equal(result.exitCode, 1);
   assert.deepEqual(result.report!.items.map(item => item.name), ['ok']);
-  assert.equal(result.report!.problems!.length, 2);
+  assert.equal(result.report!.problems!.length, 3);
   assert.ok(result.report!.problems!.some(text => /link\.png: symbolic links are not followed/.test(text)));
   assert.ok(result.report!.problems!.some(text => /with space\.png: the name must use ASCII letters, digits, dots, dashes or underscores/.test(text)));
-  assert.deepEqual(result.findings!.filter(finding => finding.ruleId === 'visual-problem').map(finding => finding.file).sort(), ['shots/link.png', 'shots/with space.png']);
+  assert.deepEqual(result.findings!.filter(finding => finding.ruleId === 'visual-problem').map(finding => finding.file).sort(), ['shots/link.png', 'shots/odd: name.png', 'shots/with space.png'], 'a file name holding a colon is not cut short');
 }));
 test('names that differ only in case collide, in one folder or across both', () => {
   const fake = (name: string) => ({ name, isFile: () => true, isSymbolicLink: () => false });

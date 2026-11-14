@@ -19,7 +19,7 @@ import { setupProject } from './setup.js';
 import { fixGates, describeFix } from './fix.js';
 import { serveBridge, revokeAll } from '../../bridge/src/index.js';
 import { DEFAULT_PORT } from '../../bridge/src/serve.js';
-import { historyCommand, trendsCommand } from './history.js';
+import { historyCommand, pruneCommand, trendsCommand } from './history.js';
 import { listCommand, doctorCommand } from './doctor.js';
 import { readTrends } from '../../core/src/history.js';
 import { readReport, renderMarkdown, renderSarif, publishDescription, exportReport, publishStatus, publishComment, notifySlack } from '../../ci/src/index.js';
@@ -42,7 +42,7 @@ try {
   const values = new Map<string, string>();
   const positional: string[] = []; const only: string[] = []; const plugins: string[] = []; const origins: string[] = [];
   let help = false;
-  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit', '--port', '--since', '--decision', '--baseline'];
+  const valueFlags = ['--config', '--client', '--provider', '--model', '--base-url', '--prompt', '--api-key-env', '--max-turns', '--timeout-ms', '--input', '--output', '--repository', '--number', '--head', '--api-url', '--token-env', '--out', '--report-url', '--head-repository', '--author', '--webhook-env', '--from', '--limit', '--port', '--since', '--decision', '--baseline', '--keep'];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i]!;
     if (arg === '--json') continue;
@@ -61,7 +61,7 @@ try {
   const configPath = values.get('--config') || '.qualitygate.yml';
   const entry = fileURLToPath(import.meta.url);
   const validFlags: Record<string, string[]> = {
-    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], visual: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], list: ['--config'], doctor: ['--config'], history: ['--config', '--limit', '--since', '--decision', '--baseline'], trends: ['--config', '--limit', '--since', '--decision'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
+    init: ['--config'], setup: ['--config', '--from'], run: ['--config'], fix: ['--config'], visual: ['--config'], ui: ['--config'], mcp: ['--config'], inspect: ['--config'], list: ['--config'], doctor: ['--config'], history: ['--config', '--limit', '--since', '--decision', '--baseline'], trends: ['--config', '--limit', '--since', '--decision'], prune: ['--config', '--keep'], sources: ['--config'], bridge: ['--config', '--port', '--origin'],
     report: ['--input', '--output', '--config'], export: ['--out', '--input', '--config'], pr: ['--input', '--provider', '--repository', '--number', '--head', '--head-repository', '--api-url', '--token-env'],
     status: ['--input', '--repository', '--head', '--report-url', '--head-repository', '--api-url', '--token-env'],
     comment: ['--input', '--provider', '--repository', '--number', '--head', '--report-url', '--head-repository', '--author', '--api-url', '--token-env'],
@@ -94,6 +94,7 @@ try {
       + '       qualitygate list [--config <path>] [--json]\n'
       + '       qualitygate doctor [--config <path>] [--json]\n'
       + '       qualitygate history [--limit <n>] [--gate <id>...] [--since <date>] [--decision <PASS|BLOCK>] [--baseline <runId>] [--config <path>] [--json]\n'
+      + '       qualitygate prune --keep <n> [--config <path>] [--json]\n'
       + '       qualitygate trends [--limit <n>] [--gate <id>...] [--since <date>] [--decision <PASS|BLOCK>] [--config <path>] [--json]\n'
       + '       qualitygate mcp [--config <path>]\n'
       + '       qualitygate bridge [--port <n>] [--origin <origin>...] [--config <path>] | qualitygate bridge --revoke-all\n'
@@ -137,6 +138,10 @@ try {
     if (baseline !== undefined && !baseline) throw new Error('--baseline expects a run id');
     const filter = { gates: only, ...(since ? { since: new Date(since).toISOString() } : {}), ...(values.has('--decision') ? { decision: z.enum(['PASS', 'BLOCK']).parse(values.get('--decision')) } : {}) };
     console.log(await (command === 'history' ? historyCommand(configPath, limit, json, { ...filter, baseline }) : trendsCommand(configPath, limit, json, filter)));
+  } else if (command === 'prune') {
+    if (positional.length) throw new Error('prune does not accept positional arguments');
+    if (!values.has('--keep')) throw new Error('prune needs --keep <n>, the number of newest runs to keep');
+    console.log(await pruneCommand(configPath, z.coerce.number().int().min(1).parse(values.get('--keep')), json));
   } else if (command === 'run' || command === 'inspect') {
     if ((command === 'run' && positional.length) || positional.length > 1) throw new Error(`${command}: unexpected arguments`);
     const view = command === 'run' && liveEnabled(process.stdout, process.env, { noLive, json }) ? liveView(process.stdout) : undefined;

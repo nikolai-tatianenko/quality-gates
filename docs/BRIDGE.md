@@ -76,8 +76,8 @@ All responses are JSON unless noted. `auth` means a bearer token is required.
 | `GET /v1/runs/:runId/artifacts/:name` | yes | one listed file, as an attachment |
 | `GET /v1/visual` | yes | visual-regression comparison of the latest run (`?run=<runId>` for another): `{enabled, runId, gateId, baselineDir, items: [{name, status, width, height, diffPixels, diffRatio, threshold, images}], warning?}`; `{enabled: false, items: []}` when the optional plugin left no `visual/visual.json`; no file paths |
 | `GET /v1/visual?run=<runId>&name=<item>&image=approved\|current\|diff` | yes | one screenshot that run lists, as `image/png`; by item name only, links and non-PNG files are refused (`404`, `415`), 10 MB cap, header size must equal the item and stay under 40 megapixels (`422`) |
-| `GET /v1/history?limit=20` | yes | recent runs and the comparison of the newest with the previous one |
-| `GET /v1/trends?limit=50` | yes | blocks per week, failing and flaky gates |
+| `GET /v1/history?limit=20` | yes | recent runs and the comparison of the newest with the previous one; optional `since=<date>`, `decision=PASS\|BLOCK` and repeated `gate=<id>` narrow the runs (an invalid value is a 400) |
+| `GET /v1/trends?limit=50` | yes | blocks per week, failing and flaky gates; accepts the same `since`, `decision` and `gate` filters as history |
 | `GET /v1/team?limit=50` | yes | team view: decision, changes since the last run, top 3 risks, time to green, blocking gates with file:line findings and a reproduce command, and `markdown`; no gate output; an unreadable history is a `warnings` entry, not an error |
 
 Only one run or scan is active at a time; a second request gets `409`. The `decision` and `exitCode` of a job and of

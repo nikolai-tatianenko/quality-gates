@@ -78,7 +78,7 @@ Existing: `packages/ci` already updates PR/MR descriptions (GitHub, GitLab, Bitb
 ## Before an npm publish
 - [ ] T-039: New version, changelog and matching tag (`v0.1.0` is stale and unpushed); publish only on the owner's explicit go
 - [x] T-040: Threat model for the CLI, dashboard, tunnel share and plugin loading (`docs/threat-model/`)
-- [ ] T-041: Enable GitHub private vulnerability reporting on the repository
+- [x] T-041: Enable GitHub private vulnerability reporting on the repository (also Dependabot security updates, secret scanning and push protection; `.github/dependabot.yml`)
 - [x] T-042: Resolve or accept in `SECURITY.md` the zod 4 and minimatch advisories (7-day release-age policy applies, no overrides)
 
 ## Optional
@@ -148,7 +148,7 @@ Publishing, renaming and merging to `main` are the owner's decisions and are not
 ### 5. Testing the tool itself
 - [x] T-082: Self-test suite on 3–4 reference repositories (pnpm monorepo, Playwright, Maestro, Python) asserting that `setup` finds the expected gates
 - [x] T-083: Exit-code contract tests, one per code (0, 1, 2, 130 and the timeout code)
-- [ ] T-085: History follow-ups. Done: schema versioning/migrations for `history.sqlite` (`PRAGMA user_version`, a newer database is refused), filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run (`history --baseline <runId>`). Open: retention/pruning (trend charts and a history table in the dashboard team view are already done)
+- [ ] T-085: History follow-ups. Done: schema versioning/migrations for `history.sqlite` (`PRAGMA user_version`, a newer database is refused), filters (`--gate`, `--since`, `--decision`), comparison against a chosen baseline run (`history --baseline <runId>`). Also done: `qualitygate prune --keep <n>`, bridge `/v1/history` and `/v1/trends` filters, multi-step migration test. Open: dashboard UI controls for the filters (trend charts and a history table in the dashboard team view are already done)
 
 ### Suggested start
 T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic `report:` for eslint and junit. These are small changes in the `node` plugin and the runner, and they remove what made the trial result hard to trust.
@@ -157,8 +157,8 @@ T-069 + T-070 + T-076: the `TIMEOUT` status with partial counts, plus automatic 
 - [x] T-086: Live view: erase rows with the real terminal height and width (resize and more gates than rows), assert exit 130 in the pty and SIGINT tests, route the history warning after the live rows are erased
 - [x] T-087: npm audit parser: a package whose `via` entries are all strings must still produce a finding when the referenced package is missing from the report
 - [x] T-088: SARIF: resolve file paths against the project root instead of the working directory, escape `#` and `?`, and report `skip:` gates as notes
-- [ ] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`
-- [ ] T-086: Live view: erase rows with the real terminal height and width (resize and more gates than rows), assert exit 130 in the pty and SIGINT tests, route the history warning after the live rows are erased
-- [ ] T-087: npm audit parser: a package whose `via` entries are all strings must still produce a finding when the referenced package is missing from the report
-- [ ] T-088: SARIF: resolve file paths against the project root instead of the working directory, escape `#` and `?`, and report `skip:` gates as notes
+- [x] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`
+- [x] T-086: Live view: erase rows with the real terminal height and width (resize and more gates than rows), assert exit 130 in the pty and SIGINT tests, route the history warning after the live rows are erased
+- [x] T-087: npm audit parser: a package whose `via` entries are all strings must still produce a finding when the referenced package is missing from the report
+- [x] T-088: SARIF: resolve file paths against the project root instead of the working directory, escape `#` and `?`, and report `skip:` gates as notes
 - [x] T-089: History: flag a gate as flaky only when its inputs hash proves nothing changed; stop swapping the global `process.emitWarning` while loading `node:sqlite`
