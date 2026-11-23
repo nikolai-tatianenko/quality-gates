@@ -2,6 +2,8 @@
 
 ## Unreleased — local workspace and analysis
 
+- The dashboard breadcrumb names the project folder (`Workspace / acme-app / Overview`): only the last folder segment, never the full path. README now opens with a dashboard GIF and screenshots taken on a neutral demo project.
+
 - T-086: the live view erases its rows using the real terminal size. With more gates than terminal rows it draws one row fewer than the height (running gates first, then `+N more`), rows that wrapped after the terminal was made narrower are counted when erasing, and a resize redraws. A history warning is printed after the rows are erased and the cursor is restored. The pty tests now assert exit codes 0 and 130.
 
 - T-087: the `npm-audit` parser keeps a package whose `via` entries are all strings when a referenced package is missing from the report (one finding, `<name>: vulnerable via <missing>`), instead of dropping it.

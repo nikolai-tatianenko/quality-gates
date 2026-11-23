@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { act, createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import { App, request } from '../packages/dashboard/src/App.js';
+import { App, projectFolder, request } from '../packages/dashboard/src/App.js';
 import { runResultSchema } from '../packages/protocol/src/index.js';
 
 const project = { configPath: '/project/.qualitygate.yml', gates: [{ id: 'lint', type: 'eslint', run: 'lint' }], urls: ['http://fixture'] };
@@ -36,6 +36,7 @@ test('React dashboard renders project checks and real findings, runs and cancels
   try {
     await act(async () => { ui.root.render(createElement(App)); });
     assert.match(ui.container.textContent!, /NO RUN/); assert.match(ui.container.textContent!, /lint/);
+    assert.equal(ui.container.querySelector('[data-test-id="project-folder"]')?.textContent, 'project', 'the breadcrumb names the project folder');
     await click(ui, 'Run quality'); assert.match(ui.container.textContent!, /Running checks/);
     await click(ui, 'Cancel run');
     await act(async () => { finish(response(blocked)); });
@@ -138,4 +139,11 @@ test('React dashboard hides the run button for a read-only shared project', asyn
     await act(async () => { ui.root.render(createElement(App)); });
     assert.match(ui.container.textContent!, /lint/); assert.equal(ui.container.querySelector('.run-checks'), null);
   } finally { await ui.cleanup(); fetch.mock.restore(); }
+});
+
+test('projectFolder returns only the folder that holds the config, for POSIX and Windows paths', () => {
+  assert.equal(projectFolder('/work/acme-app/.qualitygate.yml'), 'acme-app');
+  assert.equal(projectFolder('C:\\work\\acme-app\\.qualitygate.yml'), 'acme-app');
+  assert.equal(projectFolder('.qualitygate.yml'), '', 'a bare file name has no folder');
+  assert.equal(projectFolder('/.qualitygate.yml'), '', 'the filesystem root has no folder name');
 });

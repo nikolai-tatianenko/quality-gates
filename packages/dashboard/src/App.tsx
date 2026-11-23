@@ -5,6 +5,11 @@ import { Icon } from './Icon.js';
 import { TeamView, type Team } from './Team.js';
 import { VisualLink, VisualSection, type Visual } from './Visual.js';
 interface Project { configPath: string; gates: { id: string; type: string; run: string }[]; urls: string[]; readOnly?: boolean }
+/** Name of the folder that holds the config file, for the breadcrumb. Only the last segment, never the full path. */
+export function projectFolder(configPath: string): string {
+  const parts = configPath.split(/[\\/]/).filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 2]! : '';
+}
 export async function request<T>(path: string, method = 'GET'): Promise<T> {
   const response = await fetch(path, { method, ...(method === 'POST' ? { headers: { 'X-QualityGate-Request': '1' } } : {}) });
   const body = await response.json();
@@ -60,7 +65,7 @@ export function App() {
       </nav>
       <div className="local"><Icon name="terminal"/><div>Local execution<p>Your checks. Your machine.</p></div><span className="dot"/></div>
     </aside>
-    <main id="overview"><header><span className="breadcrumb">Workspace <span>/</span> <strong>Overview</strong></span><div className="header-actions"><span className="tag"><span className="dot"/>Local workspace</span><ThemeSwitcher/></div></header>
+    <main id="overview"><header><span className="breadcrumb">Workspace <span>/</span> {project && projectFolder(project.configPath) && <><b className="crumb-project" data-test-id="project-folder">{projectFolder(project.configPath)}</b><span>/</span></>}<strong>Overview</strong></span><div className="header-actions"><span className="tag"><span className="dot"/>Local workspace</span><ThemeSwitcher/></div></header>
       <div className="content"><section className="heading"><div><p className="eyebrow">WORKSPACE OVERVIEW</p><h1>Quality overview</h1>
         <p className="muted">Your checks, findings and release evidence, in one place.</p></div>
         <div className="actions"><a className="button-outline" href="#findings">View evidence</a>{running && <button className="secondary" onClick={() => void cancel()}>Cancel run</button>}

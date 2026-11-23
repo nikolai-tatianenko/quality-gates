@@ -39,6 +39,7 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 .breadcrumb { font-size: 12px; color: var(--muted-foreground); }
 .breadcrumb > span { padding-inline: 12px; color: var(--muted-foreground); opacity: .6; }
 .breadcrumb strong { color: var(--foreground); font-weight: 450; }
+.breadcrumb .crumb-project { color: var(--foreground); font-weight: 450; font-family: var(--font-mono, ui-monospace, monospace); }
 .header-actions { display: flex; align-items: center; gap: 16px; }
 .tag { display: inline-flex; align-items: center; gap: 7px; font-size: 10px; font-weight: 450; padding: 4px 8px; border: 1px solid var(--border); border-radius: 5px; color: var(--muted-foreground); white-space: nowrap; }
 .theme-switcher { display: inline-flex; gap: 2px; padding: 3px; border-radius: 7px; background: var(--muted); }
