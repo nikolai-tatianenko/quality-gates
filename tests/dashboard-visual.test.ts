@@ -20,6 +20,8 @@ const item = (name: string, status: VisualItem['status'], over: Partial<VisualIt
 const visual = (items: VisualItem[]): Visual => ({ enabled: true, runId: '44444444-4444-4444-8444-444444444444', gateId: 'visual', baselineDir: 'qualitygate-visual/approved', items });
 const all = visual([item('about', 'match'), item('home', 'changed'), item('fresh', 'new'), item('gone', 'missing')]);
 const $ = (ui: Ui, testId: string) => ui.container.querySelector(`[data-test-id="${testId}"]`) as HTMLElement | null;
+/** jsdom 31 serialises zero lengths as `0px`; both spellings are the same CSS value. */
+const clip = (el: HTMLElement) => el.style.clipPath.replace(/\b0px\b/g, '0');
 const byId = (ui: Ui, testId: string) => { const element = $(ui, testId); assert.ok(element, testId); return element; };
 async function click(ui: Ui, testId: string) { await act(async () => { byId(ui, testId).dispatchEvent(new ui.dom.window.MouseEvent('click', { bubbles: true })); }); }
 async function pointer(ui: Ui, target: HTMLElement, type: string, clientX = 0) {
@@ -73,12 +75,12 @@ test('slider: approved on the left, role=slider with aria-valuenow, pointer drag
     const [current, approved] = [...ui.container.querySelectorAll('.visual-compare img')] as HTMLImageElement[];
     assert.match(current!.alt, /^Current/); assert.match(approved!.alt, /^Approved/);
     assert.match(approved!.src, /image=approved/); assert.match(current!.src, /image=current/);
-    assert.equal(approved!.style.clipPath, 'inset(0 50% 0 0)', 'the approved image is visible on the left half');
+    assert.equal(clip(approved!), 'inset(0 50% 0 0)', 'the approved image is visible on the left half');
     const stage = byId(ui, 'visual-slider-stage');
     stage.getBoundingClientRect = () => ({ left: 100, width: 400, top: 0, height: 100, right: 500, bottom: 100, x: 100, y: 0, toJSON: () => ({}) });
     await pointer(ui, stage, 'pointermove', 120); assert.equal(now(ui), 50, 'moving without a pressed button does not drag');
     await pointer(ui, stage, 'pointerdown', 200); assert.equal(now(ui), 25); assert.equal(ui.dom.window.document.activeElement, handle, 'a press focuses the divider');
-    await pointer(ui, stage, 'pointermove', 400); assert.equal(now(ui), 75); assert.equal(approved!.style.clipPath, 'inset(0 25% 0 0)');
+    await pointer(ui, stage, 'pointermove', 400); assert.equal(now(ui), 75); assert.equal(clip(approved!), 'inset(0 25% 0 0)');
     await pointer(ui, stage, 'pointermove', 9999); assert.equal(now(ui), 100, 'clamped at the right edge');
     await pointer(ui, stage, 'pointermove', -50); assert.equal(now(ui), 0, 'clamped at the left edge');
     await pointer(ui, stage, 'pointerup'); await pointer(ui, stage, 'pointermove', 300); assert.equal(now(ui), 0, 'released');

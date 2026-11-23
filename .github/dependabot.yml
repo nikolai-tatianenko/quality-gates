@@ -1,22 +1,25 @@
 version: 2
+
+# One pull request per week for every ecosystem together, instead of one per package.
+# Security updates are separate: GitHub opens those as soon as an advisory lands.
+multi-ecosystem-groups:
+  weekly:
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "chore(deps)"
+
 updates:
   - package-ecosystem: npm
     directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 5
-    commit-message:
-      prefix: "chore(deps)"
+    patterns: ["*"]
+    multi-ecosystem-group: weekly
   - package-ecosystem: cargo
     directory: /packages/desktop/src-tauri
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-    commit-message:
-      prefix: "chore(deps)"
+    patterns: ["*"]
+    multi-ecosystem-group: weekly
   - package-ecosystem: github-actions
     directory: /
-    schedule:
-      interval: weekly
-    commit-message:
-      prefix: "chore(ci)"
+    patterns: ["*"]
+    multi-ecosystem-group: weekly

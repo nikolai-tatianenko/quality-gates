@@ -134,7 +134,7 @@ The STRIDE analysis for the CLI, dashboard, tunnel share, CI publishers and plug
 
 ## Known dependency advisories
 
-`pnpm audit --prod` (2026-11-21) reports one advisory; `pnpm audit` adds six dev-only ones.
+`pnpm audit --prod` (2026-11-23) reports one advisory; `pnpm audit` adds two dev-only ones.
 
 - Resolved: `zod` is on 4.6.7 (the memory-exhaustion advisory is fixed in 4.6.6), and the
   repository's own `pnpm` is 11.28.9 (the pnpm tooling advisories are fixed in 11.11). A second
@@ -147,9 +147,9 @@ The STRIDE analysis for the CLI, dashboard, tunnel share, CI publishers and plug
 - Resolved (2026-11-21): `fast-xml-parser` is on 5.12.1 and the lockfile resolves `hono` and
   `@hono/node-server` to patched releases. The MCP server speaks stdio and the bridge does not
   import `hono`, so the HTTP advisories were not reachable in any case.
-- Accepted, development only: `glob`, `minimatch` and `zod` 3.x under `c8` and `puppeteer-core`;
-  `extract-zip` (no patched release exists) and `basic-ftp` under `@puppeteer/browsers`. They run
-  in our test and verification tooling, not in the published CLI.
+- Resolved (2026-11-23): `puppeteer-core` 25 no longer pulls `extract-zip`, `basic-ftp` or zod 3.x.
+- Accepted, development only: `glob` and `minimatch` under `c8` (coverage tooling). They run in our
+  test runs, not in the published CLI.
 - Accepted, desktop shell: `glib` 0.18 (an unsound iterator) comes from the GTK 3 bindings that
   Tauri 2 uses on Linux only. The Linux build is not shipped; the macOS and Windows builds do
   not link it. Revisit when Tauri moves to GTK 4 bindings.
