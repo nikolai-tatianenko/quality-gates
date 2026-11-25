@@ -17,14 +17,14 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "eslint": "9.37.0",
+    "eslint": "10.15.0",
     "eslint-plugin-sonarjs": "4.2.2",
-    "typescript-eslint": "8.46.1",
+    "typescript-eslint": "8.73.0",
     "zod": "4.6.7",
-    "typescript": "5.9.3"
+    "typescript": "7.0.2"
   },
   "devDependencies": {
-    "esbuild": "0.25.10"
+    "esbuild": "0.28.2"
   },
   "engines": {
     "node": ">=22.23.4"

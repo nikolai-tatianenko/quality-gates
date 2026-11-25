@@ -4,6 +4,6 @@
   "private": true,
   "type": "module",
   "scripts": { "build": "node build.mjs" },
-  "dependencies": { "react": "19.2.0", "react-dom": "19.2.0" },
-  "devDependencies": { "esbuild": "0.25.10" }
+  "dependencies": { "react": "19.3.1", "react-dom": "19.3.1" },
+  "devDependencies": { "esbuild": "0.28.2" }
 }
